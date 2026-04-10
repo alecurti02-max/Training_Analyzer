@@ -53,29 +53,35 @@
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="card-grid" id="dash-stats"></div>
-  <div class="card">
-    <div class="card-title">Streak & Consistenza</div>
-    <div id="dash-streak" class="streak-display"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Calendario Allenamenti</div>
-    <div class="heatmap-container"><canvas id="heatmap-canvas" class="heatmap-canvas"></canvas></div>
-    <div class="heatmap-legend">
-      <span>Meno</span>
-      <span style="background:var(--bg3)"></span>
-      <span style="background:rgba(224,32,32,.2)"></span>
-      <span style="background:rgba(224,32,32,.45)"></span>
-      <span style="background:rgba(224,32,32,.7)"></span>
-      <span style="background:rgba(224,32,32,1)"></span>
-      <span>Pi&ugrave;</span>
+  <div class="dash-layout">
+    <div class="dash-col-main">
+      <div class="card">
+        <div class="card-title">Calendario Allenamenti</div>
+        <div class="heatmap-container"><canvas id="heatmap-canvas" class="heatmap-canvas"></canvas></div>
+        <div class="heatmap-legend">
+          <span>Meno</span>
+          <span style="background:var(--bg3)"></span>
+          <span style="background:rgba(224,32,32,.2)"></span>
+          <span style="background:rgba(224,32,32,.45)"></span>
+          <span style="background:rgba(224,32,32,.7)"></span>
+          <span style="background:rgba(224,32,32,1)"></span>
+          <span>Pi&ugrave;</span>
+        </div>
+      </div>
+      <div class="card"><div class="card-title">Ultimi Allenamenti</div><div id="dash-recent"></div></div>
+      <div class="card"><div class="card-title">Volume Settimanale</div><div class="chart-container"><canvas id="chart-weekly"></canvas></div></div>
     </div>
-  </div>
-  <div class="card"><div class="card-title">Recovery Status</div><div id="dash-recovery"></div></div>
-  <div class="card"><div class="card-title">Ultimi Allenamenti</div><div id="dash-recent"></div></div>
-  <div class="card"><div class="card-title">Volume Settimanale</div><div class="chart-container"><canvas id="chart-weekly"></canvas></div></div>
-  <div class="card">
-    <div class="card-title">Profilo Atletico (ultimi 30 giorni)</div>
-    <div class="chart-container"><canvas id="chart-radar"></canvas></div>
+    <div class="dash-col-side">
+      <div class="card">
+        <div class="card-title">Streak & Consistenza</div>
+        <div id="dash-streak" class="streak-display"></div>
+      </div>
+      <div class="card"><div class="card-title">Recovery Status</div><div id="dash-recovery"></div></div>
+      <div class="card">
+        <div class="card-title">Profilo Atletico</div>
+        <div class="chart-container" style="height:260px"><canvas id="chart-radar"></canvas></div>
+      </div>
+    </div>
   </div>
 </div>
 

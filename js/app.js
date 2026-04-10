@@ -255,10 +255,8 @@ function subscribeToData() {
     if (document.querySelector('#page-friends.active')) renderFriendsPage();
   });
 
-  // Public users (for search)
-  db.ref('publicUsers').on('value', snap => {
-    publicUsersCache = snap.val() || {};
-  });
+  // Load public users for search (paginated, once)
+  loadPublicUsers();
 }
 
 function saveWorkout(workout) {
@@ -1245,7 +1243,7 @@ function saveWeight() {
   document.getElementById('weight-value').value='';
   toast('Peso registrato!','success');
 }
-function saveWeightTarget(){const v=parseFloat(document.getElementById('weight-target').value);if(v)userRef('weightTarget').set(v);}
+function saveWeightTarget(){const v=parseFloat(document.getElementById('weight-target').value);if(v){userRef('weightTarget').set(v);renderWeightChart();}}
 function saveWeightHeight(){
   const v=parseInt(document.getElementById('weight-height').value);
   if(v){userRef('heightCm').set(v);saveSettingsToFirebase({...settingsCache,height:v});}
@@ -1357,14 +1355,51 @@ function renderFriendsPage() {
   renderCompareCheckboxes();
 }
 
+function loadPublicUsers() {
+  db.ref('publicUsers').once('value', snap => {
+    publicUsersCache = snap.val() || {};
+  }).catch(() => { publicUsersCache = {}; });
+}
+
+let _searchTimeout = null;
 function searchUsers(query) {
   const resultsEl = document.getElementById('friend-search-results');
-  if (!query || query.length < 2) { resultsEl.className = 'search-results'; return; }
-  const q = query.toLowerCase();
-  const results = Object.values(publicUsersCache).filter(u =>
-    u.uid !== currentUser.uid && (u.displayName||'').toLowerCase().includes(q)
-  ).slice(0, 8);
-  if (!results.length) { resultsEl.className = 'search-results'; return; }
+  if (!query || query.length < 2) { resultsEl.className = 'search-results'; resultsEl.innerHTML = ''; return; }
+
+  clearTimeout(_searchTimeout);
+  _searchTimeout = setTimeout(() => {
+    // First try local cache
+    const q = query.toLowerCase();
+    let results = Object.values(publicUsersCache).filter(u =>
+      u.uid !== currentUser.uid && (u.displayName||'').toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (results.length) {
+      renderSearchResults(results);
+    } else {
+      // Fallback: query Firebase directly
+      db.ref('publicUsers').orderByChild('displayName').once('value', snap => {
+        const all = snap.val() || {};
+        publicUsersCache = all; // refresh cache
+        results = Object.values(all).filter(u =>
+          u.uid !== currentUser.uid && (u.displayName||'').toLowerCase().includes(q)
+        ).slice(0, 8);
+        if (results.length) {
+          renderSearchResults(results);
+        } else {
+          resultsEl.innerHTML = '<div style="padding:14px;color:var(--text2);font-size:.85rem">Nessun utente trovato</div>';
+          resultsEl.className = 'search-results show';
+        }
+      }).catch(() => {
+        resultsEl.innerHTML = '<div style="padding:14px;color:var(--text2);font-size:.85rem">Nessun utente trovato</div>';
+        resultsEl.className = 'search-results show';
+      });
+    }
+  }, 300);
+}
+
+function renderSearchResults(results) {
+  const resultsEl = document.getElementById('friend-search-results');
   resultsEl.innerHTML = results.map(u => {
     const isFollowing = followingCache[u.uid];
     return `<div class="search-result-item">
