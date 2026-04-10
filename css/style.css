@@ -1,8 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@font-face {
+  font-family: 'BasementGrotesque';
+  src: url('../fonts/BasementGrotesque-Black_v1.202.otf') format('opentype');
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-display: swap;
+}
 
 /* ============ THEME VARIABLES ============ */
 :root {
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'BasementGrotesque', 'Poppins', sans-serif;
   --accent: #E02020;
   --accent-light: #FF4444;
   --accent-dark: #B01818;
@@ -79,9 +134,12 @@
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
 ::selection{background:var(--accent);color:#fff}
 
+/* ============ HEADING FONT ============ */
+h1,h2,h3,h4{font-family:var(--font-heading)}
+
 /* ============ NAV ============ */
 .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:6px;padding:10px 16px;background:var(--nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
-.nav-brand{font-weight:900;font-size:1.1rem;color:var(--accent);margin-right:8px;white-space:nowrap;letter-spacing:-0.02em;text-transform:uppercase}
+.nav-brand{font-weight:900;font-size:1.1rem;color:var(--accent);margin-right:8px;white-space:nowrap;letter-spacing:-0.02em;text-transform:uppercase;font-family:var(--font-heading)}
 .nav-scroll{display:flex;gap:4px;overflow-x:auto;flex:1;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
 .nav-scroll::-webkit-scrollbar{display:none}
 .nav-btn{background:none;border:none;color:var(--text2);padding:8px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:.82rem;font-weight:600;white-space:nowrap;transition:var(--transition);font-family:var(--font)}
@@ -95,9 +153,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* ============ LAYOUT ============ */
 .container{max-width:1100px;margin:0 auto;padding:20px 16px}
 .page{display:none}.page.active{display:block}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--card-shadow);transition:var(--transition)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--card-shadow);transition:var(--transition);overflow:hidden}
 .card:hover{box-shadow:var(--shadow-lg)}
-.card-title{font-size:.9rem;font-weight:700;margin-bottom:14px;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em}
+.card-title{font-size:.9rem;font-weight:700;margin-bottom:14px;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;font-family:var(--font-heading)}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 
 /* Dashboard 2-column layout */
@@ -105,6 +163,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dash-col-main,.dash-col-side{display:flex;flex-direction:column;gap:0}
 .dash-col-main .card,.dash-col-side .card{margin-bottom:16px}
 @media(max-width:800px){.dash-layout{grid-template-columns:1fr}}
+
+/* ============ CLICKABLE CARD ============ */
+.clickable-card{cursor:pointer;transition:var(--transition)}
+.clickable-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--accent)}
 
 /* ============ SCORES ============ */
 .score-circle{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;flex-shrink:0}
@@ -119,6 +181,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .form-row{display:flex;gap:10px;flex-wrap:wrap}
 .form-row .form-group{flex:1;min-width:120px}
 input,select,textarea{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.9rem;font-family:var(--font);outline:none;transition:var(--transition)}
+input[type="date"]{max-width:100%;box-sizing:border-box}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 textarea{resize:vertical;min-height:60px}
 
@@ -166,7 +229,7 @@ textarea{resize:vertical;min-height:60px}
 
 /* ============ STATS ============ */
 .stat-box{text-align:center;padding:20px 16px}
-.stat-box .stat-value{font-size:2rem;font-weight:900;letter-spacing:-0.02em}
+.stat-box .stat-value{font-size:2rem;font-weight:900;letter-spacing:-0.02em;font-family:var(--font-heading)}
 .stat-box .stat-label{font-size:.72rem;color:var(--text2);margin-top:4px;text-transform:uppercase;font-weight:600;letter-spacing:0.04em}
 .muscle-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.85rem}
 .muscle-item:last-child{border:none}
@@ -213,7 +276,7 @@ canvas{max-width:100%}
 
 /* ============ LOGIN ============ */
 .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;text-align:center;background:var(--bg)}
-.login-brand{font-size:3rem;font-weight:900;color:var(--accent);margin-bottom:8px;letter-spacing:-0.04em;text-transform:uppercase}
+.login-brand{font-size:3rem;font-weight:900;color:var(--accent);margin-bottom:8px;letter-spacing:-0.04em;text-transform:uppercase;font-family:var(--font-heading)}
 .login-screen p{color:var(--text2);margin-bottom:32px;max-width:400px;font-size:.95rem;line-height:1.6}
 
 /* ============ MOBILE-FIRST LOG WIZARD ============ */
@@ -228,7 +291,7 @@ canvas{max-width:100%}
 .type-card .type-icon{font-size:2rem;margin-bottom:6px}
 .type-card .type-name{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.02em}
 .type-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin:16px 0}
-.date-picker-big{font-size:1.1rem;padding:16px;text-align:center;border-radius:var(--radius)}
+.date-picker-big{font-size:1.1rem;padding:16px;text-align:center;border-radius:var(--radius);max-width:100%;box-sizing:border-box}
 .exercise-add-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border:2px dashed var(--border);border-radius:var(--radius);background:none;color:var(--accent);cursor:pointer;font-size:.95rem;font-weight:700;width:100%;transition:var(--transition);margin-bottom:12px;font-family:var(--font)}
 .exercise-add-btn:hover{border-color:var(--accent);background:var(--accent-bg)}
 .exercise-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
@@ -280,7 +343,7 @@ canvas{max-width:100%}
 
 /* ============ FITNESS ASSESSMENT ============ */
 .fitness-card{background:var(--bg3);border-radius:var(--radius);padding:20px;margin-top:16px;text-align:center}
-.fitness-score{font-size:3rem;font-weight:900;color:var(--accent);letter-spacing:-0.03em}
+.fitness-score{font-size:3rem;font-weight:900;color:var(--accent);letter-spacing:-0.03em;font-family:var(--font-heading)}
 .fitness-label{font-size:1.1rem;font-weight:700;margin-top:4px}
 .fitness-detail{font-size:.85rem;color:var(--text2);margin-top:8px;line-height:1.5}
 .fitness-bars{display:grid;gap:8px;margin-top:16px;text-align:left}
@@ -327,7 +390,7 @@ canvas{max-width:100%}
 
 /* ============ STREAK ============ */
 .streak-display{display:flex;gap:28px;justify-content:center;align-items:center;padding:20px}
-.streak-num{font-size:2.8rem;font-weight:900;color:var(--accent);letter-spacing:-0.03em}
+.streak-num{font-size:2.8rem;font-weight:900;color:var(--accent);letter-spacing:-0.03em;font-family:var(--font-heading)}
 .streak-info{text-align:left}
 .streak-info .streak-label{font-size:.8rem;color:var(--text2);font-weight:600;text-transform:uppercase}
 
@@ -362,6 +425,26 @@ canvas{max-width:100%}
 .filter-btn:hover{border-color:var(--accent);color:var(--text)}
 .filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
+/* ============ ATHLETIC DETAIL CARDS ============ */
+.athletic-metric-card{background:var(--bg3);border-radius:var(--radius);padding:20px;text-align:center}
+.athletic-metric-value{font-size:2rem;font-weight:900;font-family:var(--font-heading);color:var(--accent)}
+.athletic-metric-label{font-size:.78rem;color:var(--text2);text-transform:uppercase;font-weight:600;margin-top:4px}
+.athletic-metric-desc{font-size:.82rem;color:var(--text2);margin-top:8px;line-height:1.5}
+
+/* ============ LIBRARY FILTER ============ */
+.lib-filter-btn{display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.78rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:var(--transition);margin:2px}
+.lib-filter-btn:hover{border-color:var(--accent);color:var(--text)}
+.lib-filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ============ NOTIFICATIONS ============ */
+.notif-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:var(--radius-sm);margin-bottom:8px;font-size:.85rem}
+.notif-item.unread{border-left:3px solid var(--accent)}
+.notif-time{font-size:.72rem;color:var(--text2);margin-left:auto;white-space:nowrap}
+.notif-badge{position:absolute;top:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+
+/* ============ EXERCISE PARAM TAG ============ */
+.param-tag{font-size:.68rem;padding:2px 8px;border-radius:12px;background:rgba(9,132,227,.15);color:var(--blue);font-weight:600;margin-left:4px}
+
 /* ============ RESPONSIVE ============ */
 @media(max-width:600px){
   .nav{gap:4px;padding:8px 10px}
@@ -381,6 +464,8 @@ canvas{max-width:100%}
   .nav-user{display:none}
   .streak-num{font-size:2rem}
   .login-brand{font-size:2.2rem}
+  .weight-form{flex-direction:column}
+  .weight-form .form-group{min-width:100%}
 }
 
 @media(min-width:601px){

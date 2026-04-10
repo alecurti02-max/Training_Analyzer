@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#E02020">
 <title>Training Analyzer</title>
+<link rel="icon" type="image/png" href="logo_ta.png">
+<link rel="apple-touch-icon" href="logo_ta.png">
+<link rel="manifest" href="manifest.json">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -17,6 +20,7 @@
 
 <!-- ============== LOGIN SCREEN ============== -->
 <div id="screen-login" class="login-screen">
+  <img src="logo_ta.png" alt="Training Analyzer" style="width:80px;height:80px;border-radius:20px;margin-bottom:16px">
   <div class="login-brand">Training Analyzer</div>
   <p>Traccia i tuoi allenamenti, analizza i progressi e confrontati con i tuoi amici.</p>
   <button class="btn-google" id="btn-google-login">
@@ -30,13 +34,14 @@
 <div id="screen-app" style="display:none">
 
 <nav class="nav">
-  <span class="nav-brand">TA</span>
+  <img src="logo_ta.png" alt="TA" style="width:28px;height:28px;border-radius:6px;margin-right:4px">
   <div class="nav-scroll">
     <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
     <button class="nav-btn" onclick="showPage('log')">Log</button>
     <button class="nav-btn" onclick="showPage('history')">Storico</button>
     <button class="nav-btn" onclick="showPage('progress')">Progressi</button>
     <button class="nav-btn" onclick="showPage('weight')">Peso</button>
+    <button class="nav-btn" onclick="showPage('library')">Libreria</button>
     <button class="nav-btn" onclick="showPage('import')">Import</button>
     <button class="nav-btn" onclick="showPage('friends')">Amici</button>
     <button class="nav-btn" onclick="showPage('settings')">Impostazioni</button>
@@ -77,11 +82,28 @@
         <div id="dash-streak" class="streak-display"></div>
       </div>
       <div class="card"><div class="card-title">Recovery Status</div><div id="dash-recovery"></div></div>
-      <div class="card">
-        <div class="card-title">Profilo Atletico</div>
+      <div class="card clickable-card" onclick="showPage('athletic')">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">Profilo Atletico <span style="font-size:.75rem;color:var(--text2);font-weight:400">Dettagli &#8594;</span></div>
         <div class="chart-container" style="height:260px"><canvas id="chart-radar"></canvas></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ATHLETIC PROFILE DETAIL -->
+<div id="page-athletic" class="page">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+    <button class="btn btn-secondary btn-sm" onclick="showPage('dashboard')">&larr; Dashboard</button>
+    <h2 style="font-size:1.1rem;font-weight:800">Profilo Atletico</h2>
+  </div>
+  <div class="card">
+    <div class="card-title">Radar ultimi 30 giorni</div>
+    <div class="chart-container" style="height:300px"><canvas id="chart-radar-detail"></canvas></div>
+  </div>
+  <div class="card-grid" id="athletic-detail-cards"></div>
+  <div class="card">
+    <div class="card-title">Valutazione Forma Fisica</div>
+    <div id="athletic-fitness-assessment"></div>
   </div>
 </div>
 
@@ -91,7 +113,6 @@
     <div class="step-indicator" id="step-indicator">
       <div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div>
     </div>
-    <!-- Step 1: Date & Type -->
     <div class="log-step active" id="log-step-1">
       <div class="card">
         <div class="card-title">Quando e cosa?</div>
@@ -99,7 +120,6 @@
         <div class="type-cards-grid" id="sport-type-grid"></div>
       </div>
     </div>
-    <!-- Step 2: Exercises / Form -->
     <div class="log-step" id="log-step-2">
       <div id="wiz-gym-step2" style="display:none">
         <div class="card">
@@ -117,7 +137,6 @@
         </div>
       </div>
     </div>
-    <!-- Step 3: Sets (gym only) -->
     <div class="log-step" id="log-step-3">
       <div class="card">
         <div class="card-title">Serie & Carichi</div>
@@ -125,7 +144,6 @@
         <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="wizGoStep(4)">Continua &#8594;</button>
       </div>
     </div>
-    <!-- Step 4: Notes + Save -->
     <div class="log-step" id="log-step-4">
       <div class="card">
         <div class="card-title">Note & Salvataggio</div>
@@ -156,7 +174,7 @@
   <div class="card"><div class="card-title">Andamento Score</div><div class="chart-container"><canvas id="chart-scores"></canvas></div></div>
   <div class="card-grid">
     <div class="card"><div class="card-title">Volume Palestra (tonnellaggio)</div><div class="chart-container"><canvas id="chart-gym-volume"></canvas></div></div>
-    <div class="card"><div class="card-title">Pace Corsa (min/km)</div><div class="chart-container"><canvas id="chart-run-pace"></canvas></div></div>
+    <div class="card"><div class="card-title">Pace Corsa ponderato (min/km)</div><div class="chart-container"><canvas id="chart-run-pace"></canvas></div></div>
   </div>
   <div class="card"><div class="card-title">1RM Stimato (Epley)</div><div id="orm-select-container" style="margin-bottom:8px"></div><div class="chart-container"><canvas id="chart-1rm"></canvas></div></div>
   <div class="card"><div class="card-title">Heart Rate Zones (Corse)</div><div id="hr-zones-container"></div></div>
@@ -184,6 +202,43 @@
       <div class="form-group"><label>Peso Target (kg)</label><input type="number" step="0.1" id="weight-target" placeholder="70.0" onchange="saveWeightTarget()"></div>
       <div class="form-group"><label>Altezza (cm) per BMI</label><input type="number" id="weight-height" placeholder="175" onchange="saveWeightHeight()"></div>
     </div>
+  </div>
+</div>
+
+<!-- EXERCISE LIBRARY (dedicated page) -->
+<div id="page-library" class="page">
+  <div class="card">
+    <div class="card-title">Aggiungi Esercizio</div>
+    <div class="form-row">
+      <div class="form-group"><label>Nome Esercizio</label><input type="text" id="lib-name" placeholder="Squat"></div>
+      <div class="form-group"><label>Gruppo Muscolare</label><select id="lib-muscle"></select></div>
+      <div class="form-group"><label>Parametro principale</label>
+        <select id="lib-param">
+          <option value="reps">Ripetizioni (reps)</option>
+          <option value="duration">Durata (secondi)</option>
+          <option value="distance">Distanza (metri)</option>
+          <option value="calories">Calorie (kcal)</option>
+        </select>
+      </div>
+      <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary btn-sm" onclick="addExerciseToLibrary()">Aggiungi</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Gruppi Muscolari</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Gestisci i gruppi muscolari. Quelli predefiniti non si possono rimuovere.</p>
+    <div id="muscle-groups-list" style="margin-bottom:12px"></div>
+    <div class="form-row" style="margin-bottom:0">
+      <div class="form-group" style="margin-bottom:0"><input type="text" id="new-muscle-group" placeholder="Nuovo gruppo muscolare..."></div>
+      <div class="form-group" style="align-self:flex-end;margin-bottom:0"><button class="btn btn-primary btn-sm" onclick="addMuscleGroup()">Aggiungi</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Libreria Esercizi</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <input type="text" id="lib-filter" placeholder="Filtra esercizi..." oninput="renderExerciseLibrary()">
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="lib-muscle-filters"></div>
+    <div id="exercise-library-list"></div>
   </div>
 </div>
 
@@ -321,35 +376,27 @@
         </select>
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>Flessibilit&agrave; / Mobilit&agrave; (1-10)</label><input type="number" id="set-flexibility" min="1" max="10" placeholder="5" onchange="saveSettings()"></div>
+      <div class="form-group"></div>
+      <div class="form-group"></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--text2);margin-top:8px">La flessibilit&agrave; non pu&ograve; essere calcolata automaticamente. Inserisci un'auto-valutazione da 1 (scarsa) a 10 (eccellente).</p>
   </div>
   <div class="card">
     <div class="card-title">I Miei Sport</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Palestra e Corsa sono sempre attivi. Aggiungi gli sport che pratichi dal pool disponibile.</p>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Palestra e Corsa sono sempre attivi. Aggiungi gli sport che pratichi.</p>
     <div id="active-sports-list" style="margin-bottom:12px"></div>
     <div class="card-title" style="font-size:.8rem;margin-top:16px">Sport Disponibili</div>
     <div id="available-sports-pool"></div>
   </div>
   <div class="card">
-    <div class="card-title">Gruppi Muscolari</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Aggiungi gruppi muscolari personalizzati per la libreria esercizi.</p>
-    <div id="muscle-groups-list" style="margin-bottom:12px"></div>
-    <div class="form-row" style="margin-bottom:0">
-      <div class="form-group" style="margin-bottom:0"><input type="text" id="new-muscle-group" placeholder="Nuovo gruppo muscolare..."></div>
-      <div class="form-group" style="align-self:flex-end;margin-bottom:0"><button class="btn btn-primary btn-sm" onclick="addMuscleGroup()">Aggiungi</button></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Libreria Esercizi</div>
-    <div class="form-row" style="margin-bottom:12px">
-      <div class="form-group"><label>Nome Esercizio</label><input type="text" id="lib-name" placeholder="Squat"></div>
-      <div class="form-group"><label>Gruppo Muscolare</label><select id="lib-muscle"></select></div>
-      <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary btn-sm" onclick="addExerciseToLibrary()">Aggiungi</button></div>
-    </div>
-    <div id="exercise-library-list"></div>
+    <div class="card-title">Notifiche</div>
+    <div id="notifications-list"></div>
   </div>
   <div class="card">
     <div class="card-title">Info</div>
-    <p style="font-size:.85rem;color:var(--text2)">Training Analyzer v3.0</p>
+    <p style="font-size:.85rem;color:var(--text2)">Training Analyzer v3.1</p>
   </div>
 </div>
 

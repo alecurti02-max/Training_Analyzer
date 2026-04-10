@@ -505,7 +505,7 @@ function calculateStreak() {
 }
 
 // ==================== NAVIGATION ====================
-const pageMap = {dashboard:'Dashboard',log:'Log',history:'Storico',progress:'Progressi',weight:'Peso',import:'Import',friends:'Amici',settings:'Impostazioni',profile:'Profilo'};
+const pageMap = {dashboard:'Dashboard',log:'Log',history:'Storico',progress:'Progressi',weight:'Peso',library:'Libreria',import:'Import',friends:'Amici',settings:'Impostazioni',profile:'Profilo',athletic:'Profilo Atletico'};
 
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -519,10 +519,12 @@ function showPage(page) {
   if(page==='history') renderHistory();
   if(page==='progress') renderProgress();
   if(page==='weight') renderWeightPage();
-  if(page==='settings') { populateSettingsUI(); renderExerciseLibrary(); renderSportsManager(); renderMuscleGroupsManager(); }
+  if(page==='library') { renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect(); }
+  if(page==='settings') { populateSettingsUI(); renderSportsManager(); renderNotifications(); }
   if(page==='profile') renderProfile();
   if(page==='log') initLogWizard();
   if(page==='friends') renderFriendsPage();
+  if(page==='athletic') renderAthleticDetail();
 }
 
 // ==================== LOG WIZARD ====================
@@ -678,18 +680,25 @@ function renderWizExerciseList() {
 function removeWizExercise(idx) { wizExercises.splice(idx, 1); renderWizExerciseList(); }
 
 function renderWizSets() {
+  const _paramLabels={reps:'Reps',duration:'Sec',distance:'m',calories:'Kcal'};
+  const _paramPh={reps:'Reps',duration:'Secondi',distance:'Metri',calories:'Kcal'};
   document.getElementById('wiz-sets-container').innerHTML = wizExercises.map((ex, exIdx) => {
+    const lib=exercisesCache||[];
+    const libEntry=lib.find(e=>e.name===ex.name);
+    const param=libEntry?.param||'reps';
+    const paramLabel=_paramLabels[param]||'Reps';
+    const paramPh=_paramPh[param]||'Reps';
     let setsHTML = ex.sets.map((s, sIdx) =>
       `<div class="set-inline">
         <div class="set-num">${sIdx+1}</div>
-        <input type="number" placeholder="Reps" value="${s.reps||''}" onchange="wizUpdateSet(${exIdx},${sIdx},'reps',this.value)">
-        <input type="number" step="0.5" placeholder="Kg" value="${s.weight||''}" onchange="wizUpdateSet(${exIdx},${sIdx},'weight',this.value)">
+        <input type="number" placeholder="${paramPh}" value="${s.reps||''}" onchange="wizUpdateSet(${exIdx},${sIdx},'reps',this.value)">
+        ${param==='reps'?`<input type="number" step="0.5" placeholder="Kg" value="${s.weight||''}" onchange="wizUpdateSet(${exIdx},${sIdx},'weight',this.value)">`:''}
         <select onchange="wizUpdateSet(${exIdx},${sIdx},'rpe',this.value)"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
         <button class="btn-icon" onclick="wizRemoveSet(${exIdx},${sIdx})">&#128465;</button>
       </div>`
     ).join('');
     return `<div class="exercise-card">
-      <div class="exercise-card-header"><span class="exercise-card-name">${ex.name}</span><span class="exercise-card-muscle">${ex.muscle}</span></div>
+      <div class="exercise-card-header"><span class="exercise-card-name">${ex.name}</span><span class="exercise-card-muscle">${ex.muscle} <span style="font-size:.72rem;color:var(--blue)">${paramLabel}</span></span></div>
       ${setsHTML}
       <div style="display:flex;gap:6px;margin-top:4px">
         <button class="btn btn-sm btn-secondary" onclick="wizAddSet(${exIdx})">+ Serie</button>
@@ -1103,13 +1112,23 @@ function renderProgress() {
   }
 
   destroyChart('runPace');
-  const runW=workouts.filter(w=>w.type==='running'&&w._pace>0);
+  const runW=workouts.filter(w=>w.type==='running'&&w._pace>0&&w.distance>0);
   if(runW.length){
+    const byDate={};
+    runW.forEach(w=>{const d=w.date;if(!byDate[d])byDate[d]={totalDist:0,weightedPace:0};byDate[d].totalDist+=w.distance;byDate[d].weightedPace+=w._pace*w.distance;});
+    const dates=Object.keys(byDate).sort();
+    const paceData=dates.map(d=>byDate[d].weightedPace/byDate[d].totalDist);
+    const distData=dates.map(d=>byDate[d].totalDist);
     const ctx=document.getElementById('chart-run-pace')?.getContext('2d');
     if(ctx) charts.runPace=new Chart(ctx,{type:'line',
-      data:{labels:runW.map(w=>formatDate(w.date)),datasets:[{label:'Pace',data:runW.map(w=>w._pace),borderColor:'#00b894',pointBackgroundColor:'#00b894',tension:.3,fill:false}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'Pace: '+secondsToPace(ctx.raw)+'/km'}}},
-        scales:{x:{...ct,ticks:{...ct.ticks,maxTicksLimit:10}},y:{reverse:true,ticks:{...ct.ticks,callback:v=>secondsToPace(v)},grid:ct.grid}}}
+      data:{labels:dates.map(d=>formatDate(d)),
+        datasets:[
+          {label:'Pace (ponderato)',data:paceData,borderColor:'#00b894',pointBackgroundColor:'#00b894',tension:.3,fill:false,yAxisID:'y'},
+          {label:'Distanza (km)',data:distData,borderColor:'rgba(9,132,227,0.4)',backgroundColor:'rgba(9,132,227,0.1)',pointRadius:0,tension:.3,fill:true,yAxisID:'y1',type:'bar'}
+        ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:ct.textColor}},tooltip:{callbacks:{label:c=>{if(c.datasetIndex===0)return'Pace: '+secondsToPace(c.raw)+'/km';return'Distanza: '+c.raw.toFixed(1)+' km';}}}},
+        scales:{x:{...ct,ticks:{...ct.ticks,maxTicksLimit:10}},y:{reverse:true,position:'left',ticks:{...ct.ticks,callback:v=>secondsToPace(v)},grid:ct.grid},y1:{position:'right',ticks:{...ct.ticks},grid:{display:false}}}}
     });
   }
 
@@ -1272,70 +1291,112 @@ function saveWeightHeight(){
 
 // ==================== FITNESS ASSESSMENT ====================
 function getFitnessAssessment() {
-  const age = settingsCache.age || null;
   const gender = settingsCache.gender || null;
   const vo2max = settingsCache.vo2max || null;
   const resthr = settingsCache.resthr || null;
   const weight = settingsCache.bodyweight || null;
   const height = settingsCache.height || null;
-
-  let score = 0, maxScore = 0, details = [];
-
-  // VO2 Max assessment
-  if (vo2max) {
-    maxScore += 30;
-    // VO2 max norms (male, approximate)
-    let vo2score;
-    if (gender === 'F') {
-      vo2score = vo2max >= 40 ? 30 : vo2max >= 33 ? 22 : vo2max >= 27 ? 15 : 8;
-    } else {
-      vo2score = vo2max >= 50 ? 30 : vo2max >= 42 ? 22 : vo2max >= 35 ? 15 : 8;
-    }
-    score += vo2score;
-    details.push({ label: 'VO2 Max', value: vo2max + ' ml/kg/min', pct: Math.round((vo2score/30)*100), color: vo2score >= 22 ? 'var(--green)' : vo2score >= 15 ? 'var(--yellow)' : 'var(--red)' });
-  }
-
-  // Resting HR
-  if (resthr) {
-    maxScore += 20;
-    const hrScore = resthr <= 50 ? 20 : resthr <= 60 ? 16 : resthr <= 70 ? 12 : resthr <= 80 ? 8 : 4;
-    score += hrScore;
-    details.push({ label: 'FC Riposo', value: resthr + ' bpm', pct: Math.round((hrScore/20)*100), color: hrScore >= 16 ? 'var(--green)' : hrScore >= 12 ? 'var(--yellow)' : 'var(--red)' });
-  }
-
-  // BMI
-  if (weight && height) {
-    maxScore += 15;
-    const bmi = weight / ((height/100) ** 2);
-    const bmiScore = bmi >= 18.5 && bmi < 25 ? 15 : bmi >= 17 && bmi < 30 ? 10 : 5;
-    score += bmiScore;
-    details.push({ label: 'BMI', value: bmi.toFixed(1), pct: Math.round((bmiScore/15)*100), color: bmiScore >= 12 ? 'var(--green)' : bmiScore >= 8 ? 'var(--yellow)' : 'var(--red)' });
-  }
-
-  // Training consistency (last 30 days)
+  const flexibility = settingsCache.flexibility || 5;
   const now = todayStr();
   const last30 = workoutsCache.filter(w => daysBetween(now, w.date) <= 30);
-  const trainingDays = new Set(last30.map(w => w.date)).size;
-  maxScore += 20;
-  const consScore = trainingDays >= 16 ? 20 : trainingDays >= 12 ? 16 : trainingDays >= 8 ? 12 : trainingDays >= 4 ? 8 : 4;
-  score += consScore;
-  details.push({ label: 'Consistenza', value: trainingDays + ' gg/30', pct: Math.round((consScore/20)*100), color: consScore >= 16 ? 'var(--green)' : consScore >= 12 ? 'var(--yellow)' : 'var(--red)' });
+  const gymW30 = last30.filter(w => w.type === 'gym');
+  const runW30 = last30.filter(w => w.type === 'running');
+  let totalScore = 0;
+  const details = [];
 
-  // Average score
-  const avgScore = workoutsCache.length ? workoutsCache.reduce((s,w) => s + (w.scores?.overall||0), 0) / workoutsCache.length : 0;
-  maxScore += 15;
-  const perfScore = avgScore >= 8 ? 15 : avgScore >= 6.5 ? 12 : avgScore >= 5 ? 8 : 4;
-  score += perfScore;
-  details.push({ label: 'Performance', value: avgScore.toFixed(1) + '/10', pct: Math.round((perfScore/15)*100), color: perfScore >= 12 ? 'var(--green)' : perfScore >= 8 ? 'var(--yellow)' : 'var(--red)' });
+  // 1. FORZA MUSCOLARE (25%)
+  let forzaScore = 0;
+  if (gymW30.length) {
+    let relStrength = 5;
+    if (weight) {
+      let best1RM = 0;
+      workoutsCache.filter(w => w.type === 'gym').forEach(w => (w.exercises||[]).forEach(ex => {
+        if (['Squat','Panca Piana','Stacco da Terra','Military Press','Stacco Rumeno'].some(n => ex.name.includes(n))) {
+          (ex.sets||[]).forEach(s => { const orm = (s.weight||0)*(1+(s.reps||0)/30); if(orm > best1RM) best1RM = orm; });
+        }
+      }));
+      if (best1RM > 0) relStrength = Math.min(10, Math.max(1, Math.round((best1RM / weight) * 5)));
+    }
+    const recentTonnage = gymW30.reduce((s,w) => s + (w._tonnage||0), 0);
+    const gymW60_90 = workoutsCache.filter(w => w.type === 'gym' && daysBetween(now, w.date) > 30 && daysBetween(now, w.date) <= 60);
+    const prevTonnage = gymW60_90.reduce((s,w) => s + (w._tonnage||0), 0);
+    let volumeTrend = prevTonnage > 0 ? (recentTonnage >= prevTonnage ? Math.min(10, 5 + Math.round((recentTonnage/prevTonnage - 1) * 10)) : Math.max(1, Math.round((recentTonnage/prevTonnage) * 5))) : (recentTonnage > 0 ? 6 : 5);
+    const progression = gymW30.reduce((s,w) => s + (w.scores?.progression||5), 0) / gymW30.length;
+    forzaScore = (relStrength/10 * 12) + (volumeTrend/10 * 8) + (progression/10 * 5);
+  } else { forzaScore = 5; }
+  totalScore += forzaScore;
+  details.push({ label: 'Forza', value: `${Math.round(forzaScore)}/25`, pct: Math.round((forzaScore/25)*100), color: forzaScore/25 >= 0.7 ? 'var(--green)' : forzaScore/25 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: gymW30.length ? `${gymW30.length} sessioni palestra` : 'Nessun dato palestra' });
 
-  const finalPct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+  // 2. RESISTENZA CARDIOVASCOLARE (25%)
+  let cardioScore = 0;
+  let vo2Score = 5;
+  if (vo2max) { vo2Score = gender === 'F' ? (vo2max >= 40 ? 10 : vo2max >= 33 ? 7.5 : vo2max >= 27 ? 5 : 3) : (vo2max >= 50 ? 10 : vo2max >= 42 ? 7.5 : vo2max >= 35 ? 5 : 3); }
+  cardioScore += (vo2Score/10 * 12);
+  let paceScore = 5;
+  if (runW30.length >= 2) {
+    const paces = runW30.filter(w => w._pace > 0).map(w => ({ pace: w._pace, dist: w.distance || 1 }));
+    if (paces.length >= 2) {
+      const td = paces.reduce((s,p) => s + p.dist, 0);
+      const wp = paces.reduce((s,p) => s + p.pace * (p.dist/td), 0);
+      const oldRuns = workoutsCache.filter(w => w.type === 'running' && w._pace > 0 && daysBetween(now, w.date) > 30 && daysBetween(now, w.date) <= 90);
+      if (oldRuns.length) {
+        const otd = oldRuns.reduce((s,w) => s + (w.distance||1), 0);
+        const owp = oldRuns.reduce((s,w) => s + w._pace * ((w.distance||1)/otd), 0);
+        paceScore = wp <= owp ? Math.min(10, 7 + Math.round((1 - wp/owp) * 30)) : Math.max(2, Math.round((owp/wp) * 7));
+      } else { paceScore = 6; }
+    }
+  }
+  cardioScore += (paceScore/10 * 8);
+  let hrScore = 5;
+  if (resthr) { hrScore = resthr <= 50 ? 10 : resthr <= 60 ? 8 : resthr <= 70 ? 6 : resthr <= 80 ? 4 : 2; }
+  cardioScore += (hrScore/10 * 5);
+  totalScore += cardioScore;
+  details.push({ label: 'Cardio', value: `${Math.round(cardioScore)}/25`, pct: Math.round((cardioScore/25)*100), color: cardioScore/25 >= 0.7 ? 'var(--green)' : cardioScore/25 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: vo2max ? `VO2 ${vo2max} ml/kg/min` : 'Inserisci VO2 Max' });
+
+  // 3. ENDURANCE (20%)
+  let enduranceScore = 0;
+  const trainingDays30 = new Set(last30.map(w => w.date)).size;
+  enduranceScore += (Math.min(10, trainingDays30 / 2)/10 * 8);
+  const avgDuration = last30.length ? last30.reduce((s,w) => s + (w.duration||30), 0) / last30.length : 0;
+  enduranceScore += ((avgDuration >= 60 ? 10 : avgDuration >= 45 ? 8 : avgDuration >= 30 ? 6 : avgDuration >= 15 ? 4 : 2)/10 * 7);
+  const totalKm30 = runW30.reduce((s,w) => s + (w.distance||0), 0);
+  enduranceScore += ((totalKm30 >= 80 ? 10 : totalKm30 >= 50 ? 8 : totalKm30 >= 25 ? 6 : totalKm30 >= 10 ? 4 : 2)/10 * 5);
+  totalScore += enduranceScore;
+  details.push({ label: 'Endurance', value: `${Math.round(enduranceScore)}/20`, pct: Math.round((enduranceScore/20)*100), color: enduranceScore/20 >= 0.7 ? 'var(--green)' : enduranceScore/20 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `${trainingDays30} gg attivi, ${totalKm30.toFixed(0)} km` });
+
+  // 4. COMPOSIZIONE CORPOREA (15%)
+  let bodyScore = 0;
+  if (weight && height) {
+    const bmi = weight / ((height/100) ** 2);
+    bodyScore += ((bmi >= 18.5 && bmi < 25 ? 10 : bmi >= 17 && bmi < 27 ? 7 : bmi >= 15 && bmi < 30 ? 4 : 2)/10 * 10);
+    const target = parseFloat(document.getElementById('weight-target')?.value) || null;
+    if (target && weightsCache.length >= 2) {
+      const recent = weightsCache[weightsCache.length - 1].value;
+      const older = weightsCache[Math.max(0, weightsCache.length - 5)].value;
+      bodyScore += Math.abs(recent - target) < Math.abs(older - target) ? 5 : 2;
+    } else { bodyScore += 3; }
+  } else { bodyScore = 5; }
+  totalScore += bodyScore;
+  details.push({ label: 'Composizione', value: `${Math.round(bodyScore)}/15`, pct: Math.round((bodyScore/15)*100), color: bodyScore/15 >= 0.7 ? 'var(--green)' : bodyScore/15 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: weight && height ? `${weight} kg, BMI ${(weight/((height/100)**2)).toFixed(1)}` : 'Inserisci peso e altezza' });
+
+  // 5. FLESSIBILITÀ (10%)
+  let flexScore = (flexibility / 10) * 10;
+  totalScore += flexScore;
+  details.push({ label: 'Flessibilita', value: `${Math.round(flexScore)}/10`, pct: Math.round((flexScore/10)*100), color: flexScore/10 >= 0.7 ? 'var(--green)' : flexScore/10 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `Auto-valutazione: ${flexibility}/10` });
+
+  // 6. ATLETICITÀ INTEGRATA (5%)
+  const sportTypes = new Set(last30.map(w => w.type)).size;
+  let athleticScore = Math.min(5, sportTypes * 1.5 + (trainingDays30 >= 12 ? 1 : 0));
+  totalScore += athleticScore;
+  details.push({ label: 'Atleticita', value: `${Math.round(athleticScore*10)/10}/5`, pct: Math.round((athleticScore/5)*100), color: athleticScore/5 >= 0.7 ? 'var(--green)' : athleticScore/5 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `${sportTypes} sport praticati` });
+
+  const finalPct = Math.round(totalScore);
   let level, levelColor;
   if (finalPct >= 85) { level = 'Eccellente'; levelColor = 'var(--green)'; }
   else if (finalPct >= 70) { level = 'Buono'; levelColor = 'var(--blue)'; }
   else if (finalPct >= 50) { level = 'Nella media'; levelColor = 'var(--yellow)'; }
   else if (finalPct >= 30) { level = 'Da migliorare'; levelColor = 'var(--orange)'; }
   else { level = 'Insufficiente'; levelColor = 'var(--red)'; }
-
   return { score: finalPct, level, levelColor, details };
 }
 
@@ -1346,13 +1407,120 @@ function renderFitnessAssessment() {
   let html = `<div class="fitness-card">
     <div class="fitness-score" style="color:${fa.levelColor}">${fa.score}%</div>
     <div class="fitness-label" style="color:${fa.levelColor}">${fa.level}</div>
-    <div class="fitness-detail">Valutazione basata su VO2 Max, FC riposo, BMI, consistenza e performance</div>
+    <div class="fitness-detail">Valutazione basata su forza, cardio, endurance, composizione corporea, flessibilita e atleticita</div>
     <div class="fitness-bars">`;
   fa.details.forEach(d => {
-    html += `<div class="fitness-bar-row"><span class="fb-label">${d.label}</span><div class="fb-track"><div class="fb-fill" style="width:${d.pct}%;background:${d.color}"></div></div><span style="font-size:.78rem;width:70px;text-align:right;color:var(--text2)">${d.value}</span></div>`;
+    html += `<div class="fitness-bar-row"><span class="fb-label">${d.label}</span><div class="fb-track"><div class="fb-fill" style="width:${d.pct}%;background:${d.color}"></div></div><span style="font-size:.75rem;width:80px;text-align:right;color:var(--text2)">${d.value}</span></div>`;
   });
   html += '</div></div>';
   el.innerHTML = html;
+}
+
+function renderAthleticFitnessAssessment() {
+  const fa = getFitnessAssessment();
+  const el = document.getElementById('athletic-fitness-assessment');
+  if (!el) return;
+  let html = `<div class="fitness-card">
+    <div class="fitness-score" style="color:${fa.levelColor}">${fa.score}%</div>
+    <div class="fitness-label" style="color:${fa.levelColor}">${fa.level}</div>
+    <div class="fitness-bars" style="margin-top:16px">`;
+  fa.details.forEach(d => {
+    html += `<div class="fitness-bar-row"><span class="fb-label">${d.label}</span><div class="fb-track"><div class="fb-fill" style="width:${d.pct}%;background:${d.color}"></div></div><span style="font-size:.75rem;width:80px;text-align:right;color:var(--text2)">${d.value}</span></div>
+    <div style="font-size:.78rem;color:var(--text2);margin-left:90px;margin-bottom:8px">${d.sublabel||''}</div>`;
+  });
+  html += `</div></div>
+  <div class="advice-box" style="margin-top:12px">
+    <strong>Calcolati automaticamente:</strong> Forza (1RM e carichi), Cardio (pace e FC), Endurance (consistenza e km), Atleticita (varieta sport).<br>
+    <strong>Da inserire manualmente:</strong> VO2 Max, FC Riposo, Peso, Altezza, Flessibilita (in Impostazioni).
+  </div>`;
+  el.innerHTML = html;
+}
+
+// ==================== ATHLETIC DETAIL ====================
+function renderAthleticDetail() {
+  const workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const now=todayStr();
+  const last30=workouts.filter(w=>daysBetween(now,w.date)<=30);
+  const gymW=last30.filter(w=>w.type==='gym'),runW=last30.filter(w=>w.type==='running');
+  const forza=gymW.length?Math.min(10,gymW.reduce((s,w)=>s+(w.scores?.volume||5),0)/gymW.length):3;
+  const totalKm=runW.reduce((s,w)=>s+(w.distance||0),0);
+  const resistenza=Math.min(10,Math.max(2,totalKm/5));
+  const uniqueDays=new Set(last30.map(w=>w.date)).size;
+  const consistenza=Math.min(10,Math.max(2,uniqueDays/3));
+  const highRPE=last30.filter(w=>(w.rpe||w.scores?.overall||5)>=8).length;
+  const recupero=Math.max(3,10-highRPE);
+  const progressione=gymW.length?gymW.reduce((s,w)=>s+(w.scores?.progression||5),0)/gymW.length:5;
+  const muscleSet=new Set();
+  gymW.forEach(w=>(w.exercises||[]).forEach(e=>{if(e.muscle)muscleSet.add(e.muscle);}));
+  const typesUsed=new Set(last30.map(w=>w.type)).size;
+  const varieta=Math.min(10,Math.max(2,muscleSet.size+typesUsed*2));
+
+  destroyChart('radarDetail');
+  const ctx=document.getElementById('chart-radar-detail')?.getContext('2d');
+  if(ctx){
+    const isLight=!window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const textColor=isLight?'#1D1D1F':'#F5F5F7';
+    const gridColor=isLight?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.08)';
+    charts.radarDetail=new Chart(ctx,{type:'radar',
+      data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta'],
+        datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta].map(v=>Math.round(v*10)/10),
+          backgroundColor:'rgba(224,32,32,0.15)',borderColor:'#E02020',pointBackgroundColor:'#E02020',pointBorderColor:'#fff',borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
+    });
+  }
+
+  const metrics=[
+    {label:'Forza',value:forza,icon:'\u{1F4AA}',desc:gymW.length?`Basato sul volume medio di ${gymW.length} sessioni palestra negli ultimi 30 giorni. Tonnellaggio medio: ${Math.round(gymW.reduce((s,w)=>s+(w._tonnage||0),0)/gymW.length)} kg.`:'Nessuna sessione palestra negli ultimi 30 giorni.'},
+    {label:'Resistenza',value:resistenza,icon:'\u{1FAC0}',desc:`${totalKm.toFixed(1)} km totali corsi negli ultimi 30 giorni.${runW.length?' Media '+Math.round(totalKm/runW.length*10)/10+' km/sessione.':''}`},
+    {label:'Consistenza',value:consistenza,icon:'\u{1F4C5}',desc:`${uniqueDays} giorni di allenamento su 30. ${uniqueDays>=15?'Ottima costanza!':uniqueDays>=8?'Buona regolarita.':'Prova ad allenarti piu spesso.'}`},
+    {label:'Recupero',value:recupero,icon:'\u{1F50B}',desc:`${highRPE} sessioni ad alta intensita (RPE >= 8) negli ultimi 30 giorni. ${recupero>=7?'Buon equilibrio intensita/recupero.':'Attenzione al sovrallenamento.'}`},
+    {label:'Progressione',value:progressione,icon:'\u{1F4C8}',desc:gymW.length?`Score medio di progressione carichi: ${progressione.toFixed(1)}/10. ${progressione>=7?'Stai migliorando costantemente!':'Prova a incrementare gradualmente i carichi.'}`:'Serve almeno una sessione palestra.'},
+    {label:'Varieta',value:varieta,icon:'\u{1F3AF}',desc:`${muscleSet.size} gruppi muscolari allenati, ${typesUsed} sport diversi praticati. ${varieta>=7?'Allenamento ben bilanciato!':'Prova a variare di piu gli stimoli.'}`}
+  ];
+
+  document.getElementById('athletic-detail-cards').innerHTML=metrics.map(m=>`
+    <div class="card athletic-metric-card">
+      <div style="font-size:1.5rem;margin-bottom:4px">${m.icon}</div>
+      <div class="athletic-metric-value" style="color:${scoreColor(m.value)}">${m.value.toFixed(1)}</div>
+      <div class="athletic-metric-label">${m.label}</div>
+      <div class="athletic-metric-desc">${m.desc}</div>
+    </div>`).join('');
+
+  renderAthleticFitnessAssessment();
+}
+
+// ==================== NOTIFICATIONS ====================
+function sendFollowNotification(targetUid, followerName, followerPhoto) {
+  db.ref('users/' + targetUid + '/notifications/' + uid()).set({
+    type: 'follow', fromName: followerName, fromPhoto: followerPhoto, fromUid: currentUser.uid,
+    message: followerName + ' ha iniziato a seguirti', read: false, timestamp: new Date().toISOString()
+  }).catch(err => console.warn('Notifica non inviata:', err.code));
+}
+
+function renderNotifications() {
+  const el = document.getElementById('notifications-list');
+  if (!el) return;
+  userRef('notifications').orderByChild('timestamp').limitToLast(20).once('value', snap => {
+    const notifs = snap.val();
+    if (!notifs) { el.innerHTML = '<p style="color:var(--text2);font-size:.85rem">Nessuna notifica.</p>'; return; }
+    const list = Object.entries(notifs).map(([key, n]) => ({key, ...n})).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+    el.innerHTML = list.map(n => `
+      <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifRead('${n.key}')">
+        <img src="${n.fromPhoto||''}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+        <span>${n.message || 'Nuova notifica'}</span>
+        <span class="notif-time">${timeAgo(n.timestamp)}</span>
+      </div>`).join('');
+  });
+}
+
+function markNotifRead(key) { userRef('notifications/' + key + '/read').set(true); }
+
+function timeAgo(isoStr) {
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (diff < 60) return 'ora';
+  if (diff < 3600) return Math.floor(diff/60) + ' min';
+  if (diff < 86400) return Math.floor(diff/3600) + ' h';
+  return Math.floor(diff/86400) + ' gg';
 }
 
 // ==================== PROFILE ====================
@@ -1490,6 +1658,7 @@ function addFriendByUID() {
     userRef('following/' + friendUid).set({
       displayName: name, photoURL: photo, uid: friendUid, followedAt: new Date().toISOString()
     });
+    sendFollowNotification(friendUid, currentUser.displayName || 'Qualcuno', currentUser.photoURL || '');
     uidInput.value = '';
     resultEl.innerHTML = `<p style="font-size:.82rem;color:var(--green)">Ora segui ${name}!</p>`;
     toast('Ora segui ' + name + '!', 'success');
@@ -1498,11 +1667,12 @@ function addFriendByUID() {
   });
 }
 
-function toggleFollow(uid, name, photo) {
-  if (followingCache[uid]) {
-    userRef('following/' + uid).remove();
+function toggleFollow(fuid, name, photo) {
+  if (followingCache[fuid]) {
+    userRef('following/' + fuid).remove();
   } else {
-    userRef('following/' + uid).set({ displayName: name, photoURL: photo, uid: uid, followedAt: new Date().toISOString() });
+    userRef('following/' + fuid).set({ displayName: name, photoURL: photo, uid: fuid, followedAt: new Date().toISOString() });
+    sendFollowNotification(fuid, currentUser.displayName || 'Qualcuno', currentUser.photoURL || '');
   }
 }
 
@@ -1813,6 +1983,7 @@ function saveSettings(){
     gender:document.getElementById('set-gender').value||null,
     weekgoal:parseInt(document.getElementById('set-weekgoal').value)||4,
     kmgoal:parseInt(document.getElementById('set-kmgoal').value)||null,
+    flexibility:parseInt(document.getElementById('set-flexibility')?.value)||5,
     activeSports: activeSports,
     muscleGroups: muscleGroups
   };
@@ -1830,6 +2001,7 @@ function populateSettingsUI(){
   if(s.gender)document.getElementById('set-gender').value=s.gender;
   if(s.weekgoal)document.getElementById('set-weekgoal').value=s.weekgoal;
   if(s.kmgoal)document.getElementById('set-kmgoal').value=s.kmgoal;
+  if(s.flexibility){const fe=document.getElementById('set-flexibility');if(fe)fe.value=s.flexibility;}
   if(s.activeSports) activeSports = s.activeSports;
   if(s.muscleGroups) muscleGroups = s.muscleGroups;
   populateMuscleSelect();
@@ -1910,15 +2082,39 @@ function removeMuscleGroup(name) {
 function renderExerciseLibrary(){
   const lib=exercisesCache||[];
   const container=document.getElementById('exercise-library-list');if(!container)return;
-  container.innerHTML=lib.map((e,i)=>`<div class="lib-item"><span>${e.name}</span><div style="display:flex;align-items:center;gap:8px"><span class="muscle-tag">${e.muscle}</span><button class="btn-icon" onclick="removeExercise(${i})">&times;</button></div></div>`).join('');
+  const filterEl=document.getElementById('lib-filter');
+  const q=filterEl?filterEl.value.toLowerCase():'';
+  const activeFilter=document.querySelector('.lib-filter-btn.active');
+  const muscleFilter=activeFilter?activeFilter.dataset.muscle:'';
+  let filtered=lib;
+  if(q) filtered=filtered.filter(e=>e.name.toLowerCase().includes(q)||e.muscle.toLowerCase().includes(q));
+  if(muscleFilter) filtered=filtered.filter(e=>e.muscle===muscleFilter);
+  const filtersEl=document.getElementById('lib-muscle-filters');
+  if(filtersEl){
+    const muscles=[...new Set(lib.map(e=>e.muscle))];
+    filtersEl.innerHTML=`<button class="lib-filter-btn ${!muscleFilter?'active':''}" data-muscle="" onclick="setLibMuscleFilter('',this)">Tutti</button>`+
+      muscles.map(m=>`<button class="lib-filter-btn ${muscleFilter===m?'active':''}" data-muscle="${m}" onclick="setLibMuscleFilter('${m}',this)">${m}</button>`).join('');
+  }
+  const paramLabels={reps:'Ripetizioni',duration:'Durata',distance:'Distanza',calories:'Calorie'};
+  container.innerHTML=filtered.length?filtered.map(e=>{
+    const origIdx=lib.indexOf(e);
+    return`<div class="lib-item"><span>${e.name}${e.param&&e.param!=='reps'?` <span class="param-tag">${paramLabels[e.param]||e.param}</span>`:''}</span><div style="display:flex;align-items:center;gap:8px"><span class="muscle-tag">${e.muscle}</span><button class="btn-icon" onclick="removeExercise(${origIdx})">&times;</button></div></div>`;
+  }).join(''):'<p style="color:var(--text2);font-size:.85rem">Nessun esercizio trovato.</p>';
+}
+
+function setLibMuscleFilter(muscle,btn){
+  document.querySelectorAll('.lib-filter-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderExerciseLibrary();
 }
 
 function addExerciseToLibrary(){
   const name=document.getElementById('lib-name').value.trim(),muscle=document.getElementById('lib-muscle').value;
+  const param=document.getElementById('lib-param')?.value||'reps';
   if(!name){toast('Inserisci un nome!','error');return;}
   const lib=exercisesCache||[];
   if(lib.some(e=>e.name.toLowerCase()===name.toLowerCase())){toast('Esercizio gia presente!','error');return;}
-  lib.push({name,muscle});lib.sort((a,b)=>a.name.localeCompare(b.name));
+  lib.push({name,muscle,param});lib.sort((a,b)=>a.name.localeCompare(b.name));
   saveExercisesToFirebase(lib);document.getElementById('lib-name').value='';toast('Esercizio aggiunto!','success');
 }
 
