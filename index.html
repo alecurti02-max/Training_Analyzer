@@ -249,10 +249,14 @@
   </div>
   <div class="card">
     <div class="card-title">Condividi il tuo profilo</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Gli amici possono trovarti cercando il tuo nome nella sezione Amici.</p>
-    <div style="display:flex;gap:8px;align-items:center">
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Gli amici possono trovarti cercando il tuo nome oppure con il tuo UID.</p>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
       <input type="text" id="profile-link" readonly style="flex:1;font-size:.82rem">
       <button class="copy-link-btn" onclick="copyAppLink()">Copia Link</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="profile-uid" readonly style="flex:1;font-size:.78rem;font-family:monospace;color:var(--text2)">
+      <button class="copy-link-btn" onclick="copyUID()">Copia UID</button>
     </div>
   </div>
   <div class="card">
@@ -271,6 +275,14 @@
     <div class="search-box">
       <input type="text" id="friend-search" placeholder="Cerca per nome..." oninput="searchUsers(this.value)">
       <div class="search-results" id="friend-search-results"></div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <p style="font-size:.78rem;color:var(--text2);margin-bottom:8px">Oppure aggiungi direttamente con l'UID (lo trovi nel profilo dell'amico):</p>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="friend-uid-input" placeholder="Incolla UID amico..." style="flex:1;font-size:.85rem">
+        <button class="btn btn-primary btn-sm" onclick="addFriendByUID()">Aggiungi</button>
+      </div>
+      <div id="uid-add-result" style="margin-top:8px"></div>
     </div>
   </div>
   <div class="card">

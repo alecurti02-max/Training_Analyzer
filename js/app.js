@@ -117,39 +117,44 @@ function initFirebase() {
   }
 }
 
-function isMobile() {
-  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent);
-}
+let _authInitialized = false;
+let _redirectChecked = false;
 
 function setupAuth() {
   const loginBtn = document.getElementById('btn-google-login');
   const statusEl = document.getElementById('login-status');
 
-  // Handle redirect result first (for mobile)
+  statusEl.textContent = 'Caricamento...';
+
+  // Check for redirect result FIRST before doing anything
+  // This prevents the login loop on mobile Chrome
   firebase.auth().getRedirectResult().then(result => {
+    _redirectChecked = true;
     if (result.user) {
-      // User signed in via redirect
+      console.log('User from redirect:', result.user.displayName);
     }
   }).catch(err => {
-    console.warn('Redirect result error (ignorable):', err.code);
+    _redirectChecked = true;
+    console.warn('Redirect result:', err.code);
   });
 
   loginBtn.onclick = () => {
     statusEl.textContent = 'Connessione in corso...';
     const provider = new firebase.auth.GoogleAuthProvider();
-    if (isMobile()) {
-      // Use redirect on mobile to avoid popup blockers
-      firebase.auth().signInWithRedirect(provider);
-    } else {
-      firebase.auth().signInWithPopup(provider).catch(err => {
-        // Fallback to redirect if popup fails
-        if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-          firebase.auth().signInWithRedirect(provider);
-        } else {
-          statusEl.textContent = 'Errore: ' + err.message;
-        }
-      });
-    }
+    // Always use popup — works on both desktop and mobile
+    // signInWithRedirect has storage partitioning issues on Chrome Android
+    firebase.auth().signInWithPopup(provider).catch(err => {
+      console.warn('Popup error:', err.code);
+      if (err.code === 'auth/popup-blocked') {
+        // Only redirect as absolute last resort
+        statusEl.textContent = 'Popup bloccato. Reindirizzamento...';
+        firebase.auth().signInWithRedirect(provider);
+      } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        statusEl.textContent = 'Login annullato. Riprova.';
+      } else {
+        statusEl.textContent = 'Errore: ' + err.message;
+      }
+    });
   };
 
   firebase.auth().onAuthStateChanged(user => {
@@ -161,12 +166,28 @@ function setupAuth() {
         avatar.src = user.photoURL;
         avatar.style.display = 'block';
       }
+      statusEl.textContent = '';
       showScreen('app');
-      createUserProfile(user);
-      subscribeToData();
+      if (!_authInitialized) {
+        _authInitialized = true;
+        createUserProfile(user);
+        subscribeToData();
+      }
     } else {
       currentUser = null;
-      showScreen('login');
+      // Wait a moment for redirect result to resolve before showing login
+      // This prevents flash of login screen on mobile redirect return
+      const showLogin = () => {
+        if (!currentUser) {
+          statusEl.textContent = '';
+          showScreen('login');
+        }
+      };
+      if (_redirectChecked) {
+        showLogin();
+      } else {
+        setTimeout(showLogin, 1500);
+      }
     }
   });
 }
@@ -1341,6 +1362,7 @@ function renderProfile() {
   document.getElementById('profile-name').textContent=currentUser.displayName||'Utente';
   document.getElementById('profile-email').textContent=currentUser.email||'';
   document.getElementById('profile-link').value=window.location.href;
+  document.getElementById('profile-uid').value=currentUser.uid;
   userRef('profile/createdAt').once('value',snap=>{
     const val=snap.val();
     if(val) document.getElementById('profile-since').textContent='Registrato dal '+formatDate(val);
@@ -1348,6 +1370,7 @@ function renderProfile() {
   renderFitnessAssessment();
 }
 function copyAppLink(){navigator.clipboard.writeText(window.location.href).then(()=>toast('Link copiato!')).catch(()=>toast('Errore copia','error'));}
+function copyUID(){navigator.clipboard.writeText(currentUser.uid).then(()=>toast('UID copiato!')).catch(()=>toast('Errore copia','error'));}
 
 // ==================== FRIENDS ====================
 function renderFriendsPage() {
@@ -1356,9 +1379,14 @@ function renderFriendsPage() {
 }
 
 function loadPublicUsers() {
+  // Try publicUsers node first
   db.ref('publicUsers').once('value', snap => {
     publicUsersCache = snap.val() || {};
-  }).catch(() => { publicUsersCache = {}; });
+    console.log('publicUsers loaded:', Object.keys(publicUsersCache).length);
+  }).catch(err => {
+    console.warn('publicUsers read failed (rules?):', err.code);
+    publicUsersCache = {};
+  });
 }
 
 let _searchTimeout = null;
@@ -1368,34 +1396,60 @@ function searchUsers(query) {
 
   clearTimeout(_searchTimeout);
   _searchTimeout = setTimeout(() => {
-    // First try local cache
     const q = query.toLowerCase();
+
+    // Search in local cache first
     let results = Object.values(publicUsersCache).filter(u =>
       u.uid !== currentUser.uid && (u.displayName||'').toLowerCase().includes(q)
     ).slice(0, 8);
 
     if (results.length) {
       renderSearchResults(results);
-    } else {
-      // Fallback: query Firebase directly
-      db.ref('publicUsers').orderByChild('displayName').once('value', snap => {
-        const all = snap.val() || {};
-        publicUsersCache = all; // refresh cache
-        results = Object.values(all).filter(u =>
-          u.uid !== currentUser.uid && (u.displayName||'').toLowerCase().includes(q)
-        ).slice(0, 8);
-        if (results.length) {
-          renderSearchResults(results);
-        } else {
-          resultsEl.innerHTML = '<div style="padding:14px;color:var(--text2);font-size:.85rem">Nessun utente trovato</div>';
-          resultsEl.className = 'search-results show';
-        }
-      }).catch(() => {
-        resultsEl.innerHTML = '<div style="padding:14px;color:var(--text2);font-size:.85rem">Nessun utente trovato</div>';
-        resultsEl.className = 'search-results show';
-      });
+      return;
     }
+
+    // Fallback 1: try refreshing publicUsers from Firebase
+    resultsEl.innerHTML = '<div style="padding:14px;color:var(--text2);font-size:.85rem">Ricerca...</div>';
+    resultsEl.className = 'search-results show';
+
+    db.ref('publicUsers').once('value').then(snap => {
+      const all = snap.val() || {};
+      publicUsersCache = all;
+      results = Object.values(all).filter(u =>
+        u.uid !== currentUser.uid && (u.displayName||'').toLowerCase().includes(q)
+      ).slice(0, 8);
+      if (results.length) {
+        renderSearchResults(results);
+      } else {
+        // Fallback 2: search in publicStats (always readable by auth users)
+        return searchViaPublicStats(q);
+      }
+    }).catch(() => {
+      // publicUsers node not readable — search via publicStats
+      return searchViaPublicStats(q);
+    });
   }, 300);
+}
+
+function searchViaPublicStats(query) {
+  const resultsEl = document.getElementById('friend-search-results');
+  // We can read publicStats of each user, but we need UIDs
+  // Try reading all following users' friends, or known UIDs
+  // As a practical fallback, scan users we already know about
+  const knownUsers = {
+    ...publicUsersCache,
+    ...Object.fromEntries(Object.entries(followingCache).map(([uid, f]) => [uid, f]))
+  };
+  const results = Object.values(knownUsers).filter(u =>
+    u.uid !== currentUser.uid && (u.displayName||'').toLowerCase().includes(query)
+  ).slice(0, 8);
+
+  if (results.length) {
+    renderSearchResults(results);
+  } else {
+    resultsEl.innerHTML = '<div style="padding:14px;color:var(--text2);font-size:.85rem">Nessun utente trovato. Usa il campo UID qui sotto per aggiungere un amico direttamente.</div>';
+    resultsEl.className = 'search-results show';
+  }
 }
 
 function renderSearchResults(results) {
@@ -1411,6 +1465,37 @@ function renderSearchResults(results) {
     </div>`;
   }).join('');
   resultsEl.className = 'search-results show';
+}
+
+function addFriendByUID() {
+  const uidInput = document.getElementById('friend-uid-input');
+  const resultEl = document.getElementById('uid-add-result');
+  const friendUid = uidInput.value.trim();
+  if (!friendUid) { toast('Inserisci un UID!', 'error'); return; }
+  if (friendUid === currentUser.uid) { toast('Non puoi aggiungere te stesso!', 'error'); return; }
+  if (followingCache[friendUid]) { toast('Segui gia questo utente!', 'error'); return; }
+
+  resultEl.innerHTML = '<p style="font-size:.82rem;color:var(--text2)">Verifica in corso...</p>';
+
+  // Try to read their publicStats to verify they exist
+  db.ref('users/' + friendUid + '/publicStats').once('value', snap => {
+    const stats = snap.val();
+    if (!stats) {
+      resultEl.innerHTML = '<p style="font-size:.82rem;color:var(--red)">Utente non trovato. Verifica l\'UID.</p>';
+      return;
+    }
+    // Found! Follow them
+    const name = stats.displayName || 'Utente';
+    const photo = stats.photoURL || '';
+    userRef('following/' + friendUid).set({
+      displayName: name, photoURL: photo, uid: friendUid, followedAt: new Date().toISOString()
+    });
+    uidInput.value = '';
+    resultEl.innerHTML = `<p style="font-size:.82rem;color:var(--green)">Ora segui ${name}!</p>`;
+    toast('Ora segui ' + name + '!', 'success');
+  }).catch(err => {
+    resultEl.innerHTML = '<p style="font-size:.82rem;color:var(--red)">Errore: ' + err.message + '</p>';
+  });
 }
 
 function toggleFollow(uid, name, photo) {
