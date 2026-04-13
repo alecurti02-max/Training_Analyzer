@@ -1,0 +1,6 @@
+{
+  "name": "training-analyzer-client",
+  "version": "3.2.0",
+  "description": "Training Analyzer — Client (Vanilla JS, no build step)",
+  "private": true
+}

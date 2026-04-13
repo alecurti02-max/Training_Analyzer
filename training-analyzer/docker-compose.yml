@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: training_analyzer
+      POSTGRES_USER: ta_user
+      POSTGRES_PASSWORD: ta_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ta_user -d training_analyzer"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://ta_user:ta_pass@db:5432/training_analyzer
+    volumes:
+      - ./server/src:/app/src
+      - ./client:/app/public
+
+volumes:
+  pgdata:
