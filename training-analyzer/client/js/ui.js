@@ -1104,6 +1104,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Make nav-user clickable → go to profile
+  const navUser = document.getElementById('nav-user');
+  if (navUser) {
+    navUser.style.cursor = 'pointer';
+    navUser.addEventListener('click', () => showPage('profile'));
+  }
+
+  // Logout button (data-action="signOut")
+  document.querySelectorAll('[data-action="signOut"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await logout();
+      showScreen('login');
+      setupLoginUI();
+    });
+  });
+
   // Modal close on outside click
   const modal = document.getElementById('workout-modal');
   if (modal) modal.addEventListener('click', function(e) { if(e.target===this) closeModal(); });
