@@ -1096,6 +1096,14 @@ window.markNotifRead = () => {}; // placeholder - notifications handled server-s
 
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', () => {
+  // Navigation: click on nav buttons and any element with data-page
+  document.querySelectorAll('.nav-btn[data-page], [data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = btn.dataset.page;
+      if (page) showPage(page);
+    });
+  });
+
   // Modal close on outside click
   const modal = document.getElementById('workout-modal');
   if (modal) modal.addEventListener('click', function(e) { if(e.target===this) closeModal(); });
