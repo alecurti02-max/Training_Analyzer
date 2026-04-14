@@ -1124,18 +1124,32 @@ document.addEventListener('DOMContentLoaded', () => {
     navUser.addEventListener('click', () => showPage('profile'));
   }
 
-  // data-action buttons
+  // data-action buttons — universal delegated handler
+  const actionMap = {
+    signOut: () => logout().then(() => { showScreen('login'); setupLoginUI(); }),
+    exportAllData: () => window.exportAllData(),
+    triggerImportJSON: () => document.getElementById('import-json')?.click(),
+    openExerciseSheet: () => openExerciseSheet(),
+    closeExerciseSheet: () => closeExerciseSheet(),
+    wizGoStep3: () => wizGoStep(3),
+    wizGoStep4: () => wizGoStep(4),
+    wizSaveWorkout: () => wizSaveWorkout(),
+    wizGoBack: () => wizGoBack(),
+    saveWeight: () => saveWeight(),
+    addExerciseToLibrary: () => addExerciseToLibrary(),
+    addMuscleGroup: () => addMuscleGroup(),
+    copyAppLink: () => copyAppLink(),
+    copyUID: () => copyUID(),
+    addFriendByUID: () => window.addFriendByUID(),
+    compareSelected: () => window.compareSelected(),
+    closeModal: () => closeModal(),
+    saveSettings: () => saveSettings(),
+  };
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
-    const action = btn.dataset.action;
-    if (action === 'signOut') {
-      logout().then(() => { showScreen('login'); setupLoginUI(); });
-    } else if (action === 'exportAllData') {
-      window.exportAllData();
-    } else if (action === 'triggerImportJSON') {
-      document.getElementById('import-json')?.click();
-    }
+    const handler = actionMap[btn.dataset.action];
+    if (handler) handler();
   });
 
   // Import JSON file input
@@ -1145,6 +1159,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target.files[0]) window.importJSONBackup(e.target.files[0]);
     });
   }
+
+  // Settings auto-save on change
+  document.querySelectorAll('[data-settings]').forEach(input => {
+    input.addEventListener('change', () => saveSettings());
+  });
+
+  // Weight target and height inputs (save on change)
+  const weightTarget = document.getElementById('weight-target');
+  if (weightTarget) weightTarget.addEventListener('change', () => saveWeightTarget());
+  const weightHeight = document.getElementById('weight-height');
+  if (weightHeight) weightHeight.addEventListener('change', () => saveWeightHeight());
 
   // Modal close on outside click
   const modal = document.getElementById('workout-modal');
@@ -1169,21 +1194,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // File inputs
-  const gpxInput = document.getElementById('gpx-input');
+  // File inputs (HTML IDs: gpx-file, csv-file, health-file, fit-file)
+  const gpxInput = document.getElementById('gpx-file') || document.getElementById('gpx-input');
   if(gpxInput) gpxInput.addEventListener('change', (e) => window.handleGPXFiles(e.target.files));
 
-  const csvInput = document.getElementById('csv-input');
+  const csvInput = document.getElementById('csv-file') || document.getElementById('csv-input');
   if(csvInput) csvInput.addEventListener('change', (e) => window.handleCSVFile(e.target.files[0]));
 
-  const healthInput = document.getElementById('health-input');
+  const healthInput = document.getElementById('health-file') || document.getElementById('health-input');
   if(healthInput) healthInput.addEventListener('change', (e) => window.handleAppleHealthFile(e.target.files[0]));
 
-  const fitInput = document.getElementById('fit-input');
+  const fitInput = document.getElementById('fit-file') || document.getElementById('fit-input');
   if(fitInput) fitInput.addEventListener('change', (e) => window.handleFITFile(e.target.files[0]));
 
   const jsonInput = document.getElementById('json-input');
   if(jsonInput) jsonInput.addEventListener('change', (e) => window.importJSONBackup(e.target.files[0]));
+
+  // Drop zones: click to open file picker
+  const dropFileMap = { 'gpx-drop': 'gpx-file', 'csv-drop': 'csv-file', 'health-drop': 'health-file', 'fit-drop': 'fit-file' };
+  Object.entries(dropFileMap).forEach(([dropId, fileId]) => {
+    const dropEl = document.getElementById(dropId);
+    if (dropEl) dropEl.addEventListener('click', () => document.getElementById(fileId)?.click());
+  });
 
   // Close search results on click outside
   document.addEventListener('click', e => {
