@@ -4,48 +4,49 @@ const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcryptjs');
 const { User, Settings } = require('../models');
 
-// ── Google OAuth2 ──
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
-    },
-    async (_accessToken, _refreshToken, profile, done) => {
-      try {
-        const email = profile.emails?.[0]?.value;
-        if (!email) return done(null, false, { message: 'No email from Google' });
+// ── Google OAuth2 (only if credentials are configured) ──
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      },
+      async (_accessToken, _refreshToken, profile, done) => {
+        try {
+          const email = profile.emails?.[0]?.value;
+          if (!email) return done(null, false, { message: 'No email from Google' });
 
-        let user = await User.findOne({ where: { email } });
+          let user = await User.findOne({ where: { email } });
 
-        if (user) {
-          // Update Google info on existing user (allow linking local→google)
-          if (!user.photoURL || !user.displayName) {
-            await user.update({
-              displayName: user.displayName || profile.displayName,
-              photoURL: user.photoURL || profile.photos?.[0]?.value,
+          if (user) {
+            if (!user.photoURL || !user.displayName) {
+              await user.update({
+                displayName: user.displayName || profile.displayName,
+                photoURL: user.photoURL || profile.photos?.[0]?.value,
+              });
+            }
+          } else {
+            user = await User.create({
+              email,
+              displayName: profile.displayName,
+              photoURL: profile.photos?.[0]?.value || null,
+              provider: 'google',
             });
+            await Settings.create({ userId: user.uid });
           }
-        } else {
-          // Create new user
-          user = await User.create({
-            email,
-            displayName: profile.displayName,
-            photoURL: profile.photos?.[0]?.value || null,
-            provider: 'google',
-          });
-          // Create default settings
-          await Settings.create({ userId: user.uid });
-        }
 
-        return done(null, user);
-      } catch (err) {
-        return done(err);
+          return done(null, user);
+        } catch (err) {
+          return done(err);
+        }
       }
-    }
-  )
-);
+    )
+  );
+} else {
+  console.warn('Google OAuth not configured — Google login disabled');
+}
 
 // ── Local (email + password) ──
 passport.use(

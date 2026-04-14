@@ -4,11 +4,19 @@ const required = [
   'DATABASE_URL',
   'JWT_SECRET',
   'JWT_REFRESH_SECRET',
+];
+
+const optional = [
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
   'GOOGLE_CALLBACK_URL',
   'CLIENT_ORIGIN',
 ];
+
+const missingOptional = optional.filter((key) => !process.env[key]);
+if (missingOptional.length > 0) {
+  console.warn(`Warning: missing optional env vars: ${missingOptional.join(', ')} — Google OAuth disabled`);
+}
 
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length > 0) {
