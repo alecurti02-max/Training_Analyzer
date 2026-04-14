@@ -276,31 +276,45 @@ export function exportAllData(caches) {
 }
 
 export function importJSONBackup(file, callbacks) {
-  if(!file)return;const reader=new FileReader();
+  if(!file)return;
+  if(!confirm('Questo cancellerà tutti i dati esistenti e li sostituirà con il backup. Continuare?')) return;
+  const reader=new FileReader();
   reader.onload=async e=>{
     try{
       const data=JSON.parse(e.target.result);
+      toast('Importazione in corso...','');
+
+      // Delete existing data first
+      await api.del('/api/workouts').catch(()=>{});
+
       if(data.workouts) {
         const workouts = Array.isArray(data.workouts) ? data.workouts : Object.values(data.workouts);
+        let imported = 0;
         for (const w of workouts) {
-          // Wrap for API: server expects { type, date, data: {...} }
-          const { type, date, id, ...rest } = w;
+          const { type, date, id, _tonnage, ...rest } = w;
           await api.post('/api/workouts', { type: type || 'gym', date: date || new Date().toISOString().slice(0,10), data: rest });
+          imported++;
         }
+        toast(`${imported} allenamenti importati`, 'success');
       }
       if(data.settings) await api.put('/api/settings', data.settings);
       if(data.exercises) {
-        for (const ex of data.exercises) {
+        const exercises = Array.isArray(data.exercises) ? data.exercises : Object.values(data.exercises);
+        for (const ex of exercises) {
           await api.post('/api/exercises', ex);
         }
       }
       if(data.weights) {
-        for (const w of data.weights) {
+        const weights = Array.isArray(data.weights) ? data.weights : Object.values(data.weights);
+        for (const w of weights) {
           await api.post('/api/weights', w);
         }
       }
-      toast('Backup importato!','success');
+      toast('Backup importato con successo!','success');
       if (callbacks?.onImported) callbacks.onImported();
-    }catch(err){toast('Errore nel file JSON','error');}
+    }catch(err){
+      console.error('Import error:', err);
+      toast('Errore nell\'importazione: ' + (err.message||''),'error');
+    }
   };reader.readAsText(file);
 }

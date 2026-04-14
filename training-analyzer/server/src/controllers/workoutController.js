@@ -155,4 +155,13 @@ async function importFile(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, destroy, importFile, upload };
+async function destroyAll(req, res, next) {
+  try {
+    const count = await Workout.destroy({ where: { userId: req.user.uid } });
+    res.json({ deleted: count });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, getById, create, update, destroy, destroyAll, importFile, upload };

@@ -74,7 +74,7 @@ function updateSyncStatus() {
 async function loadAllData() {
   try {
     const [workoutsRes, settingsRes, exercisesRes, weightsRes, followingRes] = await Promise.all([
-      api.get('/api/workouts').catch(() => []),
+      api.get('/api/workouts?limit=200').catch(() => []),
       api.get('/api/settings').catch(() => ({})),
       api.get('/api/exercises').catch(() => null),
       api.get('/api/weights').catch(() => []),
