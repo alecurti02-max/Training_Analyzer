@@ -1111,14 +1111,27 @@ document.addEventListener('DOMContentLoaded', () => {
     navUser.addEventListener('click', () => showPage('profile'));
   }
 
-  // Logout button (data-action="signOut")
-  document.querySelectorAll('[data-action="signOut"]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await logout();
-      showScreen('login');
-      setupLoginUI();
-    });
+  // data-action buttons
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'signOut') {
+      logout().then(() => { showScreen('login'); setupLoginUI(); });
+    } else if (action === 'exportAllData') {
+      window.exportAllData();
+    } else if (action === 'triggerImportJSON') {
+      document.getElementById('import-json')?.click();
+    }
   });
+
+  // Import JSON file input
+  const importJsonInput = document.getElementById('import-json');
+  if (importJsonInput) {
+    importJsonInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) window.importJSONBackup(e.target.files[0]);
+    });
+  }
 
   // Modal close on outside click
   const modal = document.getElementById('workout-modal');
