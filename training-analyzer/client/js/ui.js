@@ -81,7 +81,19 @@ async function loadAllData() {
       api.get('/api/users/me/following').catch(() => ({}))
     ]);
 
-    workoutsCache = Array.isArray(workoutsRes) ? workoutsRes : (workoutsRes ? Object.values(workoutsRes) : []);
+    // Normalize workouts: server returns { workouts: [...] } with data in JSONB .data field
+    const rawWorkouts = Array.isArray(workoutsRes) ? workoutsRes
+      : (workoutsRes?.workouts ? workoutsRes.workouts
+      : (workoutsRes ? Object.values(workoutsRes) : []));
+    // Flatten: merge .data JSONB into top-level fields so the rest of the app works
+    workoutsCache = rawWorkouts.map(w => {
+      const flat = { ...w, ...(w.data || {}) };
+      // Keep the DB id accessible
+      flat.id = w.id;
+      flat.type = w.type;
+      flat.date = w.date;
+      return flat;
+    });
     // Compute tonnage for gym workouts
     workoutsCache.forEach(w => {
       if (w.type === 'gym' && !w._tonnage) {
@@ -156,7 +168,8 @@ function onDataChanged() {
 
 // ==================== SAVE HELPERS (API calls) ====================
 async function saveWorkout(workout) {
-  await api.post('/api/workouts', workout);
+  const { type, date, ...rest } = workout;
+  await api.post('/api/workouts', { type, date, data: rest });
 }
 
 async function deleteWorkout(id) {

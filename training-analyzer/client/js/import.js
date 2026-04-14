@@ -281,8 +281,11 @@ export function importJSONBackup(file, callbacks) {
     try{
       const data=JSON.parse(e.target.result);
       if(data.workouts) {
-        for (const w of data.workouts) {
-          await api.post('/api/workouts', w);
+        const workouts = Array.isArray(data.workouts) ? data.workouts : Object.values(data.workouts);
+        for (const w of workouts) {
+          // Wrap for API: server expects { type, date, data: {...} }
+          const { type, date, id, ...rest } = w;
+          await api.post('/api/workouts', { type: type || 'gym', date: date || new Date().toISOString().slice(0,10), data: rest });
         }
       }
       if(data.settings) await api.put('/api/settings', data.settings);
