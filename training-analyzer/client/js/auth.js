@@ -67,25 +67,26 @@ export function setupLoginUI() {
     };
   }
 
-  // Tab switching for login/register
-  const tabBtns = document.querySelectorAll('.auth-tab-btn');
+  // Tab switching for login/register (supports both class conventions)
+  const tabBtns = document.querySelectorAll('.auth-tab-btn, .login-tab');
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       tabBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      document.querySelectorAll('.auth-tab-panel').forEach(p => p.classList.remove('active'));
-      const panel = document.getElementById('auth-panel-' + btn.dataset.tab);
+      document.querySelectorAll('.auth-tab-panel, .login-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('auth-panel-' + btn.dataset.tab)
+        || document.getElementById('login-' + btn.dataset.tab);
       if (panel) panel.classList.add('active');
     });
   });
 
-  // Email login form
-  const loginForm = document.getElementById('email-login-form');
+  // Email login form (supports both ID conventions)
+  const loginForm = document.getElementById('email-login-form') || document.getElementById('login-form');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-password').value;
+      const email = (document.getElementById('login-email') || document.getElementById('login-email-input'))?.value;
+      const password = (document.getElementById('login-password') || document.getElementById('login-password-input'))?.value;
       if (statusEl) statusEl.textContent = 'Accesso in corso...';
       try {
         await login(email, password);
@@ -96,14 +97,14 @@ export function setupLoginUI() {
     });
   }
 
-  // Register form
-  const registerForm = document.getElementById('email-register-form');
+  // Register form (supports both ID conventions)
+  const registerForm = document.getElementById('email-register-form') || document.getElementById('register-form');
   if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('register-email').value;
-      const password = document.getElementById('register-password').value;
-      const displayName = document.getElementById('register-name').value;
+      const email = (document.getElementById('register-email') || document.getElementById('reg-email'))?.value;
+      const password = (document.getElementById('register-password') || document.getElementById('reg-password'))?.value;
+      const displayName = (document.getElementById('register-name') || document.getElementById('reg-name'))?.value;
       if (statusEl) statusEl.textContent = 'Registrazione in corso...';
       try {
         await register(email, password, displayName);
@@ -111,6 +112,18 @@ export function setupLoginUI() {
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Errore: ' + (err.message || 'Registrazione fallita');
       }
+    });
+  }
+
+  // Toggle show register form
+  const showRegLink = document.getElementById('show-register');
+  if (showRegLink) {
+    showRegLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const regForm = document.getElementById('register-form');
+      const loginF = document.getElementById('login-form');
+      if (regForm) regForm.style.display = regForm.style.display === 'none' ? 'block' : 'none';
+      if (loginF) loginF.style.display = loginF.style.display === 'none' ? 'block' : 'none';
     });
   }
 }
