@@ -680,7 +680,7 @@ function showWorkoutDetail(id) {
       onDataChanged();
     }
   };
-  document.getElementById('modal-edit-btn').onclick=()=>{ closeModal(); editWorkout(id); };
+  document.getElementById('modal-edit-btn').onclick=()=>{ editWorkout(id); };
   document.getElementById('modal-delete-btn').style.display='';
   document.getElementById('modal-edit-btn').style.display='';
   document.getElementById('workout-modal').classList.add('show');
@@ -1032,21 +1032,6 @@ function renderAthleticDetail() {
   const typesUsed=new Set(last30.map(w=>w.type)).size;
   const varieta=Math.min(10,Math.max(2,muscleSet.size+typesUsed*2));
 
-  destroyChart('radarDetail');
-  const ctx=document.getElementById('chart-radar-detail')?.getContext('2d');
-  if(ctx){
-    const isLight=!window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const textColor=isLight?'#1D1D1F':'#F5F5F7';
-    const gridColor=isLight?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.08)';
-    // Access Chart.js from global
-    new Chart(ctx,{type:'radar',
-      data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta','Proporzioni'],
-        datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta,proporzioni].map(v=>Math.round(v*10)/10),
-          backgroundColor:'rgba(224,32,32,0.15)',borderColor:'#E02020',pointBackgroundColor:'#E02020',pointBorderColor:'#fff',borderWidth:2}]},
-      options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
-    });
-  }
-
   // Proporzioni corporee (dalle circonferenze in settings)
   const circ = {
     chest: settingsCache.circChest, waist: settingsCache.circWaist, hips: settingsCache.circHips,
@@ -1058,19 +1043,16 @@ function renderAthleticDetail() {
   let circDesc = 'Inserisci le circonferenze corporee nelle Impostazioni per una valutazione completa.';
   if (circCount >= 3) {
     let circScore = 5;
-    // Waist-to-hip ratio (ideale: M < 0.9, F < 0.8)
     if (circ.waist && circ.hips) {
       const whr = circ.waist / circ.hips;
       const isMale = settingsCache.gender !== 'F';
       const idealWHR = isMale ? 0.9 : 0.8;
       circScore += whr <= idealWHR ? 2 : (whr <= idealWHR + 0.1 ? 1 : -1);
     }
-    // Shoulder-to-waist ratio (piu alto = piu atletico)
     if (circ.shoulders && circ.waist) {
       const swr = circ.shoulders / circ.waist;
       circScore += swr >= 1.6 ? 2 : (swr >= 1.4 ? 1 : 0);
     }
-    // Arm symmetry and development
     if (circ.bicep) circScore += circ.bicep >= 35 ? 1 : 0;
     proporzioni = Math.min(10, Math.max(2, circScore));
     const parts = [];
@@ -1078,6 +1060,20 @@ function renderAthleticDetail() {
     if (circ.shoulders && circ.waist) parts.push(`Spalle/Vita: ${(circ.shoulders/circ.waist).toFixed(2)}`);
     parts.push(`${circCount} misurazioni inserite`);
     circDesc = parts.join(' | ') + '. ' + (proporzioni >= 7 ? 'Ottime proporzioni atletiche!' : 'Continua a lavorare sulle proporzioni.');
+  }
+
+  destroyChart('radarDetail');
+  const ctx=document.getElementById('chart-radar-detail')?.getContext('2d');
+  if(ctx){
+    const isLight=!window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const textColor=isLight?'#1D1D1F':'#F5F5F7';
+    const gridColor=isLight?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.08)';
+    new Chart(ctx,{type:'radar',
+      data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta','Proporzioni'],
+        datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta,proporzioni].map(v=>Math.round(v*10)/10),
+          backgroundColor:'rgba(224,32,32,0.15)',borderColor:'#E02020',pointBackgroundColor:'#E02020',pointBorderColor:'#fff',borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
+    });
   }
 
   const metrics=[
