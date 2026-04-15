@@ -172,7 +172,16 @@ function onDataChanged() {
 // ==================== SAVE HELPERS (API calls) ====================
 async function saveWorkout(workout) {
   const { type, date, ...rest } = workout;
-  await api.post('/api/workouts', { type, date, data: rest });
+  if (editingWorkoutId) {
+    // Update existing workout
+    await api.put('/api/workouts/' + editingWorkoutId, { type, date, data: rest });
+    // Update cache
+    const idx = workoutsCache.findIndex(w => w.id === editingWorkoutId);
+    if (idx !== -1) workoutsCache[idx] = { ...workoutsCache[idx], ...workout };
+    editingWorkoutId = null;
+  } else {
+    await api.post('/api/workouts', { type, date, data: rest });
+  }
 }
 
 async function deleteWorkout(id) {
@@ -680,6 +689,9 @@ function showWorkoutDetail(id) {
       onDataChanged();
     }
   };
+  document.getElementById('modal-edit-btn').onclick=()=>{ closeModal(); editWorkout(id); };
+  document.getElementById('modal-delete-btn').style.display='';
+  document.getElementById('modal-edit-btn').style.display='';
   document.getElementById('workout-modal').classList.add('show');
   fetchPubMedForWorkout(w).then(articles=>{
     const el=document.getElementById('modal-pubmed');
@@ -688,6 +700,49 @@ function showWorkoutDetail(id) {
 }
 
 function closeModal(){document.getElementById('workout-modal').classList.remove('show');}
+
+// Edit existing workout — pre-populate wizard, save via PUT
+let editingWorkoutId = null;
+
+function editWorkout(id) {
+  const w = workoutsCache.find(x => x.id === id);
+  if (!w) return;
+  editingWorkoutId = id;
+  showPage('log');
+
+  // Set date and type
+  const dateEl = document.getElementById('wiz-date');
+  if (dateEl) dateEl.value = w.date;
+  wizType = w.type;
+  selectWorkoutType(w.type);
+
+  // Pre-populate fields based on type
+  if (w.type === 'gym') {
+    // Pre-populate exercises
+    wizExercises = (w.exercises || []).map(ex => ({
+      name: ex.name, muscle: ex.muscle, param: ex.param || 'reps',
+      sets: ex.sets ? ex.sets.map(s => ({ ...s })) : [{ reps: 0, weight: 0 }]
+    }));
+    renderWizExercises();
+    wizGoStep(3);
+  } else {
+    // Pre-populate sport-specific fields
+    const tmpl = SPORT_TEMPLATES[w.type];
+    if (tmpl && tmpl.fields) {
+      setTimeout(() => {
+        tmpl.fields.forEach(key => {
+          const el = document.getElementById('wiz-field-' + key);
+          if (el && w[key] !== undefined) {
+            el.value = w[key];
+          }
+        });
+      }, 50);
+    }
+    wizGoStep(2);
+  }
+  toast('Modifica allenamento — salva per aggiornare', 'success');
+}
+window.editWorkout = editWorkout;
 
 // ==================== PROGRESS ====================
 function renderProgress() {
@@ -828,11 +883,44 @@ function renderAthleticDetail() {
     const gridColor=isLight?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.08)';
     // Access Chart.js from global
     new Chart(ctx,{type:'radar',
-      data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta'],
-        datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta].map(v=>Math.round(v*10)/10),
+      data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta','Proporzioni'],
+        datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta,proporzioni].map(v=>Math.round(v*10)/10),
           backgroundColor:'rgba(224,32,32,0.15)',borderColor:'#E02020',pointBackgroundColor:'#E02020',pointBorderColor:'#fff',borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
     });
+  }
+
+  // Proporzioni corporee (dalle circonferenze in settings)
+  const circ = {
+    chest: settingsCache.circChest, waist: settingsCache.circWaist, hips: settingsCache.circHips,
+    bicep: settingsCache.circBicep, thigh: settingsCache.circThigh, calf: settingsCache.circCalf,
+    neck: settingsCache.circNeck, shoulders: settingsCache.circShoulders
+  };
+  const circCount = Object.values(circ).filter(v => v && v > 0).length;
+  let proporzioni = 5; // default
+  let circDesc = 'Inserisci le circonferenze corporee nelle Impostazioni per una valutazione completa.';
+  if (circCount >= 3) {
+    let circScore = 5;
+    // Waist-to-hip ratio (ideale: M < 0.9, F < 0.8)
+    if (circ.waist && circ.hips) {
+      const whr = circ.waist / circ.hips;
+      const isMale = settingsCache.gender !== 'F';
+      const idealWHR = isMale ? 0.9 : 0.8;
+      circScore += whr <= idealWHR ? 2 : (whr <= idealWHR + 0.1 ? 1 : -1);
+    }
+    // Shoulder-to-waist ratio (piu alto = piu atletico)
+    if (circ.shoulders && circ.waist) {
+      const swr = circ.shoulders / circ.waist;
+      circScore += swr >= 1.6 ? 2 : (swr >= 1.4 ? 1 : 0);
+    }
+    // Arm symmetry and development
+    if (circ.bicep) circScore += circ.bicep >= 35 ? 1 : 0;
+    proporzioni = Math.min(10, Math.max(2, circScore));
+    const parts = [];
+    if (circ.waist && circ.hips) parts.push(`WHR: ${(circ.waist/circ.hips).toFixed(2)}`);
+    if (circ.shoulders && circ.waist) parts.push(`Spalle/Vita: ${(circ.shoulders/circ.waist).toFixed(2)}`);
+    parts.push(`${circCount} misurazioni inserite`);
+    circDesc = parts.join(' | ') + '. ' + (proporzioni >= 7 ? 'Ottime proporzioni atletiche!' : 'Continua a lavorare sulle proporzioni.');
   }
 
   const metrics=[
@@ -841,7 +929,8 @@ function renderAthleticDetail() {
     {label:'Consistenza',value:consistenza,icon:'\u{1F4C5}',desc:`${uniqueDays} giorni di allenamento su 30. ${uniqueDays>=15?'Ottima costanza!':uniqueDays>=8?'Buona regolarita.':'Prova ad allenarti piu spesso.'}`},
     {label:'Recupero',value:recupero,icon:'\u{1F50B}',desc:`${highRPE} sessioni ad alta intensita (RPE >= 8) negli ultimi 30 giorni. ${recupero>=7?'Buon equilibrio intensita/recupero.':'Attenzione al sovrallenamento.'}`},
     {label:'Progressione',value:progressione,icon:'\u{1F4C8}',desc:gymW.length?`Score medio di progressione carichi: ${progressione.toFixed(1)}/10. ${progressione>=7?'Stai migliorando costantemente!':'Prova a incrementare gradualmente i carichi.'}`:'Serve almeno una sessione palestra.'},
-    {label:'Varieta',value:varieta,icon:'\u{1F3AF}',desc:`${muscleSet.size} gruppi muscolari allenati, ${typesUsed} sport diversi praticati. ${varieta>=7?'Allenamento ben bilanciato!':'Prova a variare di piu gli stimoli.'}`}
+    {label:'Varieta',value:varieta,icon:'\u{1F3AF}',desc:`${muscleSet.size} gruppi muscolari allenati, ${typesUsed} sport diversi praticati. ${varieta>=7?'Allenamento ben bilanciato!':'Prova a variare di piu gli stimoli.'}`},
+    {label:'Proporzioni',value:proporzioni,icon:'\u{1F4D0}',desc:circDesc}
   ];
 
   const cardsEl = document.getElementById('athletic-detail-cards');
@@ -869,21 +958,59 @@ function renderExerciseLibrary(){
   if(muscleFilter) filtered=filtered.filter(e=>e.muscle===muscleFilter);
   const filtersEl=document.getElementById('lib-muscle-filters');
   if(filtersEl){
-    const muscles=[...new Set(lib.map(e=>e.muscle))];
-    filtersEl.innerHTML=`<button class="lib-filter-btn ${!muscleFilter?'active':''}" data-muscle="">Tutti</button>`+
-      muscles.map(m=>`<button class="lib-filter-btn ${muscleFilter===m?'active':''}" data-muscle="${m}">${m}</button>`).join('');
+    const muscles=[...new Set(lib.map(e=>e.muscle))].sort();
+    filtersEl.innerHTML=`<button class="lib-filter-btn ${!muscleFilter?'active':''}" data-muscle="">Tutti (${lib.length})</button>`+
+      muscles.map(m=>{
+        const count=lib.filter(e=>e.muscle===m).length;
+        return`<button class="lib-filter-btn ${muscleFilter===m?'active':''}" data-muscle="${m}">${m} (${count})</button>`;
+      }).join('');
     filtersEl.querySelectorAll('.lib-filter-btn').forEach(btn => {
       btn.addEventListener('click', function() { setLibMuscleFilter(this.dataset.muscle, this); });
     });
   }
-  const paramLabels={reps:'Ripetizioni',duration:'Durata',distance:'Distanza',calories:'Calorie'};
-  container.innerHTML=filtered.length?filtered.map(e=>{
-    const origIdx=lib.indexOf(e);
-    return`<div class="lib-item"><span>${e.name}${e.param&&e.param!=='reps'?` <span class="param-tag">${paramLabels[e.param]||e.param}</span>`:''}</span><div style="display:flex;align-items:center;gap:8px"><span class="muscle-tag">${e.muscle}</span><button class="btn-icon" data-remove-lib="${origIdx}">&times;</button></div></div>`;
-  }).join(''):'<p style="color:var(--text2);font-size:.85rem">Nessun esercizio trovato.</p>';
+  const paramLabels={reps:'Ripetizioni',duration:'Durata (sec)',distance:'Distanza (m)',calories:'Calorie'};
+  const paramIcons={reps:'',duration:'&#9201;',distance:'&#8644;',calories:'&#128293;'};
 
+  // Group by muscle
+  const grouped={};
+  filtered.forEach(e=>{
+    if(!grouped[e.muscle]) grouped[e.muscle]=[];
+    grouped[e.muscle].push(e);
+  });
+
+  let html='';
+  if(!filtered.length){
+    html='<p style="color:var(--text2);font-size:.85rem">Nessun esercizio trovato.</p>';
+  } else {
+    const muscleKeys=Object.keys(grouped).sort();
+    muscleKeys.forEach(muscle=>{
+      html+=`<div class="lib-group"><div class="lib-group-header"><span class="muscle-tag">${muscle}</span> <span style="font-size:.75rem;color:var(--text2)">${grouped[muscle].length} esercizi</span></div>`;
+      grouped[muscle].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{
+        const origIdx=lib.indexOf(e);
+        const paramTag=e.param&&e.param!=='reps'?`<span class="param-tag">${paramIcons[e.param]||''} ${paramLabels[e.param]||e.param}</span>`:'';
+        html+=`<div class="lib-item">
+          <span class="lib-item-name">${e.name} ${paramTag}</span>
+          <div class="lib-item-actions">
+            <button class="btn-icon" data-edit-lib="${origIdx}" title="Modifica">&#9998;</button>
+            <button class="btn-icon" data-dup-lib="${origIdx}" title="Duplica">&#10697;</button>
+            <button class="btn-icon" data-remove-lib="${origIdx}" title="Elimina">&times;</button>
+          </div>
+        </div>`;
+      });
+      html+=`</div>`;
+    });
+  }
+  container.innerHTML=html;
+
+  // Wire up action buttons
   container.querySelectorAll('[data-remove-lib]').forEach(btn => {
     btn.addEventListener('click', () => removeExercise(parseInt(btn.dataset.removeLib)));
+  });
+  container.querySelectorAll('[data-dup-lib]').forEach(btn => {
+    btn.addEventListener('click', () => duplicateExercise(parseInt(btn.dataset.dupLib)));
+  });
+  container.querySelectorAll('[data-edit-lib]').forEach(btn => {
+    btn.addEventListener('click', () => editExercise(parseInt(btn.dataset.editLib)));
   });
 }
 
@@ -905,10 +1032,54 @@ async function addExerciseToLibrary(){
 }
 
 async function removeExercise(idx){
+  if(!confirm('Eliminare questo esercizio?')) return;
   const lib=[...(exercisesCache||[])];lib.splice(idx,1);
   await saveExercisesToServer(lib);
   renderExerciseLibrary();
 }
+
+async function duplicateExercise(idx){
+  const lib=[...(exercisesCache||[])];
+  const orig=lib[idx];if(!orig)return;
+  const copy={...orig, name:orig.name+' (copia)'};
+  lib.push(copy);lib.sort((a,b)=>a.name.localeCompare(b.name));
+  await saveExercisesToServer(lib);
+  toast('Esercizio duplicato!','success');
+  renderExerciseLibrary();
+}
+
+function editExercise(idx){
+  const lib=exercisesCache||[];
+  const ex=lib[idx];if(!ex)return;
+  const paramLabels={reps:'Ripetizioni',duration:'Durata (sec)',distance:'Distanza (m)',calories:'Calorie'};
+  const modal=document.getElementById('workout-modal');
+  document.getElementById('modal-title').textContent='Modifica Esercizio';
+  let html=`<div style="display:flex;flex-direction:column;gap:12px">
+    <div class="form-group"><label>Nome</label><input type="text" id="edit-ex-name" value="${ex.name}"></div>
+    <div class="form-group"><label>Gruppo Muscolare</label><select id="edit-ex-muscle">
+      ${muscleGroups.map(m=>`<option value="${m}" ${m===ex.muscle?'selected':''}>${m}</option>`).join('')}
+    </select></div>
+    <div class="form-group"><label>Parametro principale</label><select id="edit-ex-param">
+      ${Object.entries(paramLabels).map(([k,v])=>`<option value="${k}" ${k===(ex.param||'reps')?'selected':''}>${v}</option>`).join('')}
+    </select></div>
+    <button class="btn btn-primary" id="edit-ex-save">Salva Modifiche</button>
+  </div>`;
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal-delete-btn').style.display='none';
+  modal.classList.add('show');
+  document.getElementById('edit-ex-save').addEventListener('click', async ()=>{
+    const newName=document.getElementById('edit-ex-name').value.trim();
+    if(!newName){toast('Inserisci un nome!','error');return;}
+    lib[idx]={name:newName, muscle:document.getElementById('edit-ex-muscle').value, param:document.getElementById('edit-ex-param').value};
+    await saveExercisesToServer(lib);
+    toast('Esercizio modificato!','success');
+    closeModal();
+    document.getElementById('modal-delete-btn').style.display='';
+    renderExerciseLibrary();
+  });
+}
+window.duplicateExercise = duplicateExercise;
+window.editExercise = editExercise;
 
 // ==================== SETTINGS ====================
 async function saveSettings(){
@@ -923,6 +1094,15 @@ async function saveSettings(){
     weekgoal:parseInt(document.getElementById('set-weekgoal').value)||4,
     kmgoal:parseInt(document.getElementById('set-kmgoal').value)||null,
     flexibility:parseInt(document.getElementById('set-flexibility')?.value)||5,
+    // Circonferenze corporee (cm)
+    circChest:parseFloat(document.getElementById('set-circ-chest')?.value)||null,
+    circWaist:parseFloat(document.getElementById('set-circ-waist')?.value)||null,
+    circHips:parseFloat(document.getElementById('set-circ-hips')?.value)||null,
+    circBicep:parseFloat(document.getElementById('set-circ-bicep')?.value)||null,
+    circThigh:parseFloat(document.getElementById('set-circ-thigh')?.value)||null,
+    circCalf:parseFloat(document.getElementById('set-circ-calf')?.value)||null,
+    circNeck:parseFloat(document.getElementById('set-circ-neck')?.value)||null,
+    circShoulders:parseFloat(document.getElementById('set-circ-shoulders')?.value)||null,
     activeSports: activeSports,
     muscleGroups: muscleGroups
   };
@@ -944,6 +1124,15 @@ function populateSettingsUI(){
   setVal('set-weekgoal', s.weekgoal);
   setVal('set-kmgoal', s.kmgoal);
   setVal('set-flexibility', s.flexibility);
+  // Circonferenze
+  setVal('set-circ-chest', s.circChest);
+  setVal('set-circ-waist', s.circWaist);
+  setVal('set-circ-hips', s.circHips);
+  setVal('set-circ-bicep', s.circBicep);
+  setVal('set-circ-thigh', s.circThigh);
+  setVal('set-circ-calf', s.circCalf);
+  setVal('set-circ-neck', s.circNeck);
+  setVal('set-circ-shoulders', s.circShoulders);
   if(s.activeSports) activeSports = s.activeSports;
   if(s.muscleGroups) muscleGroups = s.muscleGroups;
   populateMuscleSelect();

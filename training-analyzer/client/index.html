@@ -406,6 +406,25 @@
     <p style="font-size:.78rem;color:var(--text2);margin-top:8px">La flessibilit&agrave; non pu&ograve; essere calcolata automaticamente. Inserisci un'auto-valutazione da 1 (scarsa) a 10 (eccellente).</p>
   </div>
   <div class="card">
+    <div class="card-title">Circonferenze Corporee (cm)</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Misurazioni per il profilo atletico e il monitoraggio della composizione corporea.</p>
+    <div class="form-row">
+      <div class="form-group"><label>Petto</label><input type="number" id="set-circ-chest" step="0.5" placeholder="cm" data-settings="true"></div>
+      <div class="form-group"><label>Vita</label><input type="number" id="set-circ-waist" step="0.5" placeholder="cm" data-settings="true"></div>
+      <div class="form-group"><label>Fianchi</label><input type="number" id="set-circ-hips" step="0.5" placeholder="cm" data-settings="true"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Spalle</label><input type="number" id="set-circ-shoulders" step="0.5" placeholder="cm" data-settings="true"></div>
+      <div class="form-group"><label>Bicipite</label><input type="number" id="set-circ-bicep" step="0.5" placeholder="cm" data-settings="true"></div>
+      <div class="form-group"><label>Collo</label><input type="number" id="set-circ-neck" step="0.5" placeholder="cm" data-settings="true"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Coscia</label><input type="number" id="set-circ-thigh" step="0.5" placeholder="cm" data-settings="true"></div>
+      <div class="form-group"><label>Polpaccio</label><input type="number" id="set-circ-calf" step="0.5" placeholder="cm" data-settings="true"></div>
+      <div class="form-group"></div>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-title">I Miei Sport</div>
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Palestra e Corsa sono sempre attivi. Aggiungi gli sport che pratichi.</p>
     <div id="active-sports-list" style="margin-bottom:12px"></div>
@@ -431,6 +450,7 @@
     <div class="modal-header">
       <h3 id="modal-title">Dettaglio Allenamento</h3>
       <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" id="modal-edit-btn">Modifica</button>
         <button class="btn btn-danger btn-sm" id="modal-delete-btn">Elimina</button>
         <button class="btn btn-secondary btn-sm" data-action="closeModal">Chiudi</button>
       </div>

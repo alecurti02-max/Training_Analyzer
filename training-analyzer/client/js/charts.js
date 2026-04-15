@@ -233,18 +233,45 @@ export function renderHRZones(workouts, settingsCache) {
   const container=document.getElementById('hr-zones-container');
   if(!container) return;
   const maxHR=(settingsCache && settingsCache.maxhr)||190;
-  const runW=workouts.filter(w=>w.type==='running'&&w.avghr&&w.duration).slice(-10).reverse();
+  const runW=workouts.filter(w=>w.type==='running'&&w.avghr&&w.duration);
   if(!runW.length){container.innerHTML='<p style="font-size:.85rem;color:var(--text2)">Nessuna corsa con dati FC disponibile.</p>';return;}
   const zones=[{name:'Z1 Recupero',min:.5,max:.6,color:'#8E8E93'},{name:'Z2 Base',min:.6,max:.7,color:'#0984e3'},{name:'Z3 Aerobica',min:.7,max:.8,color:'#00b894'},{name:'Z4 Soglia',min:.8,max:.9,color:'#fdcb6e'},{name:'Z5 Max',min:.9,max:1,color:'#E02020'}];
-  let html='';
+
+  // Aggregate: weight each run's zone distribution by its duration
+  const totalMinutes=runW.reduce((s,w)=>s+(w.duration||0),0);
+  const aggZones=[0,0,0,0,0];
   runW.forEach(w=>{
     const hrPct=w.avghr/maxHR;
+    const dur=w.duration||1;
     const zonePcts=zones.map(z=>{const center=(z.min+z.max)/2;return Math.max(0,1-Math.abs(hrPct-center)*5);});
     const total=zonePcts.reduce((s,v)=>s+v,0)||1;
-    const norm=zonePcts.map(v=>Math.round((v/total)*100));
-    html+=`<div style="margin-bottom:12px"><div style="font-size:.85rem;font-weight:600;margin-bottom:4px">${formatDate(w.date)} - ${w.distance}km (FC ${w.avghr}bpm)</div>
-      <div class="hr-zones-bar">${zones.map((z,i)=>norm[i]>0?`<div class="hr-zone" style="width:${norm[i]}%;background:${z.color}">${norm[i]}%</div>`:'').join('')}</div></div>`;
+    zonePcts.forEach((v,i)=>{aggZones[i]+=((v/total)*dur);});
   });
+  const aggTotal=aggZones.reduce((s,v)=>s+v,0)||1;
+  const aggPcts=aggZones.map(v=>Math.round((v/aggTotal)*100));
+
+  let html=`<p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Distribuzione aggregata su ${runW.length} corse (${totalMinutes} min totali)</p>`;
+
+  // Main aggregate bar
+  html+=`<div class="hr-zones-bar" style="height:36px;font-size:.8rem;border-radius:8px;overflow:hidden;margin-bottom:16px">`;
+  zones.forEach((z,i)=>{if(aggPcts[i]>0) html+=`<div class="hr-zone" style="width:${aggPcts[i]}%;background:${z.color};display:flex;align-items:center;justify-content:center">${aggPcts[i]}%</div>`;});
+  html+=`</div>`;
+
+  // Zone detail cards
+  html+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px">`;
+  zones.forEach((z,i)=>{
+    const mins=Math.round(aggZones[i]);
+    const bpmMin=Math.round(maxHR*z.min);
+    const bpmMax=Math.round(maxHR*z.max);
+    html+=`<div style="background:var(--bg2);border-radius:8px;padding:10px;border-left:4px solid ${z.color}">
+      <div style="font-size:.8rem;font-weight:700;color:${z.color}">${z.name}</div>
+      <div style="font-size:1.1rem;font-weight:800;margin:2px 0">${aggPcts[i]}%</div>
+      <div style="font-size:.75rem;color:var(--text2)">~${mins} min | ${bpmMin}-${bpmMax} bpm</div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Legend
   html+='<div class="hr-zone-legend">';
   zones.forEach(z=>{html+=`<span style="color:${z.color}">${z.name}</span>`;});
   html+='</div>';
