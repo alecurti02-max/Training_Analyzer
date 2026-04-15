@@ -63,6 +63,28 @@ async function create(req, res, next) {
   }
 }
 
+async function bulkCreate(req, res, next) {
+  try {
+    const { workouts } = req.body;
+    if (!Array.isArray(workouts) || !workouts.length) {
+      return res.status(400).json({ error: { message: 'workouts array is required' } });
+    }
+
+    const records = workouts.map(w => ({
+      userId: req.user.uid,
+      type: w.type,
+      date: w.date,
+      score: w.data?.scores?.overall ?? null,
+      data: w.data || {},
+    }));
+
+    const created = await Workout.bulkCreate(records);
+    res.status(201).json({ count: created.length });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function update(req, res, next) {
   try {
     const workout = await Workout.findOne({
@@ -164,4 +186,4 @@ async function destroyAll(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, destroy, destroyAll, importFile, upload };
+module.exports = { list, getById, create, bulkCreate, update, destroy, destroyAll, importFile, upload };

@@ -254,42 +254,47 @@ export async function importHealthWorkouts(selected, workoutsCache, settingsCach
   const toImport = data.filter(w=>w.selected);
   if(!toImport.length){ toast('Nessun allenamento selezionato','error'); return; }
 
-  let count=0, errors=0;
   const btn = document.getElementById('btn-health-import');
 
-  for (let i = 0; i < toImport.length; i++) {
-    const w = toImport[i];
-    if (btn) btn.textContent = `Importazione ${i+1}/${toImport.length}...`;
+  // Build all workout objects first
+  const prepared = toImport.map(w => {
+    const base = {id:uid(), date:w.date, duration:w.duration, notes:'Importato da Apple Health', imported:true};
+    let workout;
 
+    if (w.type==='running') {
+      workout={...base, type:'running', distance:w.distance||0,
+        _pace:w.distance>0&&w.duration>0?(w.duration*60)/w.distance:0, runType:'easy'};
+    } else if (w.type==='walking') {
+      workout={...base, type:'walking', distance:w.distance||0};
+    } else if (w.type==='cycling') {
+      workout={...base, type:'cycling', distance:w.distance||0,
+        avgSpeed:w.distance>0&&w.duration>0?Math.round((w.distance/(w.duration/60))*10)/10:0};
+    } else if (w.type==='swimming') {
+      workout={...base, type:'swimming', distance:w.distance||0};
+    } else if (w.type==='gym') {
+      workout={...base, type:'gym', exercises:[], _tonnage:0};
+    } else {
+      workout={...base, type:'gym', exercises:[], _tonnage:0,
+        notes:'Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')'};
+    }
+
+    try { workout.scores=scoreWorkout(workout, workoutsCache, settingsCache); } catch(e) { workout.scores={}; }
+    try { workout.advice=getAdvice(workout); } catch(e) { workout.advice=''; }
+    return _wrapForAPI(workout);
+  });
+
+  // Send in batches of 50 via bulk endpoint
+  const BATCH=50;
+  let count=0, errors=0;
+  for (let i=0; i<prepared.length; i+=BATCH) {
+    const batch = prepared.slice(i, i+BATCH);
+    if (btn) btn.textContent = `Importazione ${Math.min(i+BATCH, prepared.length)}/${prepared.length}...`;
     try {
-      let workout;
-      const base = {id:uid(), date:w.date, duration:w.duration, notes:'Importato da Apple Health', imported:true};
-
-      if (w.type==='running') {
-        workout={...base, type:'running', distance:w.distance||0,
-          _pace:w.distance>0&&w.duration>0?(w.duration*60)/w.distance:0, runType:'easy'};
-      } else if (w.type==='walking') {
-        workout={...base, type:'walking', distance:w.distance||0};
-      } else if (w.type==='cycling') {
-        workout={...base, type:'cycling', distance:w.distance||0,
-          avgSpeed:w.distance>0&&w.duration>0?Math.round((w.distance/(w.duration/60))*10)/10:0};
-      } else if (w.type==='swimming') {
-        workout={...base, type:'swimming', distance:w.distance||0};
-      } else if (w.type==='gym') {
-        workout={...base, type:'gym', exercises:[], _tonnage:0};
-      } else {
-        workout={...base, type:'gym', exercises:[], _tonnage:0,
-          notes:'Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')'};
-      }
-
-      try { workout.scores=scoreWorkout(workout, workoutsCache, settingsCache); } catch(e) { workout.scores={}; }
-      try { workout.advice=getAdvice(workout); } catch(e) { workout.advice=''; }
-
-      await api.post('/api/workouts', _wrapForAPI(workout));
-      count++;
+      const res = await api.post('/api/workouts/bulk', { workouts: batch });
+      count += res.count || batch.length;
     } catch(err) {
-      console.error('Health import error for workout', w, err);
-      errors++;
+      console.error('Bulk import error batch', i, err);
+      errors += batch.length;
     }
   }
 
