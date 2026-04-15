@@ -6,7 +6,7 @@ import { api, clearTokens } from './api.js';
 import { initAuth, setupLoginUI, logout } from './auth.js';
 import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports } from './sports.js';
 import { scoreWorkout, getAdvice, getRecoveryStatus, calculateStreak, getFitnessAssessment } from './scoring.js';
-import { destroyChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
+import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
 
@@ -680,7 +680,7 @@ function showWorkoutDetail(id) {
       onDataChanged();
     }
   };
-  document.getElementById('modal-edit-btn').onclick=()=>{ editWorkout(id); };
+  document.getElementById('modal-edit-btn').onclick=(e)=>{ e.stopPropagation(); e.preventDefault(); editWorkout(id); };
   document.getElementById('modal-delete-btn').style.display='';
   document.getElementById('modal-edit-btn').style.display='';
   document.getElementById('workout-modal').classList.add('show');
@@ -696,10 +696,13 @@ function closeModal(){document.getElementById('workout-modal').classList.remove(
 let editingWorkoutId = null;
 
 function editWorkout(id) {
+  try {
   const w = workoutsCache.find(x => x.id === id);
-  if (!w) return;
+  if (!w) { console.error('editWorkout: workout not found', id); return; }
   const tmpl = SPORT_TEMPLATES[w.type];
   const typeName = tmpl?.name || w.type;
+  // Ensure modal stays open
+  document.getElementById('workout-modal').classList.add('show');
   document.getElementById('modal-title').textContent = 'Modifica: ' + typeName;
   document.getElementById('modal-edit-btn').style.display = 'none';
   document.getElementById('modal-delete-btn').style.display = 'none';
@@ -898,6 +901,10 @@ function editWorkout(id) {
       toast('Errore: ' + (err.message || 'Salvataggio fallito'), 'error');
     }
   });
+  } catch(err) {
+    console.error('editWorkout error:', err);
+    toast('Errore apertura editor: ' + err.message, 'error');
+  }
 }
 window.editWorkout = editWorkout;
 
@@ -1068,12 +1075,12 @@ function renderAthleticDetail() {
     const isLight=!window.matchMedia('(prefers-color-scheme: dark)').matches;
     const textColor=isLight?'#1D1D1F':'#F5F5F7';
     const gridColor=isLight?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.08)';
-    new Chart(ctx,{type:'radar',
+    storeChart('radarDetail', new Chart(ctx,{type:'radar',
       data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta','Proporzioni'],
         datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta,proporzioni].map(v=>Math.round(v*10)/10),
           backgroundColor:'rgba(224,32,32,0.15)',borderColor:'#E02020',pointBackgroundColor:'#E02020',pointBorderColor:'#fff',borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
-    });
+    }));
   }
 
   const metrics=[

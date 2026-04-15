@@ -16,6 +16,11 @@ export function destroyChart(key) {
   if(charts[key]){charts[key].destroy();delete charts[key];}
 }
 
+export function storeChart(key, instance) {
+  if(charts[key]){charts[key].destroy();delete charts[key];}
+  charts[key] = instance;
+}
+
 export function getChartTheme() {
   const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.getAttribute('data-theme') !== 'dark';
   return {
