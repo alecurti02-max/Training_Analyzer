@@ -6,6 +6,8 @@ export const SPORT_TEMPLATES = {
     fields:['duration','rpe'] },
   running: { name:'Corsa', icon:'\u{1F3C3}', fixed:true,
     fields:['distance','duration','pace','avghr','maxhr','elevation','cadence','rpe','runType'] },
+  walking: { name:'Camminata', icon:'\u{1F6B6}',
+    fields:['distance','duration','avghr','rpe'] },
   karting: { name:'Karting', icon:'\u{1F3C1}',
     fields:['track','duration','laps','bestLap','avgLap','rpe'] },
   cycling: { name:'Ciclismo', icon:'\u{1F6B4}',

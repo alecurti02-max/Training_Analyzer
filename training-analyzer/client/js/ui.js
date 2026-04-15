@@ -592,6 +592,9 @@ function workoutItemHTML(w) {
   let detail = '';
   if (w.type==='gym') detail = `${(w.exercises||[]).length} esercizi \u00b7 ${Math.round((w._tonnage||0)/1000*10)/10}t`;
   else if (w.type==='running') detail = `${w.distance||0} km \u00b7 ${secondsToPace(w._pace)}`;
+  else if (w.type==='walking') detail = `${w.distance||0} km \u00b7 ${w.duration||0} min`;
+  else if (w.type==='cycling') detail = `${w.distance||0} km \u00b7 ${w.duration||0} min`;
+  else if (w.type==='swimming') detail = `${w.distance?w.distance+' km \u00b7 ':''}${w.duration||0} min`;
   else if (w.type==='karting') detail = `${w.track||''} \u00b7 Best: ${w.bestLap||'--'}s`;
   else if (w.duration) detail = `${w.duration} min`;
   const typeClass = SPORT_TEMPLATES[w.type] ? 'type-'+w.type : 'type-custom';

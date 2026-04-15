@@ -7,6 +7,7 @@ import { scoreWorkout, getAdvice } from './scoring.js';
 
 // ==================== LOCAL HELPERS ====================
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function _wrapForAPI(workout) { const { type, date, ...rest } = workout; return { type, date, data: rest }; }
 function todayStr() { return new Date().toISOString().slice(0,10); }
 function secondsToPace(s) { if(!s||s<=0)return'--'; const m=Math.floor(s/60),sec=Math.round(s%60); return m+':'+String(sec).padStart(2,'0'); }
 function formatDate(d) { return new Date(d).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}); }
@@ -72,7 +73,7 @@ export async function importGPXWorkout(data, workoutsCache, settingsCache) {
     avghr:data.avghr,maxhr:data.maxhr,elevation:data.elevation,runType:'easy',notes:'Importato da GPX',imported:true};
   workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
   workout.advice=getAdvice(workout);
-  await api.post('/api/workouts', workout);
+  await api.post('/api/workouts', _wrapForAPI(workout));
   toast('Corsa importata!','success');
 }
 
@@ -118,7 +119,7 @@ export async function confirmCSVImport(pendingRows, workoutsCache, settingsCache
     const workout={id:uid(),type:'gym',date,exercises,_tonnage:tonnage,notes:'Importato da CSV',imported:true};
     workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
     workout.advice=getAdvice(workout);
-    await api.post('/api/workouts', workout);
+    await api.post('/api/workouts', _wrapForAPI(workout));
     count++;
   }
   toast(`${count} sessioni importate!`,'success');
@@ -209,10 +210,15 @@ export function handleAppleHealthFile(file, callbacks) {
     if(progressFill) progressFill.style.width='100%';
     const unique=[],seen=new Set();
     workouts.forEach(w=>{const key=`${w.date}_${w.type}_${w.duration}`;if(!seen.has(key)){seen.add(key);unique.push(w);}});
-    const toShow=unique.slice(-50).reverse();window._healthImportData=toShow;
-    if(!toShow.length){if(preview)preview.innerHTML='<p style="color:var(--text2)">Nessun allenamento trovato.</p>';return;}
+    unique.reverse(); // newest first
+    window._healthImportData=unique; // ALL workouts, not just 50
+    if(!unique.length){if(preview)preview.innerHTML='<p style="color:var(--text2)">Nessun allenamento trovato.</p>';return;}
+    const PREVIEW_LIMIT=50;
+    const toShow=unique.slice(0,PREVIEW_LIMIT);
     const typeNames={running:'Corsa',walking:'Camminata',cycling:'Ciclismo',swimming:'Nuoto',gym:'Palestra',other:'Altro'};
-    let html=`<div class="card"><div class="card-title">Trovati ${unique.length} allenamenti</div><div style="max-height:400px;overflow-y:auto">`;
+    let html=`<div class="card"><div class="card-title">Trovati ${unique.length} allenamenti</div>`;
+    if(unique.length>PREVIEW_LIMIT) html+=`<p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Anteprima ultimi ${PREVIEW_LIMIT} — tutti i ${unique.length} verranno importati.</p>`;
+    html+=`<div style="max-height:400px;overflow-y:auto">`;
     toShow.forEach((w,i)=>{
       html+=`<div class="import-preview-item"><input type="checkbox" class="import-checkbox" ${w.selected?'checked':''} data-health-idx="${i}">
         <span style="flex:1"><strong>${formatDate(w.date)}</strong> - ${typeNames[w.type]||w.type} - ${w.duration} min${w.distance?' - '+w.distance+' km':''}</span></div>`;
@@ -257,21 +263,29 @@ export async function importHealthWorkouts(selected, workoutsCache, settingsCach
 
     try {
       let workout;
-      if(w.type==='running'||w.type==='walking'||w.type==='cycling'){
-        workout={id:uid(),type:'running',date:w.date,distance:w.distance||0,duration:w.duration,
-          _pace:w.distance>0&&w.duration>0?(w.duration*60)/w.distance:0,runType:'easy',notes:'Importato da Apple Health',imported:true};
-      } else if(w.type==='gym'){
-        workout={id:uid(),type:'gym',date:w.date,duration:w.duration,exercises:[],_tonnage:0,notes:'Importato da Apple Health',imported:true};
+      const base = {id:uid(), date:w.date, duration:w.duration, notes:'Importato da Apple Health', imported:true};
+
+      if (w.type==='running') {
+        workout={...base, type:'running', distance:w.distance||0,
+          _pace:w.distance>0&&w.duration>0?(w.duration*60)/w.distance:0, runType:'easy'};
+      } else if (w.type==='walking') {
+        workout={...base, type:'walking', distance:w.distance||0};
+      } else if (w.type==='cycling') {
+        workout={...base, type:'cycling', distance:w.distance||0,
+          avgSpeed:w.distance>0&&w.duration>0?Math.round((w.distance/(w.duration/60))*10)/10:0};
+      } else if (w.type==='swimming') {
+        workout={...base, type:'swimming', distance:w.distance||0};
+      } else if (w.type==='gym') {
+        workout={...base, type:'gym', exercises:[], _tonnage:0};
       } else {
-        // Import 'other' types as gym with activity note
-        workout={id:uid(),type:'gym',date:w.date,duration:w.duration,exercises:[],_tonnage:0,
-          notes:'Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')',imported:true};
+        workout={...base, type:'gym', exercises:[], _tonnage:0,
+          notes:'Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')'};
       }
 
       try { workout.scores=scoreWorkout(workout, workoutsCache, settingsCache); } catch(e) { workout.scores={}; }
       try { workout.advice=getAdvice(workout); } catch(e) { workout.advice=''; }
 
-      await api.post('/api/workouts', workout);
+      await api.post('/api/workouts', _wrapForAPI(workout));
       count++;
     } catch(err) {
       console.error('Health import error for workout', w, err);
@@ -344,7 +358,7 @@ export async function importFITWorkout(data, workoutsCache, settingsCache){
   const workout={id:uid(),type:'gym',date:data.date,duration:data.duration,exercises:[],_tonnage:0,notes:'Importato da FIT',imported:true};
   workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
   workout.advice=getAdvice(workout);
-  await api.post('/api/workouts', workout);
+  await api.post('/api/workouts', _wrapForAPI(workout));
   toast('Importato da FIT!','success');
 }
 
