@@ -598,18 +598,78 @@ function workoutItemHTML(w) {
   else if (w.type==='karting') detail = `${w.track||''} \u00b7 Best: ${w.bestLap||'--'}s`;
   else { let parts=[]; if(w.duration) parts.push(w.duration+' min'); if(w.distance) parts.push(w.distance+' km'); if(w.avghr) parts.push('FC '+w.avghr); detail=parts.join(' \u00b7 ')||''; }
   const typeClass = SPORT_TEMPLATES[w.type] ? 'type-'+w.type : 'type-custom';
-  return `<div class="workout-item" data-workout-id="${w.id}">
+  const isSelected = _selectedIds.has(w.id);
+  const checkbox = _selectMode ? `<input type="checkbox" class="select-workout-cb" ${isSelected?'checked':''} style="width:18px;height:18px;cursor:pointer;flex-shrink:0">` : '';
+  return `<div class="workout-item ${isSelected?'selected':''}" data-workout-id="${w.id}">
+    ${checkbox}
     <div class="score-sm" style="background:${scoreColor(score)};color:#fff">${typeof score==='number'?score.toFixed(1):score}</div>
     <div class="workout-info"><h4>${formatDate(w.date)} <span class="workout-type-badge ${typeClass}">${typeName}</span></h4><p>${detail}</p></div>
   </div>`;
 }
 
 // ==================== HISTORY ====================
+let _selectMode = false;
+const _selectedIds = new Set();
+
 function filterHistory(f, btn) {
   historyFilter=f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   renderHistory();
+}
+
+function toggleSelectMode() {
+  _selectMode = !_selectMode;
+  _selectedIds.clear();
+  const bar = document.getElementById('history-select-bar');
+  const btn = document.getElementById('btn-select-mode');
+  if (bar) bar.style.display = _selectMode ? 'flex' : 'none';
+  if (btn) { btn.textContent = _selectMode ? 'Annulla' : 'Seleziona'; btn.classList.toggle('active', _selectMode); }
+  updateSelectCount();
+  renderHistory();
+}
+
+function toggleWorkoutSelection(id) {
+  if (_selectedIds.has(id)) _selectedIds.delete(id); else _selectedIds.add(id);
+  const el = document.querySelector(`[data-workout-id="${id}"]`);
+  if (el) el.classList.toggle('selected', _selectedIds.has(id));
+  updateSelectCount();
+}
+
+function updateSelectCount() {
+  const el = document.getElementById('history-select-count');
+  if (el) el.textContent = _selectedIds.size + ' selezionati';
+}
+
+function selectAllVisible() {
+  document.querySelectorAll('#history-list [data-workout-id]').forEach(el => {
+    const id = el.dataset.workoutId;
+    _selectedIds.add(id);
+    el.classList.add('selected');
+  });
+  updateSelectCount();
+}
+
+function deselectAll() {
+  _selectedIds.clear();
+  document.querySelectorAll('#history-list .selected').forEach(el => el.classList.remove('selected'));
+  updateSelectCount();
+}
+
+async function deleteSelected() {
+  if (!_selectedIds.size) { toast('Nessun allenamento selezionato', 'error'); return; }
+  if (!confirm(`Eliminare ${_selectedIds.size} allenamenti?`)) return;
+  let deleted = 0;
+  const ids = [..._selectedIds];
+  // Delete in batches
+  for (const id of ids) {
+    try { await api.del('/api/workouts/' + id); deleted++; } catch(e) { console.error('Delete error', id, e); }
+  }
+  workoutsCache = workoutsCache.filter(w => !_selectedIds.has(w.id));
+  _selectedIds.clear();
+  toast(`${deleted} allenamenti eliminati`, 'success');
+  updateSelectCount();
+  onDataChanged();
 }
 
 function renderHistory() {
@@ -1588,6 +1648,10 @@ document.addEventListener('DOMContentLoaded', () => {
         onDataChanged();
       } catch (err) { toast('Errore: ' + err.message, 'error'); }
     },
+    toggleSelectMode: () => toggleSelectMode(),
+    selectAll: () => selectAllVisible(),
+    deselectAll: () => deselectAll(),
+    deleteSelected: () => deleteSelected(),
   };
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
@@ -1622,7 +1686,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Workout items (delegated click on dashboard, history)
   document.addEventListener('click', (e) => {
     const workoutItem = e.target.closest('[data-workout-id]');
-    if (workoutItem) showWorkoutDetail(workoutItem.dataset.workoutId);
+    if (!workoutItem) return;
+    if (_selectMode) {
+      toggleWorkoutSelection(workoutItem.dataset.workoutId);
+    } else {
+      showWorkoutDetail(workoutItem.dataset.workoutId);
+    }
   });
 
   // Drag & Drop zones

@@ -184,7 +184,16 @@
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div class="card-title" style="margin:0">Storico Allenamenti</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap" id="history-filters"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <div id="history-filters" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <button class="btn btn-secondary btn-sm" id="btn-select-mode" data-action="toggleSelectMode">Seleziona</button>
+      </div>
+    </div>
+    <div id="history-select-bar" style="display:none;padding:8px 0;margin-bottom:8px;display:none;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" data-action="selectAll">Seleziona tutti</button>
+      <button class="btn btn-secondary btn-sm" data-action="deselectAll">Deseleziona tutti</button>
+      <span id="history-select-count" style="font-size:.82rem;color:var(--text2)">0 selezionati</span>
+      <button class="btn btn-danger btn-sm" data-action="deleteSelected" style="margin-left:auto">Elimina selezionati</button>
     </div>
     <div id="history-list"></div>
   </div>

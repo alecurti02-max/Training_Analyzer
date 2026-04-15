@@ -215,6 +215,7 @@ textarea{resize:vertical;min-height:60px}
 /* ============ WORKOUT LIST ============ */
 .workout-item{display:flex;gap:16px;align-items:center;padding:16px;background:var(--bg3);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:var(--transition);border:1px solid transparent}
 .workout-item:hover{border-color:var(--accent);transform:translateX(4px)}
+.workout-item.selected{border-color:var(--red);background:rgba(231,76,60,.1)}
 .workout-info{flex:1}
 .workout-info h4{font-size:.95rem;margin-bottom:3px;font-weight:600}
 .workout-info p{font-size:.8rem;color:var(--text2)}
