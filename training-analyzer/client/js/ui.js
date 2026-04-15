@@ -741,6 +741,25 @@ function editWorkout(id) {
         <button class="btn btn-secondary btn-sm edit-add-set" data-ei="${ei}" style="margin-top:4px;font-size:.75rem">+ Serie</button>
       </div>`;
     });
+
+    // Add exercise picker
+    const lib = exercisesCache || [];
+    const grouped = {};
+    lib.forEach(e => { if (!grouped[e.muscle]) grouped[e.muscle] = []; grouped[e.muscle].push(e); });
+    const muscleKeys = Object.keys(grouped).sort();
+
+    html += `<div style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:10px">
+      <div class="card-title" style="font-size:.85rem;margin-bottom:8px">Aggiungi Esercizio</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <div class="form-group" style="flex:1;min-width:180px;margin:0">
+          <select id="edit-add-exercise-select" style="width:100%;padding:8px;border-radius:8px;background:var(--bg1);color:var(--text1);border:1px solid var(--bg3)">
+            <option value="">Scegli esercizio...</option>
+            ${muscleKeys.map(m => `<optgroup label="${m}">${grouped[m].map(e => `<option value="${e.name}" data-muscle="${e.muscle}">${e.name}</option>`).join('')}</optgroup>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm" id="edit-add-exercise-btn" style="white-space:nowrap">+ Esercizio</button>
+      </div>
+    </div>`;
   } else if (w.type === 'running') {
     html += `<div class="form-row">
       <div class="form-group"><label>Distanza (km)</label><input type="number" id="edit-w-distance" step="0.1" value="${w.distance||''}"></div>
@@ -840,6 +859,20 @@ function editWorkout(id) {
       }
     });
   });
+
+  // Wire up add exercise button (gym only)
+  const addExBtn = document.getElementById('edit-add-exercise-btn');
+  if (addExBtn) {
+    addExBtn.addEventListener('click', () => {
+      const sel = document.getElementById('edit-add-exercise-select');
+      if (!sel || !sel.value) { toast('Seleziona un esercizio', 'error'); return; }
+      const opt = sel.options[sel.selectedIndex];
+      const newEx = { name: sel.value, muscle: opt.dataset.muscle || '', sets: [{ reps: 8, weight: 0 }] };
+      editExercises.push(newEx);
+      w.exercises = editExercises;
+      editWorkout(id);
+    });
+  }
 
   // Cancel
   document.getElementById('edit-w-cancel').addEventListener('click', () => showWorkoutDetail(id));
