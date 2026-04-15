@@ -87,8 +87,11 @@ async function loadAllData() {
       : (workoutsRes ? Object.values(workoutsRes) : []));
     // Flatten: merge .data JSONB into top-level fields so the rest of the app works
     workoutsCache = rawWorkouts.map(w => {
-      const flat = { ...w, ...(w.data || {}) };
-      // Keep the DB id accessible
+      const data = w.data || {};
+      // Remove conflicting keys from data before merging
+      const { id: _ignoreId, type: _ignoreType, date: _ignoreDate, userId: _ignoreUser, ...safeData } = data;
+      const flat = { ...w, ...safeData };
+      // Ensure DB fields always win
       flat.id = w.id;
       flat.type = w.type;
       flat.date = w.date;
@@ -1144,6 +1147,15 @@ document.addEventListener('DOMContentLoaded', () => {
     compareSelected: () => window.compareSelected(),
     closeModal: () => closeModal(),
     saveSettings: () => saveSettings(),
+    deleteAllWorkouts: async () => {
+      if (!confirm('Sei sicuro? Verranno eliminati TUTTI gli allenamenti.')) return;
+      try {
+        const res = await api.del('/api/workouts');
+        workoutsCache = [];
+        toast('Eliminati ' + (res?.deleted || 'tutti gli') + ' allenamenti', 'success');
+        onDataChanged();
+      } catch (err) { toast('Errore: ' + err.message, 'error'); }
+    },
   };
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
