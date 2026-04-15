@@ -179,10 +179,14 @@ export function handleAppleHealthFile(file, callbacks) {
         const cm=/WorkoutStatistics[^>]*type="HKQuantityTypeIdentifierActiveEnergyBurned"[^>]*sum="([^"]*)"/.exec(children);
         if(cm) calories=parseFloat(cm[1])||0;
       }
+      // Heart rate
+      let avghr=0, maxhr=0;
+      const hrm=/WorkoutStatistics[^>]*type="HKQuantityTypeIdentifierHeartRate"[^>]*average="([^"]*)"[^>]*minimum="[^"]*"[^>]*maximum="([^"]*)"/.exec(children);
+      if(hrm){ avghr=Math.round(parseFloat(hrm[1])||0); maxhr=Math.round(parseFloat(hrm[2])||0); }
 
       workouts.push({type:_classifyActivity(actType),actType,date:startDate.slice(0,10),
         duration:Math.round(duration),distance:Math.round(distance*100)/100,
-        calories:Math.round(calories),selected:true});
+        calories:Math.round(calories),avghr,maxhr,selected:true});
     }
 
     // --- Also match self-closing <Workout ... /> (legacy Apple Health format) ---
@@ -211,17 +215,34 @@ export function handleAppleHealthFile(file, callbacks) {
     const unique=[],seen=new Set();
     workouts.forEach(w=>{const key=`${w.date}_${w.type}_${w.duration}`;if(!seen.has(key)){seen.add(key);unique.push(w);}});
     unique.reverse(); // newest first
-    window._healthImportData=unique; // ALL workouts, not just 50
+
+    // Estimate user's max HR from all workouts (95th percentile of observed maxhr)
+    const allMaxHR = unique.map(w=>w.maxhr).filter(h=>h>0).sort((a,b)=>a-b);
+    const userMaxHR = allMaxHR.length ? allMaxHR[Math.floor(allMaxHR.length*0.95)] : 190;
+
+    // Calculate RPE from heart rate data: RPE = (avgHR / userMaxHR) * 10, clamped 1-10
+    unique.forEach(w => {
+      if(w.avghr && userMaxHR) {
+        w.rpe = Math.max(1, Math.min(10, Math.round((w.avghr / userMaxHR) * 10)));
+      }
+    });
+
+    window._healthImportData=unique; // ALL workouts
     if(!unique.length){if(preview)preview.innerHTML='<p style="color:var(--text2)">Nessun allenamento trovato.</p>';return;}
     const PREVIEW_LIMIT=50;
     const toShow=unique.slice(0,PREVIEW_LIMIT);
     const typeNames={running:'Corsa',walking:'Camminata',cycling:'Ciclismo',swimming:'Nuoto',gym:'Palestra',other:'Altro'};
     let html=`<div class="card"><div class="card-title">Trovati ${unique.length} allenamenti</div>`;
     if(unique.length>PREVIEW_LIMIT) html+=`<p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Anteprima ultimi ${PREVIEW_LIMIT} — tutti i ${unique.length} verranno importati.</p>`;
+    if(userMaxHR) html+=`<p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">FC max stimata: ${userMaxHR} bpm — RPE calcolato automaticamente.</p>`;
     html+=`<div style="max-height:400px;overflow-y:auto">`;
     toShow.forEach((w,i)=>{
+      let info = `${w.duration} min`;
+      if(w.distance) info += ` - ${w.distance} km`;
+      if(w.avghr) info += ` - FC ${w.avghr}`;
+      if(w.rpe) info += ` - RPE ${w.rpe}`;
       html+=`<div class="import-preview-item"><input type="checkbox" class="import-checkbox" ${w.selected?'checked':''} data-health-idx="${i}">
-        <span style="flex:1"><strong>${formatDate(w.date)}</strong> - ${typeNames[w.type]||w.type} - ${w.duration} min${w.distance?' - '+w.distance+' km':''}</span></div>`;
+        <span style="flex:1"><strong>${formatDate(w.date)}</strong> - ${typeNames[w.type]||w.type} - ${info}</span></div>`;
     });
     html+=`</div><button class="btn btn-primary" style="margin-top:12px;width:100%" id="btn-health-import">Importa selezionati</button></div>`;
     if(preview) {
@@ -259,6 +280,11 @@ export async function importHealthWorkouts(selected, workoutsCache, settingsCach
   // Build all workout objects first
   const prepared = toImport.map(w => {
     const base = {id:uid(), date:w.date, duration:w.duration, notes:'Importato da Apple Health', imported:true};
+    // Add heart rate and RPE if available
+    if(w.avghr) base.avghr = w.avghr;
+    if(w.maxhr) base.maxhr = w.maxhr;
+    if(w.rpe) base.rpe = w.rpe;
+    if(w.calories) base.calories = w.calories;
     let workout;
 
     if (w.type==='running') {
