@@ -127,28 +127,84 @@ export async function confirmCSVImport(pendingRows, workoutsCache, settingsCache
 }
 
 // ==================== APPLE HEALTH IMPORT ====================
+function _healthAttr(str, name) {
+  const m = new RegExp(name + '="([^"]*)"').exec(str);
+  return m ? m[1] : '';
+}
+
+function _classifyActivity(actType) {
+  if (actType.includes('Running')) return 'running';
+  if (actType.includes('Walking')) return 'walking';
+  if (actType.includes('Cycling')) return 'cycling';
+  if (actType.includes('Swimming')) return 'swimming';
+  if (actType.includes('StrengthTraining') || actType.includes('FunctionalStrength') ||
+      actType.includes('TraditionalStrengthTraining') || actType.includes('CrossTraining') ||
+      actType.includes('CoreTraining') || actType.includes('HighIntensityIntervalTraining'))
+    return 'gym';
+  return 'other';
+}
+
 export function handleAppleHealthFile(file, callbacks) {
   if(!file) return;
   const progressBar=document.getElementById('health-progress'),progressFill=document.getElementById('health-progress-fill'),preview=document.getElementById('health-preview');
   if(progressBar) progressBar.style.display='';
   if(preview) preview.innerHTML='<p style="color:var(--text2);font-size:.85rem">Parsing...</p>';
-  const chunkSize=1024*1024,fileSize=file.size;let offset=0,textBuffer='';
+  const chunkSize=2*1024*1024,fileSize=file.size;let offset=0,textBuffer='';
   const workouts=[];const reader=new FileReader();
   function readNextChunk(){reader.readAsText(file.slice(offset,Math.min(offset+chunkSize,fileSize)));}
   reader.onload=function(e){
     textBuffer+=e.target.result;offset+=chunkSize;
     if(progressFill) progressFill.style.width=Math.min(100,Math.round((offset/fileSize)*100))+'%';
-    const re=/<Workout\s[^>]*?workoutActivityType="([^"]*)"[^>]*?startDate="([^"]*)"[^>]*?duration="([^"]*)"[^>]*?(?:totalDistance="([^"]*)")?[^>]*?(?:totalEnergyBurned="([^"]*)")?[^>]*?\/?>/g;
-    let m;
-    while((m=re.exec(textBuffer))!==null){
-      let type='other';const actType=m[1];
-      if(actType.includes('Running'))type='running';else if(actType.includes('Walking'))type='walking';
-      else if(actType.includes('Cycling'))type='cycling';else if(actType.includes('Swimming'))type='swimming';
-      else if(actType.includes('StrengthTraining')||actType.includes('FunctionalStrength'))type='gym';
-      workouts.push({type,actType,date:m[2].slice(0,10),duration:Math.round(parseFloat(m[3])||0),
-        distance:Math.round((parseFloat(m[4])||0)*100)/100,calories:Math.round(parseFloat(m[5])||0),selected:true});
+
+    // --- Match complete <Workout ...>...</Workout> blocks (modern Apple Health format) ---
+    const reBlock=/<Workout\s([^>]*?)>([\s\S]*?)<\/Workout>/g;
+    let m, lastBlockEnd=0;
+    while((m=reBlock.exec(textBuffer))!==null){
+      lastBlockEnd=reBlock.lastIndex;
+      const attrs=m[1], children=m[2];
+      const actType=_healthAttr(attrs,'workoutActivityType');
+      const startDate=_healthAttr(attrs,'startDate');
+      const duration=parseFloat(_healthAttr(attrs,'duration'))||0;
+
+      // Distance: try attribute first (legacy), then WorkoutStatistics children
+      let distance=parseFloat(_healthAttr(attrs,'totalDistance'))||0;
+      if(!distance){
+        const dm=/WorkoutStatistics[^>]*type="HKQuantityTypeIdentifier(?:DistanceWalkingRunning|DistanceCycling|DistanceSwimming)"[^>]*sum="([^"]*)"/.exec(children);
+        if(dm) distance=parseFloat(dm[1])||0;
+      }
+      // Calories: same approach
+      let calories=parseFloat(_healthAttr(attrs,'totalEnergyBurned'))||0;
+      if(!calories){
+        const cm=/WorkoutStatistics[^>]*type="HKQuantityTypeIdentifierActiveEnergyBurned"[^>]*sum="([^"]*)"/.exec(children);
+        if(cm) calories=parseFloat(cm[1])||0;
+      }
+
+      workouts.push({type:_classifyActivity(actType),actType,date:startDate.slice(0,10),
+        duration:Math.round(duration),distance:Math.round(distance*100)/100,
+        calories:Math.round(calories),selected:true});
     }
-    if(textBuffer.length>chunkSize*2) textBuffer=textBuffer.slice(-chunkSize);
+
+    // --- Also match self-closing <Workout ... /> (legacy Apple Health format) ---
+    const reSelf=/<Workout\s([^>]*?)\/>/g;
+    let m2;
+    while((m2=reSelf.exec(textBuffer))!==null){
+      if(m2.index<lastBlockEnd) continue; // already matched as block
+      const attrs=m2[1];
+      const actType=_healthAttr(attrs,'workoutActivityType');
+      const startDate=_healthAttr(attrs,'startDate');
+      const duration=parseFloat(_healthAttr(attrs,'duration'))||0;
+      const distance=parseFloat(_healthAttr(attrs,'totalDistance'))||0;
+      const calories=parseFloat(_healthAttr(attrs,'totalEnergyBurned'))||0;
+      workouts.push({type:_classifyActivity(actType),actType,date:startDate.slice(0,10),
+        duration:Math.round(duration),distance:Math.round(distance*100)/100,
+        calories:Math.round(calories),selected:true});
+    }
+
+    // Trim buffer smartly: keep from after last </Workout> to catch split blocks
+    const lastClose=textBuffer.lastIndexOf('</Workout>');
+    if(lastClose!==-1) textBuffer=textBuffer.slice(lastClose+'</Workout>'.length);
+    else if(textBuffer.length>chunkSize*2) textBuffer=textBuffer.slice(-chunkSize);
+
     if(offset<fileSize){readNextChunk();return;}
     if(progressFill) progressFill.style.width='100%';
     const unique=[],seen=new Set();
