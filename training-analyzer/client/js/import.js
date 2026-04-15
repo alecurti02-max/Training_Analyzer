@@ -224,9 +224,18 @@ export function handleAppleHealthFile(file, callbacks) {
       preview.querySelectorAll('[data-health-idx]').forEach(cb => {
         cb.addEventListener('change', function() { window._healthImportData[parseInt(this.dataset.healthIdx)].selected = this.checked; });
       });
-      document.getElementById('btn-health-import')?.addEventListener('click', async () => {
-        await importHealthWorkouts(window._healthImportData, callbacks?.workoutsCache || [], callbacks?.settingsCache || {});
-        if (callbacks?.onImported) callbacks.onImported();
+      const importBtn = document.getElementById('btn-health-import');
+      if (importBtn) importBtn.addEventListener('click', async () => {
+        importBtn.disabled = true;
+        importBtn.textContent = 'Importazione in corso...';
+        try {
+          await importHealthWorkouts(window._healthImportData, callbacks?.workoutsCache || [], callbacks?.settingsCache || {});
+          if (callbacks?.onImported) callbacks.onImported();
+        } catch (err) {
+          toast('Errore importazione: ' + (err.message || 'Sconosciuto'), 'error');
+          importBtn.disabled = false;
+          importBtn.textContent = 'Importa selezionati';
+        }
       });
     }
   };
@@ -235,22 +244,44 @@ export function handleAppleHealthFile(file, callbacks) {
 }
 
 export async function importHealthWorkouts(selected, workoutsCache, settingsCache){
-  const data=selected||window._healthImportData;if(!data)return;let count=0;
-  for (const w of data.filter(w=>w.selected)) {
-    if(w.type==='running'||w.type==='walking'||w.type==='cycling'){
-      const workout={id:uid(),type:'running',date:w.date,distance:w.distance||0,duration:w.duration,
-        _pace:w.distance>0&&w.duration>0?(w.duration*60)/w.distance:0,runType:'easy',notes:'Importato da Apple Health',imported:true};
-      workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
-      workout.advice=getAdvice(workout);
-      await api.post('/api/workouts', workout);count++;
-    } else if(w.type==='gym'){
-      const workout={id:uid(),type:'gym',date:w.date,duration:w.duration,exercises:[],_tonnage:0,notes:'Importato da Apple Health',imported:true};
-      workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
-      workout.advice=getAdvice(workout);
-      await api.post('/api/workouts', workout);count++;
+  const data=selected||window._healthImportData;if(!data)return;
+  const toImport = data.filter(w=>w.selected);
+  if(!toImport.length){ toast('Nessun allenamento selezionato','error'); return; }
+
+  let count=0, errors=0;
+  const btn = document.getElementById('btn-health-import');
+
+  for (let i = 0; i < toImport.length; i++) {
+    const w = toImport[i];
+    if (btn) btn.textContent = `Importazione ${i+1}/${toImport.length}...`;
+
+    try {
+      let workout;
+      if(w.type==='running'||w.type==='walking'||w.type==='cycling'){
+        workout={id:uid(),type:'running',date:w.date,distance:w.distance||0,duration:w.duration,
+          _pace:w.distance>0&&w.duration>0?(w.duration*60)/w.distance:0,runType:'easy',notes:'Importato da Apple Health',imported:true};
+      } else if(w.type==='gym'){
+        workout={id:uid(),type:'gym',date:w.date,duration:w.duration,exercises:[],_tonnage:0,notes:'Importato da Apple Health',imported:true};
+      } else {
+        // Import 'other' types as gym with activity note
+        workout={id:uid(),type:'gym',date:w.date,duration:w.duration,exercises:[],_tonnage:0,
+          notes:'Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')',imported:true};
+      }
+
+      try { workout.scores=scoreWorkout(workout, workoutsCache, settingsCache); } catch(e) { workout.scores={}; }
+      try { workout.advice=getAdvice(workout); } catch(e) { workout.advice=''; }
+
+      await api.post('/api/workouts', workout);
+      count++;
+    } catch(err) {
+      console.error('Health import error for workout', w, err);
+      errors++;
     }
   }
-  toast(`${count} allenamenti importati!`,'success');
+
+  if(errors) toast(`${count} importati, ${errors} errori`,'error');
+  else toast(`${count} allenamenti importati!`,'success');
+
   const preview=document.getElementById('health-preview');
   if(preview) preview.innerHTML='';
 }
