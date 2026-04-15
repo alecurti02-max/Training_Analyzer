@@ -1,315 +1,278 @@
 # Training Analyzer
 
-Web app per tracciare allenamenti multi-sport, analizzare progressi e confrontarsi con amici. Pensata per essere hostata su GitHub Pages con Firebase come backend.
+Web app full-stack per tracciare allenamenti multi-sport, analizzare progressi e confrontarsi con amici.
 
-**Live:** https://alecurti02-max.github.io/Training_Analyzer/
-**Versione:** 3.1
-
----
-
-## Architettura
-
-```
-index.html        → Struttura HTML (login, nav, pagine, modali)
-css/style.css     → Stili (tema rosso, dark/light, responsive mobile-first)
-js/app.js         → Logica applicativa (Firebase, wizard, grafici, import/export)
-fonts/            → Font locali (BasementGrotesque, Poppins)
-manifest.json     → PWA manifest (standalone, icona adattiva)
-logo_ta.png       → Logo/icona app (1024x1024)
-```
-
-Non c'e build step, bundler o framework. Tutto gira client-side. Le dipendenze esterne sono caricate via CDN:
-
-- **Firebase 10.12** (Auth, Realtime Database) — compat SDK
-- **Chart.js 4.4.1** — grafici (line, bar, doughnut, radar)
-- **Google Fonts** — caricamento Poppins come fallback
-
-### Font personalizzati
-
-- **BasementGrotesque Black** (`fonts/BasementGrotesque-Black_v1.202.otf`) — titoli e heading (`.font-heading`, weight 900)
-- **Poppins** (`fonts/Poppins/`, weights 300-900) — testo corpo e UI
-
-### Backend: Firebase
-
-Non esiste un server. Firebase Realtime Database e il BaaS. La config e hardcodata in `js/app.js` (prime righe).
-
-**Progetto Firebase:** `training-analyzer-deb1f`
-**Database:** `https://training-analyzer-deb1f-default-rtdb.europe-west1.firebasedatabase.app`
-
-#### Struttura dati
-
-```
-/users/{uid}/
-  profile/          → displayName, email, photoURL, createdAt
-  workouts/{id}/    → oggetto allenamento completo (tipo, data, score, esercizi/dati sport)
-  exercises/        → array libreria esercizi personalizzata
-  settings/         → FC max, FC riposo, peso, altezza, VO2max, eta, sesso, sport attivi,
-                      gruppi muscolari, flexibility (1-10), weekgoal, kmgoal
-  weights/{id}/     → log peso corporeo {date, value}
-  weightTarget      → numero (kg obiettivo)
-  heightCm          → numero
-  publicStats/      → metriche aggregate visibili agli amici autenticati
-  following/{uid}/  → lista utenti seguiti {displayName, photoURL, uid, followedAt}
-  notifications/{id}/ → {type, fromName, fromPhoto, fromUid, message, read, timestamp}
-
-/publicUsers/{uid}/ → displayName, photoURL, uid (per ricerca amici)
-```
-
-#### Firebase Rules
-
-```json
-{
-  "rules": {
-    "users": {
-      "$uid": {
-        ".read": "auth!=null && auth.uid==$uid",
-        ".write": "auth!=null && auth.uid==$uid",
-        "publicStats": { ".read": "auth!=null" }
-      }
-    },
-    "publicUsers": {
-      ".read": "auth!=null",
-      "$uid": { ".write": "auth!=null && auth.uid==$uid" }
-    }
-  }
-}
-```
-
-Ogni utente legge/scrive solo i propri dati. `publicStats` e `publicUsers` sono leggibili da chiunque autenticato.
-
-#### Domini autorizzati (Firebase Auth)
-
-In Firebase Console → Authentication → Settings → Authorized domains, devono essere presenti:
-
-- `localhost`
-- `alecurti02-max.github.io`
+**Versione:** 3.2.1
+**Live:** https://training-analyzer-oiu2.onrender.com
 
 ---
 
-## Autenticazione
+## Struttura del progetto
 
-Login esclusivamente con Google (`signInWithPopup` su desktop, `signInWithRedirect` su mobile). Il fallback redirect evita il problema "missing initial state" che si verifica su browser mobile con storage partizionato.
+```
+.
+├── training-analyzer/               App full-stack (v3.2)
+│   ├── client/                      Frontend (Vanilla JS, ES modules)
+│   │   ├── index.html               HTML (login, nav, pagine, modali)
+│   │   ├── css/style.css            Stili (tema rosso, dark/light, responsive)
+│   │   ├── manifest.json            PWA manifest
+│   │   ├── logo_ta.png              Logo/icona app
+│   │   ├── fonts/                   BasementGrotesque + Poppins
+│   │   └── js/
+│   │       ├── ui.js                Orchestratore: stato, render, wizard, PubMed
+│   │       ├── api.js               Layer HTTP centralizzato + JWT auto-refresh
+│   │       ├── auth.js              Login Google OAuth + email/password
+│   │       ├── sports.js            SPORT_TEMPLATES, FIELD_DEFS, costanti
+│   │       ├── scoring.js           Score workout, recovery, streak, fitness assessment
+│   │       ├── charts.js            Chart.js, heatmap canvas, tutti i grafici
+│   │       ├── import.js            GPX, CSV, Apple Health, FIT, JSON backup
+│   │       └── friends.js           Ricerca utenti, follow, confronto stats
+│   ├── server/                      Backend (Node.js + Express)
+│   │   ├── src/
+│   │   │   ├── index.js             Entry point (listen + DB sync + connect)
+│   │   │   ├── app.js               Express: helmet, cors, rate-limit, routes
+│   │   │   ├── config/
+│   │   │   │   ├── database.js      Sequelize + PostgreSQL (SSL in prod)
+│   │   │   │   ├── passport.js      Google OAuth2 + Local (OAuth opzionale)
+│   │   │   │   └── env.js           Validazione env vars (Google OAuth opzionale)
+│   │   │   ├── models/              User, Workout, Exercise, Settings, Weight, Follow
+│   │   │   ├── routes/              auth, workouts, exercises, settings, weights, users
+│   │   │   ├── controllers/         Logica business (un file per route)
+│   │   │   ├── middleware/          authenticate (JWT), authorize, errorHandler
+│   │   │   └── utils/jwt.js         Generazione/verifica JWT
+│   │   ├── migrations/              6 migration Sequelize
+│   │   ├── seeders/                 Demo user + workout campione
+│   │   ├── scripts/
+│   │   │   └── migrateFromFirebase.js  Migrazione dati da Firebase
+│   │   ├── Dockerfile               Node 20 alpine multi-stage
+│   │   └── package.json
+│   ├── docker-compose.yml           PostgreSQL 16 + server
+│   ├── .env.example                 Template variabili d'ambiente
+│   └── .gitignore
+│
+├── index.html                       Legacy frontend (v3.1, client-only + Firebase)
+├── css/style.css
+├── js/app.js
+├── fonts/
+├── manifest.json
+├── logo_ta.png
+└── logica_valutazione_forma_fisica.md
+```
 
-All'avvio viene chiamato `getRedirectResult()` per gestire il ritorno dal redirect su mobile.
-
-Non esiste schermata di setup o registrazione: l'utente clicca "Accedi con Google" e viene creato automaticamente il profilo su Firebase.
+> I file nella root (`index.html`, `js/app.js`, `css/style.css`) sono la versione legacy 3.1 (client-only con Firebase). La versione attiva e in sviluppo e dentro `training-analyzer/`.
 
 ---
 
-## Pagine dell'app
+## Stack tecnologico
 
-| Pagina | ID | Descrizione |
+| Layer | Tecnologia |
+|---|---|
+| Frontend | Vanilla JS (ES modules), Chart.js 4.4.1, no framework, no build step |
+| Backend | Node.js 20, Express 4 |
+| Database | PostgreSQL 16 |
+| ORM | Sequelize 6 |
+| Auth | Passport.js (Google OAuth2 + Local), JWT (access 15min + refresh 7gg) |
+| Security | helmet, cors, express-rate-limit, bcryptjs |
+| Container | Docker, docker-compose |
+| Hosting | Render (Web Service + PostgreSQL) |
+
+---
+
+## Deploy attuale (Render)
+
+L'app e in produzione su Render:
+
+- **Web Service:** `training-analyzer` (Node runtime, root dir `training-analyzer`)
+- **Database:** PostgreSQL managed su Render (Frankfurt)
+- **Build command:** `cd server && npm install`
+- **Start command:** `cd server && node src/index.js`
+- **Auto-deploy:** su ogni push a `main`
+
+Le tabelle vengono create automaticamente all'avvio del server (`sequelize.sync()`).
+
+Google OAuth e opzionale: il server parte anche senza le credenziali Google (login email/password sempre disponibile).
+
+---
+
+## Quick Start (locale)
+
+### Con Docker
+
+```bash
+cd training-analyzer
+cp .env.example .env
+# Modifica .env con JWT secrets (Google OAuth opzionale)
+
+docker-compose up --build
+# Server su http://localhost:3000
+# PostgreSQL su localhost:5432
+```
+
+### Senza Docker
+
+```bash
+# 1. Avvia PostgreSQL e crea database:
+createdb training_analyzer
+
+# 2. Configura ambiente:
+cd training-analyzer
+cp .env.example .env
+# Modifica DATABASE_URL e JWT secrets
+
+# 3. Installa e avvia:
+cd server
+npm install
+npm run dev
+
+# Server su http://localhost:3000
+# Il client viene servito automaticamente da Express
+```
+
+---
+
+## Variabili d'ambiente
+
+| Variabile | Richiesta | Descrizione |
 |---|---|---|
-| Dashboard | `page-dashboard` | Panoramica: heatmap, score recenti, streak, grafici trend |
-| Log | `page-log` | Wizard multi-step per registrare un allenamento |
-| Storico | `page-history` | Lista allenamenti passati con filtri e dettaglio |
-| Profilo atletico | `page-athletic` | Radar 6 metriche, card dettaglio per dimensione atletica |
-| Profilo | `page-profile` | Valutazione forma fisica, dati personali, statistiche |
-| Amici | `page-friends` | Ricerca utenti, follow, confronto statistiche |
-| Impostazioni | `page-settings` | Dati biometrici, sport attivi, import/export, info |
+| `DATABASE_URL` | Si | Connection string PostgreSQL |
+| `JWT_SECRET` | Si | Segreto per access token (64 char random) |
+| `JWT_REFRESH_SECRET` | Si | Segreto per refresh token (64 char random) |
+| `NODE_ENV` | No | `production` o `development` (default) |
+| `PORT` | No | Porta server (default `3000`) |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
+| `GOOGLE_CALLBACK_URL` | No | Callback URL OAuth |
+| `CLIENT_ORIGIN` | No | Origin per CORS |
+
+Se le variabili Google OAuth non sono configurate, il login Google viene disabilitato automaticamente. Il login email/password funziona sempre.
+
+---
+
+## API Endpoints
+
+### Autenticazione
+
+| Metodo | Endpoint | Descrizione |
+|---|---|---|
+| POST | `/api/auth/register` | Registrazione email/password |
+| POST | `/api/auth/login` | Login email/password |
+| POST | `/api/auth/logout` | Logout (invalida refresh token) |
+| POST | `/api/auth/refresh` | Rinnova access + refresh token |
+| GET | `/api/auth/google` | Avvia Google OAuth (se configurato) |
+| GET | `/api/auth/google/callback` | Callback Google OAuth |
+
+### Workout (autenticazione richiesta)
+
+| Metodo | Endpoint | Descrizione |
+|---|---|---|
+| GET | `/api/workouts?type=&from=&to=&limit=&offset=` | Lista con filtri (default limit 50, max 200) |
+| GET | `/api/workouts/:id` | Dettaglio singolo |
+| POST | `/api/workouts` | Crea nuovo (`{ type, date, data }`) |
+| PUT | `/api/workouts/:id` | Aggiorna |
+| DELETE | `/api/workouts` | Elimina tutti i workout dell'utente |
+| DELETE | `/api/workouts/:id` | Elimina singolo |
+| POST | `/api/workouts/import` | Import file (multipart) |
+
+### Esercizi, Settings, Peso
+
+| Metodo | Endpoint | Descrizione |
+|---|---|---|
+| GET/POST/PUT/DELETE | `/api/exercises[/:id]` | CRUD libreria esercizi |
+| GET/PUT | `/api/settings` | Leggi/aggiorna impostazioni |
+| GET/POST/PUT/DELETE | `/api/weights[/:id]` | CRUD log peso |
+
+### Utenti e Social
+
+| Metodo | Endpoint | Descrizione |
+|---|---|---|
+| GET | `/api/users/search?q=` | Cerca per nome (ILIKE) |
+| GET | `/api/users/me/profile` | Profilo + stats corrente |
+| GET | `/api/users/me/following` | Lista utenti seguiti |
+| GET | `/api/users/:uid/stats` | Stats pubbliche di un utente |
+| POST | `/api/users/:uid/follow` | Segui utente |
+| DELETE | `/api/users/:uid/follow` | Smetti di seguire |
+
+### Health check
+
+| Metodo | Endpoint | Descrizione |
+|---|---|---|
+| GET | `/health` | Status server (`{ status: "ok" }`) |
+
+---
+
+## Schema Database
+
+```
+users           1:N  workouts    (userId FK)
+users           1:N  exercises   (userId FK)
+users           1:1  settings    (userId PK/FK)
+users           1:N  weights     (userId FK)
+users (follower) N:M users (following) via follows (PK composta)
+
+Workout.data    JSONB — dettagli completi (esercizi, serie, scores, advice)
+Settings        JSONB — activeSports, activeGroups, dati biometrici
+```
+
+Il client fa il flatten dei workout (merge di `.data` nel top-level) per compatibilita con la logica di rendering. I campi `id`, `type`, `date` del DB hanno sempre priorita sui campi omonimi in `.data`.
 
 ---
 
 ## Funzionalita principali
 
-### Sport personalizzabili
-
-Il sistema supporta 20+ sport definiti in `SPORT_TEMPLATES` (app.js). Ogni sport ha:
-
-- `name`, `icon` — per UI
-- `fixed: true` — palestra e corsa non rimovibili
-- `fields` — array di chiavi che mappano a `FIELD_DEFS` (label, tipo input, placeholder)
-- `hasExercises: true` — solo palestra, attiva il wizard esercizi/serie
-
-L'utente attiva/disattiva sport da Impostazioni → I Miei Sport. La scelta viene salvata in `settings.activeSports`.
-
-Per aggiungere un nuovo sport: inserire una entry in `SPORT_TEMPLATES` e definire eventuali nuovi campi in `FIELD_DEFS`. Il wizard si adatta automaticamente.
-
-### Wizard di registrazione allenamento
-
-Il log usa un wizard a 4 step con indicatore visuale (`.step-dot`):
-
-1. Selezione sport
-2. Dati specifici dello sport (campi da `FIELD_DEFS`)
-3. Per palestra: selezione esercizi tramite bottom sheet mobile-first + serie/reps/peso
-4. Riepilogo e salvataggio
-
-**Bottom sheet esercizi:** su mobile, la selezione esercizi avviene tramite un pannello che scorre dal basso (`.bottom-sheet`) con ricerca in tempo reale. Funzioni: `openExerciseSheet()`, `closeExerciseSheet()`, `filterExerciseSheet()`.
-
-### Scoring
-
-Ogni allenamento riceve uno score 0-10 calcolato diversamente per tipo:
-
-- **Palestra:** volume (25%), intensita/RPE (25%), progressione carichi (25%), varieta muscoli (15%), durata (10%)
-- **Corsa:** distanza vs media (25%), pace vs media (30%), efficienza FC (25%), sforzo/RPE (20%)
-- **Karting:** costanza tra giri (35%), miglioramento best lap (40%), sforzo (25%)
-- **Altri sport:** RPE (60%), durata (40%)
-
-Funzioni: `scoreGymWorkout()`, `scoreRunWorkout()`, `scoreKartWorkout()`, `scoreGenericWorkout()`.
-
-Il 1RM e stimato con la formula di Epley: `peso * (1 + reps/30)`.
-
-Ogni score ha label dettagliate per componente (volume, intensity, variety, progression, duration, distance, pace, hrEfficiency, effort, consistency, improvement) e un advice box con consigli specifici generati da `getAdvice()`.
-
-### Profilo atletico
-
-Pagina dedicata (`page-athletic`) con analisi delle capacita atletiche su 6 dimensioni, calcolate sugli ultimi 30 giorni (`renderAthleticDetail()`):
-
-| Metrica | Calcolo |
-|---|---|
-| Forza | Volume medio allenamenti palestra |
-| Resistenza | Km totali corsi in 30 giorni |
-| Consistenza | Giorni unici di allenamento / 30 |
-| Recupero | Basato su numero sessioni ad alto RPE |
-| Progressione | Score medio progressione carichi palestra |
-| Varieta | Gruppi muscolari + sport diversi praticati |
-
-Visualizzazione: **radar chart** a 6 assi + **6 card** con punteggio, barra colorata e descrizione testuale per ogni dimensione.
-
-### Valutazione forma fisica
-
-Nel profilo, `getFitnessAssessment()` calcola un punteggio percentuale basato su 7 componenti:
-
-| Componente | Peso | Fonte |
-|---|---|---|
-| Forza | 25% | 1RM stimato, volume, progressione carichi |
-| Cardio | 25% | VO2 Max, trend pace, efficienza FC |
-| Endurance | 20% | Giorni allenamento, trend durata, km totali |
-| Composizione corporea | 15% | BMI, trend peso, gruppi muscolari allenati |
-| Flessibilita | 10% | Autovalutazione utente (1-10) da Impostazioni |
-| Atleticita | 5% | Varieta sport praticati |
-
-Ogni componente e visualizzato con barra colorata (verde 70%+, giallo 40%+, rosso sotto) e sub-label con il dettaglio del calcolo.
-
-Giudizio complessivo: Eccellente (85%+), Buono (70%+), Nella media (50%+), Da migliorare (30%+), Insufficiente.
-
-### Streak
-
-Il sistema calcola e mostra in dashboard:
-
-- **Streak corrente:** giorni consecutivi di allenamento
-- **Record storico:** massimo streak raggiunto
-
-Logica: verifica che le date consecutive differiscano di esattamente 1 giorno.
-
-### Sistema amici
-
-- `/publicUsers/{uid}` viene scritto al login con nome e foto Google
-- La ricerca in "Amici" filtra `publicUsersCache` per nome (client-side) + ricerca via `publicStats`
-- Seguire qualcuno scrive in `following/{uid}` dell'utente corrente
-- Il confronto legge `publicStats` di ogni amico selezionato e genera barre comparative
-- E possibile aggiungere amici anche tramite UID diretto
-
-### Notifiche
-
-Sistema di notifiche in-app per eventi sociali:
-
-- **Follow notification:** quando qualcuno ti segue, viene generata una notifica
-- **Struttura Firebase:** `/users/{uid}/notifications/{id}` con campi: type, fromName, fromPhoto, fromUid, message, read, timestamp
-- **Funzioni:** `sendFollowNotification()`, `renderNotifications()`, `markNotifRead()`
-- **UI:** badge conteggio non lette, lista con stato letto/non letto, formattazione "time ago" (ora, X min, X h, X gg)
-
-### Recovery status
-
-`getRecoveryStatus()` stima il recupero per ogni gruppo muscolare basandosi su:
-
-- Giorni trascorsi dall'ultimo allenamento di quel muscolo
-- Intensita (RPE) della sessione
-- Soglie: RPE >= 8 → 3 giorni, RPE >= 6 → 2 giorni, altrimenti 1.5
-
-Calcola anche un livello di **fatica generale** aggregato e suggerisce **giorni di riposo** nell'advice box della dashboard.
-
-### PubMed
-
-Dopo il salvataggio di un allenamento palestra o corsa, `fetchPubMedForWorkout()` costruisce una query basata su muscoli/tipo e interroga le eutils API (esearch → esummary → efetch per abstract). I risultati sono cachati in `sessionStorage` (chiave `ta_pubmed_cache`).
-
-Gli articoli vengono mostrati nel dettaglio allenamento (`.research-box`) con titolo, autori, data, abstract e link diretto a PubMed.
-
-### Import
-
-| Formato | Tipo risultante | Parser |
-|---|---|---|
-| GPX | running | `parseGPX()` — estrae trackpoints, calcola distanza (haversine), pace, FC, dislivello |
-| CSV | gym | `handleCSVFile()` — formato: `data,esercizio,serie,reps,peso_kg,rpe` |
-| Apple Health XML | running/gym | `handleAppleHealthFile()` — streaming a chunk da 1MB, regex su tag `<Workout>` |
-| FIT | gym | `parseFITMinimal()` — scansione binaria per timestamp FIT epoch |
-| JSON | tutti | `importJSONBackup()` — restore completo da backup |
+- **20+ sport personalizzabili** con template e campi dedicati
+- **Wizard multi-step** per la registrazione allenamenti
+- **Scoring 0-10** per tipo di sport (palestra, corsa, karting, generico)
+- **Profilo atletico** con radar chart su 6 dimensioni (forza, resistenza, consistenza, recupero, progressione, varieta)
+- **Valutazione forma fisica** su 7 componenti pesate
+- **Streak tracking** con record storico
+- **Sistema amici** con follow, ricerca e confronto statistiche
+- **Import multi-formato:** GPX, CSV, Apple Health XML, FIT, JSON backup
+- **Export/Import backup** JSON completo con cancellazione dati esistenti
+- **PubMed integration** per articoli scientifici correlati all'allenamento
+- **Recovery status** per gruppo muscolare
+- **PWA installabile** (standalone, icona adattiva)
+- **Tema dark/light** automatico (OS) + override manuale
+- **Login duale:** Google OAuth + email/password (Google opzionale)
 
 ---
 
-## Tema e design
+## Scoring
 
-Il design segue uno stile bold e sportivo: tipografia pesante (BasementGrotesque 900 per heading, Poppins per corpo), uppercase sui titoli, colore tema rosso `#E02020`.
+Il calcolo dello score e **client-side** (`client/js/scoring.js`). Il server riceve e salva lo score calcolato.
 
-### Sistema tema a 3 livelli
-
-1. **Default:** variabili CSS in `:root` (light)
-2. **Sistema operativo:** `@media (prefers-color-scheme: dark)` si adatta automaticamente
-3. **Override manuale:** attributi `[data-theme="dark"]` / `[data-theme="light"]` per forzare il tema
-
-I grafici Chart.js leggono il tema corrente tramite `getChartTheme()` per adattare colori di griglia e testo.
-
-L'heatmap e renderizzata su Canvas (`renderHeatmap()`), non con Chart.js.
-
-### Grafici implementati
-
-- **Line chart:** score nel tempo, trend metriche
-- **Bar chart:** volume, frequenza settimanale
-- **Radar chart:** profilo atletico (6 dimensioni)
-- **Doughnut:** distribuzione gruppi muscolari (ultime 4 settimane)
-- **Canvas heatmap:** calendario attivita
+- **Palestra:** volume 25% + intensita 25% + progressione 25% + varieta 15% + durata 10%
+- **Corsa:** distanza 25% + pace 30% + efficienza FC 25% + sforzo 20%
+- **Karting:** costanza 35% + miglioramento 40% + sforzo 25%
+- **Altri sport:** RPE 60% + durata 40%
 
 ---
 
-## PWA
+## Migrazione da Firebase (v3.1 → v3.2)
 
-L'app e installabile come PWA grazie a `manifest.json`:
+Due metodi disponibili:
 
-- `display: "standalone"` — si apre senza barra browser
-- `background_color: "#0A0A0C"` — splash screen scuro
-- `theme_color: "#E02020"` — rosso tema
-- Icona adattiva (`purpose: "any maskable"`)
+### Metodo 1: Export/Import JSON (consigliato)
 
----
+1. Vai sul sito vecchio (GitHub Pages) → Impostazioni → Export JSON
+2. Vai sul sito nuovo (Render) → Import → Import JSON → carica il file
 
-## Impostazioni utente
-
-Oltre ai dati biometrici base (FC max, FC riposo, peso, altezza, VO2max, eta, sesso), le impostazioni includono:
-
-- **Flessibilita / Mobilita** (`flexibility`): autovalutazione 1-10, usata nel fitness assessment (10% del punteggio). Non calcolabile automaticamente.
-- **Obiettivo settimanale** (`weekgoal`): numero di allenamenti target a settimana
-- **Obiettivo km** (`kmgoal`): km di corsa target a settimana
-- **Sport attivi** (`activeSports`): lista sport abilitati nel wizard
-- **Gruppi muscolari personalizzati:** aggiunte utente ai gruppi di default
-
----
-
-## Deploy
-
-Il sito e hostato su GitHub Pages dal branch `main` della repo `alecurti02-max/Training_Analyzer`.
-
-Per aggiornare:
+### Metodo 2: Script server-side
 
 ```bash
-git add -A
-git commit -m "descrizione"
-git push origin main
+cd training-analyzer/server
+npm install firebase-admin --save-dev
+# Scarica firebase-service-account.json da Firebase Console
+npm run migrate:firebase -- --dry-run
+npm run migrate:firebase
 ```
-
-GitHub Pages rebuilda automaticamente in 1-2 minuti. I dati utente non vengono toccati (vivono su Firebase).
 
 ---
 
 ## Sviluppo locale
 
-Basta un server HTTP statico:
-
 ```bash
-# Python
-python3 -m http.server 8000
-
-# Node
-npx serve .
+cd training-analyzer/server
+npm run dev
 ```
 
-Aprire `http://localhost:8000`. Il login Google funziona su localhost (e tra i domini autorizzati Firebase di default).
+Il server serve sia l'API (`/api/*`) che i file statici del client (`/`). Non serve un server separato per il frontend. Hot reload con nodemon; per il client basta ricaricare il browser.
