@@ -133,16 +133,47 @@ function _healthAttr(str, name) {
   return m ? m[1] : '';
 }
 
+// Extract a numeric field from a WorkoutStatistics element
+function _healthStat(children, typeSubstr, field) {
+  const re = new RegExp('WorkoutStatistics[^>]*type="[^"]*' + typeSubstr + '"[^>]*' + field + '="([^"]*)"');
+  const m = re.exec(children);
+  return m ? parseFloat(m[1]) || 0 : 0;
+}
+
+// Extract a MetadataEntry value
+function _healthMeta(children, key) {
+  const re = new RegExp('MetadataEntry key="' + key + '" value="([^"]*)"');
+  const m = re.exec(children);
+  return m ? m[1] : '';
+}
+
 function _classifyActivity(actType) {
   if (actType.includes('Running')) return 'running';
   if (actType.includes('Walking')) return 'walking';
   if (actType.includes('Cycling')) return 'cycling';
   if (actType.includes('Swimming')) return 'swimming';
+  if (actType.includes('Hiking')) return 'hiking';
+  if (actType.includes('DownhillSkiing') || actType.includes('SnowSports')) return 'skiing';
+  if (actType.includes('Tennis')) return 'tennis';
+  if (actType.includes('Rowing')) return 'rowing';
   if (actType.includes('StrengthTraining') || actType.includes('FunctionalStrength') ||
       actType.includes('TraditionalStrengthTraining') || actType.includes('CrossTraining') ||
       actType.includes('CoreTraining') || actType.includes('HighIntensityIntervalTraining'))
     return 'gym';
   return 'other';
+}
+
+// Convert METs to RPE (1-10 Borg scale)
+function _metsToRPE(mets) {
+  if (mets < 3) return 2;
+  if (mets < 4) return 3;
+  if (mets < 6) return 4;
+  if (mets < 7) return 5;
+  if (mets < 8) return 6;
+  if (mets < 9) return 7;
+  if (mets < 10.5) return 8;
+  if (mets < 12) return 9;
+  return 10;
 }
 
 export function handleAppleHealthFile(file, callbacks) {
@@ -167,26 +198,67 @@ export function handleAppleHealthFile(file, callbacks) {
       const startDate=_healthAttr(attrs,'startDate');
       const duration=parseFloat(_healthAttr(attrs,'duration'))||0;
 
-      // Distance: try attribute first (legacy), then WorkoutStatistics children
+      // --- Extract ALL available data from WorkoutStatistics ---
+      // Distance
       let distance=parseFloat(_healthAttr(attrs,'totalDistance'))||0;
-      if(!distance){
-        const dm=/WorkoutStatistics[^>]*type="HKQuantityTypeIdentifier(?:DistanceWalkingRunning|DistanceCycling|DistanceSwimming)"[^>]*sum="([^"]*)"/.exec(children);
-        if(dm) distance=parseFloat(dm[1])||0;
-      }
-      // Calories: same approach
+      if(!distance) distance = _healthStat(children,'DistanceWalkingRunning','sum')
+                            || _healthStat(children,'DistanceCycling','sum')
+                            || _healthStat(children,'DistanceSwimming','sum');
+      // Calories
       let calories=parseFloat(_healthAttr(attrs,'totalEnergyBurned'))||0;
-      if(!calories){
-        const cm=/WorkoutStatistics[^>]*type="HKQuantityTypeIdentifierActiveEnergyBurned"[^>]*sum="([^"]*)"/.exec(children);
-        if(cm) calories=parseFloat(cm[1])||0;
-      }
-      // Heart rate
-      let avghr=0, maxhr=0;
-      const hrm=/WorkoutStatistics[^>]*type="HKQuantityTypeIdentifierHeartRate"[^>]*average="([^"]*)"[^>]*minimum="[^"]*"[^>]*maximum="([^"]*)"/.exec(children);
-      if(hrm){ avghr=Math.round(parseFloat(hrm[1])||0); maxhr=Math.round(parseFloat(hrm[2])||0); }
+      if(!calories) calories = _healthStat(children,'ActiveEnergyBurned','sum');
+      // Heart rate (average, minimum, maximum)
+      const avghr = Math.round(_healthStat(children,'HeartRate','average'));
+      const maxhr = Math.round(_healthStat(children,'HeartRate','maximum'));
+      const minhr = Math.round(_healthStat(children,'HeartRate','minimum'));
+      // Steps
+      const steps = Math.round(_healthStat(children,'StepCount','sum'));
+      // Running metrics
+      const runSpeed = _healthStat(children,'RunningSpeed','average');
+      const runPower = Math.round(_healthStat(children,'RunningPower','average'));
+      const runStride = Math.round(_healthStat(children,'RunningStrideLength','average')*100)/100;
+      const runGCT = Math.round(_healthStat(children,'RunningGroundContactTime','average'));
+      const runVertOsc = Math.round(_healthStat(children,'RunningVerticalOscillation','average')*10)/10;
+      // Cycling metrics
+      const cycSpeed = Math.round(_healthStat(children,'CyclingSpeed','average')*10)/10;
+      const cycPower = Math.round(_healthStat(children,'CyclingPower','average'));
+      const cycCadence = Math.round(_healthStat(children,'CyclingCadence','average'));
+      // Swimming metrics
+      const swimStrokes = Math.round(_healthStat(children,'SwimmingStrokeCount','sum'));
 
-      workouts.push({type:_classifyActivity(actType),actType,date:startDate.slice(0,10),
-        duration:Math.round(duration),distance:Math.round(distance*100)/100,
-        calories:Math.round(calories),avghr,maxhr,selected:true});
+      // --- Extract MetadataEntry fields ---
+      const elevRaw = _healthMeta(children,'HKElevationAscended');
+      const elevation = elevRaw ? Math.round(parseFloat(elevRaw)/100*10)/10 : 0; // cm → m
+      const metsRaw = _healthMeta(children,'HKAverageMETs');
+      const mets = metsRaw ? Math.round(parseFloat(metsRaw)*100)/100 : 0;
+      const indoorRaw = _healthMeta(children,'HKIndoorWorkout');
+      const indoor = indoorRaw === '1';
+      const tempRaw = _healthMeta(children,'HKWeatherTemperature');
+      const temperature = tempRaw ? Math.round((parseFloat(tempRaw)-32)*5/9) : 0; // °F → °C
+      const strokeStyle = _healthMeta(children,'HKSwimmingStrokeStyle');
+      const lapLength = _healthMeta(children,'HKLapLength') ? parseFloat(_healthMeta(children,'HKLapLength')) : 0;
+
+      // Build workout object with ALL available data (undefined for missing = not stored)
+      const w = {type:_classifyActivity(actType), actType, date:startDate.slice(0,10),
+        duration:Math.round(duration), distance:Math.round(distance*100)/100,
+        calories:Math.round(calories), selected:true};
+      // Only add fields that have real values
+      if(avghr) w.avghr=avghr; if(maxhr) w.maxhr=maxhr; if(minhr) w.minhr=minhr;
+      if(steps) w.steps=steps; if(elevation) w.elevation=elevation; if(mets) w.mets=mets;
+      if(indoor) w.indoor=true;
+      if(temperature) w.temperature=temperature;
+      if(runSpeed) w.runSpeed=Math.round(runSpeed*10)/10;
+      if(runPower) w.runPower=runPower;
+      if(runStride) w.runStride=runStride;
+      if(runGCT) w.runGCT=runGCT;
+      if(runVertOsc) w.runVertOsc=runVertOsc;
+      if(cycSpeed) w.cycSpeed=cycSpeed;
+      if(cycPower) w.cycPower=cycPower;
+      if(cycCadence) w.cycCadence=cycCadence;
+      if(swimStrokes) w.swimStrokes=swimStrokes;
+      if(strokeStyle) w.strokeStyle=strokeStyle;
+      if(lapLength) w.lapLength=lapLength;
+      workouts.push(w);
     }
 
     // --- Also match self-closing <Workout ... /> (legacy Apple Health format) ---
@@ -216,14 +288,12 @@ export function handleAppleHealthFile(file, callbacks) {
     workouts.forEach(w=>{const key=`${w.date}_${w.type}_${w.duration}`;if(!seen.has(key)){seen.add(key);unique.push(w);}});
     unique.reverse(); // newest first
 
-    // Estimate user's max HR from all workouts (95th percentile of observed maxhr)
-    const allMaxHR = unique.map(w=>w.maxhr).filter(h=>h>0).sort((a,b)=>a-b);
-    const userMaxHR = allMaxHR.length ? allMaxHR[Math.floor(allMaxHR.length*0.95)] : 190;
-
-    // Calculate RPE from heart rate data: RPE = (avgHR / userMaxHR) * 10, clamped 1-10
+    // Calculate RPE: Priority 1 = METs (Apple's effort), Priority 2 = HR fallback (FCmax 197 bpm)
     unique.forEach(w => {
-      if(w.avghr && userMaxHR) {
-        w.rpe = Math.max(1, Math.min(10, Math.round((w.avghr / userMaxHR) * 10)));
+      if (w.mets) {
+        w.rpe = _metsToRPE(w.mets);
+      } else if (w.avghr) {
+        w.rpe = Math.max(1, Math.min(10, Math.round((w.avghr / 197) * 10)));
       }
     });
 
@@ -231,16 +301,18 @@ export function handleAppleHealthFile(file, callbacks) {
     if(!unique.length){if(preview)preview.innerHTML='<p style="color:var(--text2)">Nessun allenamento trovato.</p>';return;}
     const PREVIEW_LIMIT=50;
     const toShow=unique.slice(0,PREVIEW_LIMIT);
-    const typeNames={running:'Corsa',walking:'Camminata',cycling:'Ciclismo',swimming:'Nuoto',gym:'Palestra',other:'Altro'};
+    const typeNames={running:'Corsa',walking:'Camminata',cycling:'Ciclismo',swimming:'Nuoto',
+      gym:'Palestra',hiking:'Escursionismo',skiing:'Sci',tennis:'Tennis',rowing:'Canottaggio',other:'Altro'};
     let html=`<div class="card"><div class="card-title">Trovati ${unique.length} allenamenti</div>`;
     if(unique.length>PREVIEW_LIMIT) html+=`<p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Anteprima ultimi ${PREVIEW_LIMIT} — tutti i ${unique.length} verranno importati.</p>`;
-    if(userMaxHR) html+=`<p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">FC max stimata: ${userMaxHR} bpm — RPE calcolato automaticamente.</p>`;
     html+=`<div style="max-height:400px;overflow-y:auto">`;
     toShow.forEach((w,i)=>{
       let info = `${w.duration} min`;
-      if(w.distance) info += ` - ${w.distance} km`;
-      if(w.avghr) info += ` - FC ${w.avghr}`;
-      if(w.rpe) info += ` - RPE ${w.rpe}`;
+      if(w.distance) info += ` · ${w.distance} km`;
+      if(w.avghr) info += ` · FC ${w.avghr}`;
+      if(w.rpe) info += ` · RPE ${w.rpe}`;
+      if(w.calories) info += ` · ${w.calories} kcal`;
+      if(w.elevation) info += ` · ${w.elevation}m D+`;
       html+=`<div class="import-preview-item"><input type="checkbox" class="import-checkbox" ${w.selected?'checked':''} data-health-idx="${i}">
         <span style="flex:1"><strong>${formatDate(w.date)}</strong> - ${typeNames[w.type]||w.type} - ${info}</span></div>`;
     });
@@ -277,32 +349,47 @@ export async function importHealthWorkouts(selected, workoutsCache, settingsCach
 
   const btn = document.getElementById('btn-health-import');
 
-  // Build all workout objects first
+  // Build all workout objects — pass through ALL available fields
   const prepared = toImport.map(w => {
-    const base = {id:uid(), date:w.date, duration:w.duration, notes:'Importato da Apple Health', imported:true};
-    // Add heart rate and RPE if available
-    if(w.avghr) base.avghr = w.avghr;
-    if(w.maxhr) base.maxhr = w.maxhr;
-    if(w.rpe) base.rpe = w.rpe;
-    if(w.calories) base.calories = w.calories;
-    let workout;
+    // Base fields present for every workout
+    const workout = {id:uid(), date:w.date, type:w.type, duration:w.duration, notes:'Importato da Apple Health', imported:true};
 
-    if (w.type==='running') {
-      workout={...base, type:'running', distance:w.distance||0,
-        _pace:w.distance>0&&w.duration>0?(w.duration*60)/w.distance:0, runType:'easy'};
-    } else if (w.type==='walking') {
-      workout={...base, type:'walking', distance:w.distance||0};
-    } else if (w.type==='cycling') {
-      workout={...base, type:'cycling', distance:w.distance||0,
-        avgSpeed:w.distance>0&&w.duration>0?Math.round((w.distance/(w.duration/60))*10)/10:0};
-    } else if (w.type==='swimming') {
-      workout={...base, type:'swimming', distance:w.distance||0};
-    } else if (w.type==='gym') {
-      workout={...base, type:'gym', exercises:[], _tonnage:0};
-    } else {
-      workout={...base, type:'gym', exercises:[], _tonnage:0,
-        notes:'Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')'};
+    // Conditionally add ALL fields that exist (never store empty/zero)
+    if(w.distance) workout.distance = w.distance;
+    if(w.avghr) workout.avghr = w.avghr;
+    if(w.maxhr) workout.maxhr = w.maxhr;
+    if(w.minhr) workout.minhr = w.minhr;
+    if(w.rpe) workout.rpe = w.rpe;
+    if(w.mets) workout.mets = w.mets;
+    if(w.calories) workout.calories = w.calories;
+    if(w.elevation) workout.elevation = w.elevation;
+    if(w.indoor) workout.indoor = true;
+    if(w.temperature) workout.temperature = w.temperature;
+    if(w.steps) workout.steps = w.steps;
+    // Running-specific
+    if(w.runSpeed) workout.avgSpeed = w.runSpeed;
+    if(w.runPower) workout.avgPower = w.runPower;
+    if(w.runStride) workout.avgStride = w.runStride;
+    if(w.runGCT) workout.groundContact = w.runGCT;
+    if(w.runVertOsc) workout.vertOsc = w.runVertOsc;
+    // Cycling-specific
+    if(w.cycSpeed) workout.avgSpeed = w.cycSpeed;
+    if(w.cycPower) workout.avgPower = w.cycPower;
+    if(w.cycCadence) workout.avgCadence = w.cycCadence;
+    // Swimming-specific
+    if(w.swimStrokes) workout.strokes = w.swimStrokes;
+    if(w.strokeStyle) workout.strokeStyle = w.strokeStyle;
+    if(w.lapLength) workout.lapLength = w.lapLength;
+    // Pace for running/walking
+    if((w.type==='running'||w.type==='walking') && w.distance>0 && w.duration>0) {
+      workout._pace = (w.duration*60)/w.distance; // sec/km
     }
+    // Gym needs exercises array
+    if(w.type==='gym') { workout.exercises=[]; workout._tonnage=0; }
+    // Other → save as original type name
+    if(w.type==='other') {
+      workout.type='gym'; workout.exercises=[]; workout._tonnage=0;
+      workout.notes='Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')';}
 
     try { workout.scores=scoreWorkout(workout, workoutsCache, settingsCache); } catch(e) { workout.scores={}; }
     try { workout.advice=getAdvice(workout); } catch(e) { workout.advice=''; }

@@ -591,12 +591,12 @@ function workoutItemHTML(w) {
   const score=w.scores?.overall||'--';
   let detail = '';
   if (w.type==='gym') detail = `${(w.exercises||[]).length} esercizi \u00b7 ${Math.round((w._tonnage||0)/1000*10)/10}t`;
-  else if (w.type==='running') detail = `${w.distance||0} km \u00b7 ${secondsToPace(w._pace)}`;
-  else if (w.type==='walking') detail = `${w.distance||0} km \u00b7 ${w.duration||0} min`;
-  else if (w.type==='cycling') detail = `${w.distance||0} km \u00b7 ${w.duration||0} min`;
-  else if (w.type==='swimming') detail = `${w.distance?w.distance+' km \u00b7 ':''}${w.duration||0} min`;
+  else if (w.type==='running') { detail = `${w.distance||0} km \u00b7 ${secondsToPace(w._pace)}`; if(w.avghr) detail+=` \u00b7 FC ${w.avghr}`; }
+  else if (w.type==='walking') { detail = `${w.distance||0} km \u00b7 ${w.duration||0} min`; if(w.avghr) detail+=` \u00b7 FC ${w.avghr}`; }
+  else if (w.type==='cycling') { detail = `${w.distance||0} km \u00b7 ${w.duration||0} min`; if(w.avghr) detail+=` \u00b7 FC ${w.avghr}`; }
+  else if (w.type==='swimming') { detail = `${w.distance?w.distance+' km \u00b7 ':''}${w.duration||0} min`; if(w.strokes) detail+=` \u00b7 ${w.strokes} bracciate`; }
   else if (w.type==='karting') detail = `${w.track||''} \u00b7 Best: ${w.bestLap||'--'}s`;
-  else if (w.duration) detail = `${w.duration} min`;
+  else { let parts=[]; if(w.duration) parts.push(w.duration+' min'); if(w.distance) parts.push(w.distance+' km'); if(w.avghr) parts.push('FC '+w.avghr); detail=parts.join(' \u00b7 ')||''; }
   const typeClass = SPORT_TEMPLATES[w.type] ? 'type-'+w.type : 'type-custom';
   return `<div class="workout-item" data-workout-id="${w.id}">
     <div class="score-sm" style="background:${scoreColor(score)};color:#fff">${typeof score==='number'?score.toFixed(1):score}</div>
@@ -651,7 +651,15 @@ function showWorkoutDetail(id) {
   if(w.advice?.length) html+='<div class="advice-box">'+w.advice.map(a=>'- '+a).join('<br>')+'</div>';
   html+='<div style="margin-top:16px">';
   if(w.type==='gym') {
-    if(w.duration) html+=`<p style="font-size:.85rem;color:var(--text2)">Durata: ${w.duration} min | RPE: ${w.rpe||'--'} | Tonnellaggio: ${Math.round(w._tonnage||0)} kg</p>`;
+    let gymInfo=[];
+    if(w.duration) gymInfo.push('Durata: '+w.duration+' min');
+    if(w.rpe) gymInfo.push('RPE: '+w.rpe);
+    if(w._tonnage) gymInfo.push('Tonnellaggio: '+Math.round(w._tonnage)+' kg');
+    if(w.avghr) gymInfo.push('FC Media: '+w.avghr+' bpm');
+    if(w.maxhr) gymInfo.push('FC Max: '+w.maxhr+' bpm');
+    if(w.calories) gymInfo.push('Calorie: '+Math.round(w.calories)+' kcal');
+    if(w.mets) gymInfo.push('METs: '+w.mets);
+    if(gymInfo.length) html+=`<p style="font-size:.85rem;color:var(--text2)">${gymInfo.join(' | ')}</p>`;
     (w.exercises||[]).forEach(ex=>{
       html+=`<div style="margin-top:10px"><strong style="font-size:.9rem">${ex.name}</strong> <span style="font-size:.75rem;color:var(--accent)">${ex.muscle||''}</span>`;
       html+='<table style="width:100%;font-size:.82rem;margin-top:4px;border-collapse:collapse"><tr style="color:var(--text2)"><td>Serie</td><td>Reps</td><td>Peso</td><td>RPE</td></tr>';
@@ -659,17 +667,56 @@ function showWorkoutDetail(id) {
       html+='</table></div>';
     });
   }
-  if(w.type==='running') html+=`<p style="font-size:.85rem;color:var(--text2)">Distanza: ${w.distance} km | Durata: ${w.duration||'--'} min | Pace: ${secondsToPace(w._pace)}/km<br>FC Media: ${w.avghr||'--'} bpm | FC Max: ${w.maxhr||'--'} bpm | Dislivello: ${w.elevation||'--'} m<br>Tipo: ${w.runType||'--'} | RPE: ${w.rpe||'--'}</p>`;
-  if(w.type==='karting') html+=`<p style="font-size:.85rem;color:var(--text2)">Circuito: ${w.track||'--'} | Durata: ${w.duration||'--'} min | Giri: ${w.laps||'--'}<br>Miglior Giro: ${w.bestLap||'--'}s | Giro Medio: ${w.avgLap||'--'}s | RPE: ${w.rpe||'--'}</p>`;
-  if (w.type !== 'gym' && w.type !== 'running' && w.type !== 'karting') {
-    let details = [];
-    if (w.duration) details.push('Durata: ' + w.duration + ' min');
-    if (w.distance) details.push('Distanza: ' + w.distance + ' km');
-    if (w.rpe) details.push('RPE: ' + w.rpe);
-    if (w.rounds) details.push('Round: ' + w.rounds);
-    if (w.sets) details.push('Set: ' + w.sets);
-    if (w.avghr) details.push('FC Media: ' + w.avghr + ' bpm');
-    if (details.length) html += `<p style="font-size:.85rem;color:var(--text2)">${details.join(' | ')}</p>`;
+  if(w.type==='running') {
+    let rd=[];
+    if(w.distance) rd.push('Distanza: '+w.distance+' km');
+    if(w.duration) rd.push('Durata: '+w.duration+' min');
+    if(w._pace) rd.push('Pace: '+secondsToPace(w._pace)+'/km');
+    html+='<p style="font-size:.85rem;color:var(--text2)">'+rd.join(' | ')+'</p>';
+    let rd2=[];
+    if(w.avghr) rd2.push('FC Media: '+w.avghr+' bpm');
+    if(w.maxhr) rd2.push('FC Max: '+w.maxhr+' bpm');
+    if(w.minhr) rd2.push('FC Min: '+w.minhr+' bpm');
+    if(rd2.length) html+='<p style="font-size:.85rem;color:var(--text2)">'+rd2.join(' | ')+'</p>';
+    let rd3=[];
+    if(w.elevation) rd3.push('Dislivello: '+w.elevation+' m');
+    if(w.calories) rd3.push('Calorie: '+Math.round(w.calories)+' kcal');
+    if(w.steps) rd3.push('Passi: '+w.steps);
+    if(w.rpe) rd3.push('RPE: '+w.rpe);
+    if(w.mets) rd3.push('METs: '+w.mets);
+    if(rd3.length) html+='<p style="font-size:.85rem;color:var(--text2)">'+rd3.join(' | ')+'</p>';
+    let rd4=[];
+    if(w.avgSpeed) rd4.push('Velocita: '+w.avgSpeed+' km/h');
+    if(w.avgPower) rd4.push('Potenza: '+w.avgPower+' W');
+    if(w.avgStride) rd4.push('Falcata: '+w.avgStride+' m');
+    if(w.groundContact) rd4.push('Ground Contact: '+w.groundContact+' ms');
+    if(w.vertOsc) rd4.push('Osc. Verticale: '+w.vertOsc+' cm');
+    if(rd4.length) html+='<p style="font-size:.85rem;color:var(--text2)">'+rd4.join(' | ')+'</p>';
+    if(w.runType&&w.runType!=='easy') html+='<p style="font-size:.85rem;color:var(--text2)">Tipo: '+w.runType+'</p>';
+    if(w.indoor) html+='<p style="font-size:.85rem;color:var(--text2)">Indoor</p>';
+  }
+  else if(w.type==='karting') html+=`<p style="font-size:.85rem;color:var(--text2)">Circuito: ${w.track||'--'} | Durata: ${w.duration||'--'} min | Giri: ${w.laps||'--'}<br>Miglior Giro: ${w.bestLap||'--'}s | Giro Medio: ${w.avgLap||'--'}s | RPE: ${w.rpe||'--'}</p>`;
+  else if (w.type !== 'gym') {
+    // Smart generic detail: show ALL available fields, skip empty ones
+    const allFields=[
+      [w.distance,'Distanza',w.distance+' km'], [w.duration,'Durata',w.duration+' min'],
+      [w._pace,'Pace',secondsToPace(w._pace)+'/km'],
+      [w.avghr,'FC Media',w.avghr+' bpm'], [w.maxhr,'FC Max',w.maxhr+' bpm'], [w.minhr,'FC Min',w.minhr+' bpm'],
+      [w.elevation,'Dislivello',w.elevation+' m'], [w.calories,'Calorie',Math.round(w.calories||0)+' kcal'],
+      [w.rpe,'RPE',w.rpe], [w.mets,'METs',w.mets],
+      [w.avgSpeed,'Velocita Media',w.avgSpeed+' km/h'], [w.avgPower,'Potenza',w.avgPower+' W'],
+      [w.avgCadence,'Cadenza',w.avgCadence+' rpm'],
+      [w.strokes,'Bracciate',w.strokes], [w.strokeStyle,'Stile',w.strokeStyle],
+      [w.lapLength,'Vasca',w.lapLength+' m'], [w.steps,'Passi',w.steps],
+      [w.rounds,'Round',w.rounds], [w.sets,'Set',w.sets],
+    ];
+    // Group into rows of 3
+    const present=allFields.filter(([v])=>v);
+    for(let i=0;i<present.length;i+=3){
+      const row=present.slice(i,i+3).map(([,label,display])=>label+': '+display).join(' | ');
+      html+='<p style="font-size:.85rem;color:var(--text2)">'+row+'</p>';
+    }
+    if(w.indoor) html+='<p style="font-size:.85rem;color:var(--text2)">Indoor</p>';
   }
   if(w.notes) html+=`<p style="margin-top:10px;font-size:.85rem;font-style:italic;color:var(--text2)">"${w.notes}"</p>`;
   html+='</div><div id="modal-pubmed"></div>';
