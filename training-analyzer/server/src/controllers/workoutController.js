@@ -19,7 +19,7 @@ async function list(req, res, next) {
     const { count, rows } = await Workout.findAndCountAll({
       where,
       order: [['date', 'DESC'], ['createdAt', 'DESC']],
-      limit: Math.min(parseInt(limit, 10) || 50, 200),
+      limit: Math.min(parseInt(limit, 10) || 50, 5000),
       offset: parseInt(offset, 10) || 0,
     });
 
