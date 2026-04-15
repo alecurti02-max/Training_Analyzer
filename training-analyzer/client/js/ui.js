@@ -172,16 +172,7 @@ function onDataChanged() {
 // ==================== SAVE HELPERS (API calls) ====================
 async function saveWorkout(workout) {
   const { type, date, ...rest } = workout;
-  if (editingWorkoutId) {
-    // Update existing workout
-    await api.put('/api/workouts/' + editingWorkoutId, { type, date, data: rest });
-    // Update cache
-    const idx = workoutsCache.findIndex(w => w.id === editingWorkoutId);
-    if (idx !== -1) workoutsCache[idx] = { ...workoutsCache[idx], ...workout };
-    editingWorkoutId = null;
-  } else {
-    await api.post('/api/workouts', { type, date, data: rest });
-  }
+  await api.post('/api/workouts', { type, date, data: rest });
 }
 
 async function deleteWorkout(id) {
@@ -701,46 +692,212 @@ function showWorkoutDetail(id) {
 
 function closeModal(){document.getElementById('workout-modal').classList.remove('show');}
 
-// Edit existing workout — pre-populate wizard, save via PUT
+// Edit existing workout — inline in modal
 let editingWorkoutId = null;
 
 function editWorkout(id) {
   const w = workoutsCache.find(x => x.id === id);
   if (!w) return;
-  editingWorkoutId = id;
-  showPage('log');
+  const tmpl = SPORT_TEMPLATES[w.type];
+  const typeName = tmpl?.name || w.type;
+  document.getElementById('modal-title').textContent = 'Modifica: ' + typeName;
+  document.getElementById('modal-edit-btn').style.display = 'none';
+  document.getElementById('modal-delete-btn').style.display = 'none';
 
-  // Set date and type
-  const dateEl = document.getElementById('wiz-date');
-  if (dateEl) dateEl.value = w.date;
-  wizType = w.type;
-  selectWorkoutType(w.type);
+  let html = '<div class="edit-workout-form">';
 
-  // Pre-populate fields based on type
+  // Date
+  html += `<div class="form-group"><label>Data</label><input type="date" id="edit-w-date" value="${w.date}"></div>`;
+
+  // Sport-specific fields
   if (w.type === 'gym') {
-    // Pre-populate exercises
-    wizExercises = (w.exercises || []).map(ex => ({
-      name: ex.name, muscle: ex.muscle, param: ex.param || 'reps',
-      sets: ex.sets ? ex.sets.map(s => ({ ...s })) : [{ reps: 0, weight: 0 }]
-    }));
-    renderWizExercises();
-    wizGoStep(3);
+    html += `<div class="form-row">
+      <div class="form-group"><label>Durata (min)</label><input type="number" id="edit-w-duration" value="${w.duration||''}"></div>
+      <div class="form-group"><label>RPE (1-10)</label><input type="number" id="edit-w-rpe" min="1" max="10" value="${w.rpe||''}"></div>
+    </div>`;
+    // Exercises
+    html += '<div class="card-title" style="margin-top:12px;font-size:.9rem">Esercizi</div>';
+    (w.exercises || []).forEach((ex, ei) => {
+      html += `<div class="edit-exercise" style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <strong style="font-size:.85rem">${ex.name} <span style="color:var(--accent);font-size:.75rem">${ex.muscle||''}</span></strong>
+          <button class="btn-icon edit-remove-exercise" data-ei="${ei}" title="Rimuovi">&times;</button>
+        </div>
+        <table style="width:100%;font-size:.82rem;border-collapse:collapse">
+          <tr style="color:var(--text2)"><td>Serie</td><td>Reps</td><td>Peso (kg)</td><td>RPE</td><td></td></tr>`;
+      (ex.sets || []).forEach((s, si) => {
+        html += `<tr>
+          <td>${si + 1}</td>
+          <td><input type="number" class="edit-set-input" data-ei="${ei}" data-si="${si}" data-field="reps" value="${s.reps||0}" min="0" style="width:50px"></td>
+          <td><input type="number" class="edit-set-input" data-ei="${ei}" data-si="${si}" data-field="weight" value="${s.weight||0}" min="0" step="0.5" style="width:60px"></td>
+          <td><input type="number" class="edit-set-input" data-ei="${ei}" data-si="${si}" data-field="rpe" value="${s.rpe||''}" min="1" max="10" style="width:45px"></td>
+          <td><button class="btn-icon edit-remove-set" data-ei="${ei}" data-si="${si}" title="Rimuovi serie">&times;</button></td>
+        </tr>`;
+      });
+      html += `</table>
+        <button class="btn btn-secondary btn-sm edit-add-set" data-ei="${ei}" style="margin-top:4px;font-size:.75rem">+ Serie</button>
+      </div>`;
+    });
+  } else if (w.type === 'running') {
+    html += `<div class="form-row">
+      <div class="form-group"><label>Distanza (km)</label><input type="number" id="edit-w-distance" step="0.1" value="${w.distance||''}"></div>
+      <div class="form-group"><label>Durata (min)</label><input type="number" id="edit-w-duration" value="${w.duration||''}"></div>
+      <div class="form-group"><label>Pace (min/km)</label><input type="text" id="edit-w-pace" value="${w.paceInput||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>FC Media</label><input type="number" id="edit-w-avghr" value="${w.avghr||''}"></div>
+      <div class="form-group"><label>FC Max</label><input type="number" id="edit-w-maxhr" value="${w.maxhr||''}"></div>
+      <div class="form-group"><label>Dislivello (m)</label><input type="number" id="edit-w-elevation" value="${w.elevation||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo corsa</label>
+        <select id="edit-w-runType">
+          ${['easy','tempo','interval','long','recovery','race'].map(t=>`<option value="${t}" ${t===w.runType?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>RPE (1-10)</label><input type="number" id="edit-w-rpe" min="1" max="10" value="${w.rpe||''}"></div>
+    </div>`;
   } else {
-    // Pre-populate sport-specific fields
-    const tmpl = SPORT_TEMPLATES[w.type];
+    // Generic sport fields from template
     if (tmpl && tmpl.fields) {
-      setTimeout(() => {
-        tmpl.fields.forEach(key => {
-          const el = document.getElementById('wiz-field-' + key);
-          if (el && w[key] !== undefined) {
-            el.value = w[key];
-          }
-        });
-      }, 50);
+      html += '<div class="form-row" style="flex-wrap:wrap">';
+      tmpl.fields.forEach(key => {
+        const fd = FIELD_DEFS[key];
+        if (!fd) return;
+        const val = w[key] || '';
+        if (fd.type === 'select' && fd.options) {
+          html += `<div class="form-group"><label>${fd.label}</label><select id="edit-w-${key}">
+            ${fd.options.map(o=>`<option value="${o}" ${o==val?'selected':''}>${o}</option>`).join('')}
+          </select></div>`;
+        } else {
+          html += `<div class="form-group"><label>${fd.label}</label><input type="${fd.type||'number'}" id="edit-w-${key}" value="${val}" ${fd.step?'step="'+fd.step+'"':''} ${fd.min!==undefined?'min="'+fd.min+'"':''}></div>`;
+        }
+      });
+      html += '</div>';
     }
-    wizGoStep(2);
   }
-  toast('Modifica allenamento — salva per aggiornare', 'success');
+
+  // Notes
+  html += `<div class="form-group" style="margin-top:12px"><label>Note</label><textarea id="edit-w-notes" rows="2" style="width:100%;border-radius:8px;padding:8px;background:var(--bg3);color:var(--text1);border:1px solid var(--bg3)">${w.notes||''}</textarea></div>`;
+
+  // Save / Cancel buttons
+  html += `<div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" id="edit-w-save">Salva Modifiche</button>
+    <button class="btn btn-secondary" id="edit-w-cancel">Annulla</button>
+  </div></div>`;
+
+  document.getElementById('modal-body').innerHTML = html;
+
+  // Deep clone exercises for editing
+  let editExercises = (w.exercises || []).map(ex => ({
+    ...ex, sets: (ex.sets || []).map(s => ({ ...s }))
+  }));
+
+  // Wire up set inputs
+  document.querySelectorAll('.edit-set-input').forEach(input => {
+    input.addEventListener('change', () => {
+      const ei = parseInt(input.dataset.ei), si = parseInt(input.dataset.si), field = input.dataset.field;
+      const val = field === 'rpe' ? (parseInt(input.value) || null) : (parseFloat(input.value) || 0);
+      if (editExercises[ei] && editExercises[ei].sets[si]) editExercises[ei].sets[si][field] = val;
+    });
+  });
+
+  // Wire up add set buttons
+  document.querySelectorAll('.edit-add-set').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ei = parseInt(btn.dataset.ei);
+      if (editExercises[ei]) {
+        editExercises[ei].sets.push({ reps: 0, weight: 0 });
+        editWorkout(id); // re-render
+      }
+    });
+  });
+
+  // Wire up remove set buttons
+  document.querySelectorAll('.edit-remove-set').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ei = parseInt(btn.dataset.ei), si = parseInt(btn.dataset.si);
+      if (editExercises[ei] && editExercises[ei].sets.length > 1) {
+        editExercises[ei].sets.splice(si, 1);
+        // Update w temporarily so re-render picks up changes
+        w.exercises = editExercises;
+        editWorkout(id);
+      }
+    });
+  });
+
+  // Wire up remove exercise
+  document.querySelectorAll('.edit-remove-exercise').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ei = parseInt(btn.dataset.ei);
+      if (confirm('Rimuovere ' + editExercises[ei]?.name + '?')) {
+        editExercises.splice(ei, 1);
+        w.exercises = editExercises;
+        editWorkout(id);
+      }
+    });
+  });
+
+  // Cancel
+  document.getElementById('edit-w-cancel').addEventListener('click', () => showWorkoutDetail(id));
+
+  // Save
+  document.getElementById('edit-w-save').addEventListener('click', async () => {
+    const updated = { ...w };
+    updated.date = document.getElementById('edit-w-date').value || w.date;
+    updated.notes = document.getElementById('edit-w-notes').value || '';
+
+    if (w.type === 'gym') {
+      updated.duration = parseInt(document.getElementById('edit-w-duration')?.value) || w.duration;
+      updated.rpe = parseInt(document.getElementById('edit-w-rpe')?.value) || w.rpe;
+      // Read all set inputs fresh
+      document.querySelectorAll('.edit-set-input').forEach(input => {
+        const ei = parseInt(input.dataset.ei), si = parseInt(input.dataset.si), field = input.dataset.field;
+        const val = field === 'rpe' ? (parseInt(input.value) || null) : (parseFloat(input.value) || 0);
+        if (editExercises[ei] && editExercises[ei].sets[si]) editExercises[ei].sets[si][field] = val;
+      });
+      updated.exercises = editExercises;
+      // Recalculate tonnage
+      let t = 0;
+      updated.exercises.forEach(ex => (ex.sets || []).forEach(s => t += (s.reps || 0) * (s.weight || 0)));
+      updated._tonnage = t;
+    } else if (w.type === 'running') {
+      updated.distance = parseFloat(document.getElementById('edit-w-distance')?.value) || w.distance;
+      updated.duration = parseInt(document.getElementById('edit-w-duration')?.value) || w.duration;
+      updated.paceInput = document.getElementById('edit-w-pace')?.value || w.paceInput;
+      updated._pace = paceToSeconds(updated.paceInput);
+      updated.avghr = parseInt(document.getElementById('edit-w-avghr')?.value) || w.avghr;
+      updated.maxhr = parseInt(document.getElementById('edit-w-maxhr')?.value) || w.maxhr;
+      updated.elevation = parseInt(document.getElementById('edit-w-elevation')?.value) || w.elevation;
+      updated.runType = document.getElementById('edit-w-runType')?.value || w.runType;
+      updated.rpe = parseInt(document.getElementById('edit-w-rpe')?.value) || w.rpe;
+    } else if (tmpl && tmpl.fields) {
+      tmpl.fields.forEach(key => {
+        const el = document.getElementById('edit-w-' + key);
+        if (el) {
+          const fd = FIELD_DEFS[key];
+          updated[key] = fd?.type === 'number' || fd?.type === undefined ? (parseFloat(el.value) || null) : el.value;
+        }
+      });
+    }
+
+    // Recalculate scores
+    updated.scores = scoreWorkout(updated, workoutsCache, settingsCache);
+    updated.advice = getAdvice(updated);
+
+    try {
+      const { type, date, id: wId, data: _d, createdAt, updatedAt, userId, ...rest } = updated;
+      await api.put('/api/workouts/' + id, { type, date, data: rest });
+      // Update cache
+      const idx = workoutsCache.findIndex(x => x.id === id);
+      if (idx !== -1) workoutsCache[idx] = { ...workoutsCache[idx], ...updated };
+      toast('Allenamento aggiornato!', 'success');
+      showWorkoutDetail(id); // show updated detail
+      onDataChanged();
+    } catch (err) {
+      toast('Errore: ' + (err.message || 'Salvataggio fallito'), 'error');
+    }
+  });
 }
 window.editWorkout = editWorkout;
 

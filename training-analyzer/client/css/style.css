@@ -269,6 +269,13 @@ canvas{max-width:100%}
 .lib-item-actions .btn-icon:hover{background:var(--bg2);color:var(--text1)}
 .lib-item .muscle-tag{font-size:.72rem;padding:3px 10px;border-radius:20px;background:var(--accent-bg);color:var(--accent);font-weight:600}
 .param-tag{font-size:.7rem;padding:2px 8px;border-radius:12px;background:var(--bg2);color:var(--text2);font-weight:500}
+.edit-workout-form input,.edit-workout-form select,.edit-workout-form textarea{background:var(--bg2);border:1px solid var(--bg3);color:var(--text1);border-radius:6px;padding:6px 8px;font-size:.85rem}
+.edit-workout-form input:focus,.edit-workout-form select:focus{border-color:var(--accent);outline:none}
+.edit-workout-form .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.edit-workout-form .form-group{flex:1;min-width:100px}
+.edit-workout-form .form-group label{display:block;font-size:.75rem;color:var(--text2);margin-bottom:3px;font-weight:600}
+.edit-exercise .btn-icon{font-size:.9rem;color:var(--text2);cursor:pointer;border:none;background:transparent}
+.edit-exercise .btn-icon:hover{color:var(--red)}
 
 /* ============ EMPTY / TOAST / SYNC ============ */
 .empty-state{text-align:center;padding:40px;color:var(--text2)}
