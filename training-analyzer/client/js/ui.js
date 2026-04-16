@@ -21,6 +21,17 @@ let isOnline = navigator.onLine;
 // Wizard state
 let wizStep = 1, wizType = '', wizExercises = [];
 
+// Bottom sheet callback (dynamic, defaults to wizard)
+let _sheetCallback = null;
+
+// Live session state
+let liveSession = null;
+let liveTimerInterval = null;
+let liveRestInterval = null;
+let liveRestTotal = 90;
+let liveRestRemaining = 0;
+let liveSelectedType = '';
+
 // History filter state
 let historyFilter = 'all';
 
@@ -137,7 +148,7 @@ function showScreen(name) {
   if (name === 'app') initApp();
 }
 
-const pageMap = {dashboard:'Dashboard',log:'Log',history:'Storico',progress:'Progressi',weight:'Peso',library:'Libreria',import:'Import',friends:'Amici',settings:'Impostazioni',profile:'Profilo',athletic:'Profilo Atletico'};
+const pageMap = {dashboard:'Dashboard',log:'Log',live:'Live',history:'Storico',progress:'Progressi',weight:'Peso',library:'Libreria',import:'Import',friends:'Amici',settings:'Impostazioni',profile:'Profilo',athletic:'Profilo Atletico'};
 
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -154,6 +165,7 @@ function showPage(page) {
   if(page==='library') { renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect(); }
   if(page==='settings') { populateSettingsUI(); renderSportsManager(); renderNotifications(); }
   if(page==='profile') renderProfile();
+  if(page==='live') initLivePage();
   if(page==='log') initLogWizard();
   if(page==='friends') renderFriendsPageLocal();
   if(page==='athletic') renderAthleticDetail();
@@ -288,7 +300,8 @@ function renderSportFields() {
 }
 
 // Exercise bottom sheet
-function openExerciseSheet() {
+function openExerciseSheet(callback) {
+  _sheetCallback = callback || addWizExercise;
   document.getElementById('exercise-sheet-overlay').classList.add('show');
   document.getElementById('exercise-sheet').classList.add('show');
   document.getElementById('exercise-search').value = '';
@@ -308,7 +321,7 @@ function renderExerciseSheetList(filter = '') {
     `<div class="bs-exercise-item" data-ex-name="${e.name.replace(/"/g,'&quot;')}" data-ex-muscle="${e.muscle}"><span class="bs-ex-name">${e.name}</span><span class="bs-ex-muscle">${e.muscle}</span></div>`
   ).join('');
   listEl.querySelectorAll('.bs-exercise-item').forEach(item => {
-    item.addEventListener('click', () => addWizExercise(item.dataset.exName, item.dataset.exMuscle));
+    item.addEventListener('click', () => (_sheetCallback || addWizExercise)(item.dataset.exName, item.dataset.exMuscle));
   });
 }
 function filterExerciseSheet() {
@@ -540,6 +553,487 @@ function renderPubMedBox(articles) {
     html += `<div class="research-article"><div class="article-title"><a href="${a.link}" target="_blank">${a.title}</a></div><div class="article-meta">${a.authors} - ${a.source} (${a.year})</div>${a.abstract?`<div class="article-insight">${a.abstract}</div>`:''}</div>`;
   });
   return html + '</div></div>';
+}
+
+// ==================== LIVE WORKOUT ====================
+
+// --- Timer utilities ---
+function liveFormatTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+function liveGetElapsed() {
+  if (!liveSession) return 0;
+  const now = liveSession.paused ? liveSession.pausedAt : Date.now();
+  return Math.floor((now - liveSession.startTime - liveSession.totalPaused) / 1000);
+}
+function liveUpdateTimerDisplay() {
+  const el = document.getElementById('live-timer');
+  if (!el) return;
+  el.textContent = liveFormatTime(liveGetElapsed());
+  el.classList.toggle('paused', !!(liveSession && liveSession.paused));
+}
+function liveStartTimer() {
+  liveStopTimer();
+  liveUpdateTimerDisplay();
+  liveTimerInterval = setInterval(liveUpdateTimerDisplay, 1000);
+}
+function liveStopTimer() {
+  if (liveTimerInterval) { clearInterval(liveTimerInterval); liveTimerInterval = null; }
+}
+
+// --- localStorage persistence ---
+function liveDraftKey() { return 'liveSession_' + (currentUser?.uid || 'anon'); }
+function liveSaveDraft() {
+  if (!liveSession) return;
+  liveSession._lastSavedAt = Date.now();
+  try { localStorage.setItem(liveDraftKey(), JSON.stringify(liveSession)); } catch(e) {}
+}
+function liveLoadDraft() {
+  try { const d = localStorage.getItem(liveDraftKey()); return d ? JSON.parse(d) : null; } catch(e) { return null; }
+}
+function liveClearDraft() {
+  try { localStorage.removeItem(liveDraftKey()); } catch(e) {}
+}
+
+// --- Draft recovery ---
+function liveCheckDraft() {
+  const draft = liveLoadDraft();
+  if (draft) {
+    document.getElementById('live-recovery-modal').classList.add('show');
+  }
+}
+function liveResumeDraft() {
+  document.getElementById('live-recovery-modal').classList.remove('show');
+  const draft = liveLoadDraft();
+  if (!draft) return;
+  // Adjust for offline gap: add time since last save to totalPaused if was not paused
+  if (!draft.paused && draft._lastSavedAt) {
+    const gap = Date.now() - draft._lastSavedAt;
+    draft.totalPaused = (draft.totalPaused || 0) + gap;
+  } else if (draft.paused) {
+    // Was paused — pausedAt stays as it was
+  }
+  liveSession = draft;
+  showPage('live');
+}
+function liveDiscardDraft() {
+  document.getElementById('live-recovery-modal').classList.remove('show');
+  liveClearDraft();
+  liveSession = null;
+}
+
+// --- Screen management ---
+function liveShowScreen(screen) {
+  document.querySelectorAll('#page-live .live-screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('live-' + screen);
+  if (el) el.classList.add('active');
+}
+
+// --- Start screen ---
+function initLivePage() {
+  if (liveSession) {
+    liveShowScreen('active');
+    liveRenderActive();
+    liveStartTimer();
+    return;
+  }
+  liveShowScreen('start');
+  liveSelectedType = '';
+  const dateEl = document.getElementById('live-date');
+  if (dateEl) dateEl.value = todayStr();
+  document.getElementById('live-start-btn').disabled = true;
+  liveRenderSportGrid();
+}
+function liveRenderSportGrid() {
+  const sports = getUserActiveSports(settingsCache);
+  const grid = document.getElementById('live-sport-grid');
+  grid.innerHTML = sports.map(key => {
+    const s = SPORT_TEMPLATES[key];
+    if (!s) return '';
+    return `<div class="type-card" data-live-sport="${key}"><div class="type-icon">${s.icon}</div><div class="type-name">${s.name}</div></div>`;
+  }).join('');
+  grid.querySelectorAll('.type-card').forEach(card => {
+    card.addEventListener('click', () => {
+      grid.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      liveSelectedType = card.dataset.liveSport;
+      document.getElementById('live-start-btn').disabled = false;
+    });
+  });
+}
+
+// --- Session start ---
+function liveStart() {
+  if (!liveSelectedType) { toast('Seleziona un tipo!', 'error'); return; }
+  const date = document.getElementById('live-date').value || todayStr();
+  liveSession = {
+    type: liveSelectedType,
+    date,
+    startTime: Date.now(),
+    exercises: [],
+    paused: false,
+    pausedAt: null,
+    totalPaused: 0,
+    sportFields: {},
+    _lastSavedAt: Date.now()
+  };
+  liveShowScreen('active');
+  liveRenderActive();
+  liveStartTimer();
+  liveSaveDraft();
+  // For gym, open exercise sheet immediately
+  if (liveSelectedType === 'gym') {
+    document.getElementById('live-fab').style.display = '';
+    setTimeout(() => openExerciseSheet(liveAddExercise), 300);
+  }
+}
+
+// --- Pause/Resume ---
+function livePauseResume() {
+  if (!liveSession) return;
+  if (liveSession.paused) {
+    // Resume
+    liveSession.totalPaused += Date.now() - liveSession.pausedAt;
+    liveSession.paused = false;
+    liveSession.pausedAt = null;
+    document.getElementById('live-pause-btn').textContent = 'Pausa';
+    liveStartTimer();
+  } else {
+    // Pause
+    liveSession.paused = true;
+    liveSession.pausedAt = Date.now();
+    document.getElementById('live-pause-btn').textContent = 'Riprendi';
+    liveStopTimer();
+    liveUpdateTimerDisplay();
+  }
+  liveSaveDraft();
+}
+
+// --- Exercise management (gym) ---
+function liveAddExercise(name, muscle) {
+  closeExerciseSheet();
+  if (!liveSession) return;
+  const lastPerf = getLastPerformance(name);
+  const sets = lastPerf
+    ? lastPerf.sets.map(s => ({reps: s.reps, weight: s.weight, rpe: s.rpe || null, done: false}))
+    : [{reps: '', weight: '', rpe: null, done: false}];
+  liveSession.exercises.push({ name, muscle, sets, lastPerf });
+  liveRenderExercises();
+  liveSaveDraft();
+}
+function liveRemoveExercise(idx) {
+  if (!liveSession) return;
+  liveSession.exercises.splice(idx, 1);
+  liveRenderExercises();
+  liveSaveDraft();
+}
+function liveOpenSheet() {
+  openExerciseSheet(liveAddExercise);
+}
+
+// --- Set management ---
+function liveUpdateSet(exIdx, sIdx, field, value) {
+  if (!liveSession) return;
+  const set = liveSession.exercises[exIdx]?.sets[sIdx];
+  if (!set) return;
+  if (field === 'reps') set.reps = parseInt(value) || '';
+  else if (field === 'weight') set.weight = parseFloat(value) || '';
+  else if (field === 'rpe') set.rpe = parseInt(value) || null;
+  liveSaveDraft();
+}
+function liveAddSet(exIdx) {
+  if (!liveSession) return;
+  const ex = liveSession.exercises[exIdx];
+  const lastSet = ex.sets[ex.sets.length - 1] || {};
+  ex.sets.push({reps: lastSet.reps || '', weight: lastSet.weight || '', rpe: lastSet.rpe || null, done: false});
+  liveRenderExercises();
+  liveSaveDraft();
+}
+function liveRemoveSet(exIdx, sIdx) {
+  if (!liveSession) return;
+  const ex = liveSession.exercises[exIdx];
+  ex.sets.splice(sIdx, 1);
+  if (!ex.sets.length) ex.sets.push({reps: '', weight: '', rpe: null, done: false});
+  liveRenderExercises();
+  liveSaveDraft();
+}
+function liveCompleteSet(exIdx, sIdx) {
+  if (!liveSession) return;
+  const ex = liveSession.exercises[exIdx];
+  const set = ex.sets[sIdx];
+  if (!set || set.done) return;
+  set.done = true;
+  // Auto-add new empty set if this was the last undone set
+  const hasUndone = ex.sets.some(s => !s.done);
+  if (!hasUndone) {
+    ex.sets.push({reps: set.reps || '', weight: set.weight || '', rpe: null, done: false});
+  }
+  liveRenderExercises();
+  liveSaveDraft();
+  liveRestStart();
+}
+
+// --- Rest timer ---
+function liveRestStart() {
+  liveRestTotal = 90;
+  liveRestRemaining = 90;
+  liveRestDismiss(); // clear any existing
+  const overlay = document.getElementById('live-rest-overlay');
+  overlay.style.display = '';
+  liveRestUpdate();
+  liveRestInterval = setInterval(() => {
+    liveRestRemaining--;
+    if (liveRestRemaining <= 0) {
+      liveRestRemaining = 0;
+      liveRestUpdate();
+      liveRestDismiss();
+      try { navigator.vibrate?.(200); } catch(e) {}
+      toast('Riposo terminato!');
+    } else {
+      liveRestUpdate();
+    }
+  }, 1000);
+}
+function liveRestUpdate() {
+  const timeEl = document.getElementById('live-rest-time');
+  const progEl = document.getElementById('live-rest-progress');
+  if (timeEl) {
+    const m = Math.floor(liveRestRemaining / 60);
+    const s = liveRestRemaining % 60;
+    timeEl.textContent = m + ':' + String(s).padStart(2, '0');
+  }
+  if (progEl) {
+    const circumference = 339.292;
+    const fraction = liveRestTotal > 0 ? liveRestRemaining / liveRestTotal : 0;
+    progEl.setAttribute('stroke-dashoffset', circumference * (1 - fraction));
+  }
+}
+function liveRestAdjust(seconds) {
+  liveRestRemaining = Math.max(0, liveRestRemaining + seconds);
+  liveRestTotal = Math.max(liveRestTotal, liveRestRemaining);
+  liveRestUpdate();
+}
+function liveRestDismiss() {
+  if (liveRestInterval) { clearInterval(liveRestInterval); liveRestInterval = null; }
+  const overlay = document.getElementById('live-rest-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+// --- Rendering ---
+function liveRenderActive() {
+  if (!liveSession) return;
+  const isGym = liveSession.type === 'gym';
+  document.getElementById('live-fab').style.display = isGym ? '' : 'none';
+  document.getElementById('live-exercises').style.display = isGym ? '' : 'none';
+  document.getElementById('live-sport-fields-container').style.display = isGym ? 'none' : '';
+  if (isGym) {
+    liveRenderExercises();
+  } else {
+    liveRenderSportFields();
+  }
+  const btn = document.getElementById('live-pause-btn');
+  if (btn) btn.textContent = liveSession.paused ? 'Riprendi' : 'Pausa';
+}
+
+function liveRenderExercises() {
+  const container = document.getElementById('live-exercises');
+  if (!liveSession || !container) return;
+  const exercises = liveSession.exercises;
+  if (!exercises.length) {
+    container.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);padding:32px"><p>Nessun esercizio aggiunto.</p><p style="font-size:.85rem">Usa il pulsante + per aggiungere esercizi.</p></div>';
+    return;
+  }
+  container.innerHTML = exercises.map((ex, exIdx) => {
+    const lib = exercisesCache || [];
+    const libEntry = lib.find(e => e.name === ex.name);
+    const param = libEntry?.param || 'reps';
+    const _paramLabels = {reps:'Reps', duration:'Sec', distance:'m', calories:'Kcal'};
+    const _paramPh = {reps:'Reps', duration:'Secondi', distance:'Metri', calories:'Kcal'};
+    const paramLabel = _paramLabels[param] || 'Reps';
+    const paramPh = _paramPh[param] || 'Reps';
+    const lastStr = ex.lastPerf ? `Ultima volta: ${ex.lastPerf.sets.length}x${ex.lastPerf.sets[0]?.reps||'?'} @ ${ex.lastPerf.sets[0]?.weight||'?'}kg` : '';
+
+    let setsHTML = ex.sets.map((s, sIdx) => {
+      const doneClass = s.done ? ' done' : '';
+      const actionBtn = s.done
+        ? `<span class="set-done-check">&#10003;</span>`
+        : `<button class="btn-fatto" data-live-done="${exIdx}-${sIdx}">Fatto</button>`;
+      return `<div class="set-inline${doneClass}">
+        <div class="set-num">${sIdx+1}</div>
+        <input type="number" placeholder="${paramPh}" value="${s.reps||''}" data-live-set="${exIdx}-${sIdx}-reps">
+        ${param==='reps'?`<input type="number" step="0.5" placeholder="Kg" value="${s.weight||''}" data-live-set="${exIdx}-${sIdx}-weight">`:''}
+        <select data-live-set="${exIdx}-${sIdx}-rpe"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
+        ${actionBtn}
+        <button class="btn-icon" data-live-remove-set="${exIdx}-${sIdx}">&#128465;</button>
+      </div>`;
+    }).join('');
+
+    return `<div class="exercise-card">
+      <div class="exercise-card-header"><span class="exercise-card-name">${ex.name}</span><span class="exercise-card-muscle">${ex.muscle}</span><button class="btn-icon" data-live-remove-ex="${exIdx}" style="margin-left:auto">&times;</button></div>
+      ${lastStr ? `<div style="font-size:.75rem;color:var(--text2);margin-bottom:6px">${lastStr}</div>` : ''}
+      ${setsHTML}
+      <button class="btn btn-sm btn-secondary" data-live-add-set="${exIdx}" style="margin-top:4px">+ Serie</button>
+    </div>`;
+  }).join('');
+
+  // Bind events
+  container.querySelectorAll('[data-live-set]').forEach(el => {
+    el.addEventListener('change', function() {
+      const [exIdx, sIdx, field] = this.dataset.liveSet.split('-');
+      liveUpdateSet(parseInt(exIdx), parseInt(sIdx), field, this.value);
+    });
+  });
+  container.querySelectorAll('[data-live-done]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const [exIdx, sIdx] = this.dataset.liveDone.split('-').map(Number);
+      liveCompleteSet(exIdx, sIdx);
+    });
+  });
+  container.querySelectorAll('[data-live-add-set]').forEach(btn => {
+    btn.addEventListener('click', function() { liveAddSet(parseInt(this.dataset.liveAddSet)); });
+  });
+  container.querySelectorAll('[data-live-remove-set]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const [exIdx, sIdx] = this.dataset.liveRemoveSet.split('-').map(Number);
+      liveRemoveSet(exIdx, sIdx);
+    });
+  });
+  container.querySelectorAll('[data-live-remove-ex]').forEach(btn => {
+    btn.addEventListener('click', function() { liveRemoveExercise(parseInt(this.dataset.liveRemoveEx)); });
+  });
+}
+
+function liveRenderSportFields() {
+  if (!liveSession) return;
+  const tmpl = SPORT_TEMPLATES[liveSession.type];
+  if (!tmpl) return;
+  document.getElementById('live-sport-title').textContent = tmpl.icon + ' ' + tmpl.name;
+  const fields = (tmpl.fields || []).filter(f => f !== 'duration'); // duration comes from timer
+  let html = '<div class="form-row">';
+  let count = 0;
+  fields.forEach(fKey => {
+    const f = FIELD_DEFS[fKey];
+    if (!f) return;
+    if (count > 0 && count % 2 === 0) html += '</div><div class="form-row">';
+    const val = liveSession.sportFields[fKey] || '';
+    if (f.type === 'select') {
+      html += `<div class="form-group"><label>${f.label}</label><select data-live-field="${fKey}">${(f.options||[]).map(o=>`<option value="${o.v}" ${val===o.v?'selected':''}>${o.t}</option>`).join('')}</select></div>`;
+    } else {
+      html += `<div class="form-group"><label>${f.label}</label><input type="${f.type}" ${f.step?'step="'+f.step+'"':''} ${f.min!==undefined?'min="'+f.min+'"':''} ${f.max!==undefined?'max="'+f.max+'"':''} data-live-field="${fKey}" placeholder="${f.ph||''}" value="${val}"></div>`;
+    }
+    count++;
+  });
+  html += '</div>';
+  document.getElementById('live-sport-fields').innerHTML = html;
+  // Bind change events
+  document.querySelectorAll('[data-live-field]').forEach(el => {
+    el.addEventListener('change', function() {
+      liveSession.sportFields[this.dataset.liveField] = this.value;
+      liveSaveDraft();
+    });
+  });
+}
+
+// --- Finish flow ---
+function liveFinishPrompt() {
+  if (!liveSession) return;
+  const elapsed = liveGetElapsed();
+  const durationMin = Math.round(elapsed / 60);
+  document.getElementById('live-duration').value = durationMin;
+
+  // Build summary
+  const tmpl = SPORT_TEMPLATES[liveSession.type];
+  let summaryHTML = '';
+  summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Sport</span><span class="live-summary-value">${tmpl?.icon||''} ${tmpl?.name||liveSession.type}</span></div>`;
+  summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Data</span><span class="live-summary-value">${liveSession.date}</span></div>`;
+  summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Durata</span><span class="live-summary-value">${liveFormatTime(elapsed)}</span></div>`;
+
+  if (liveSession.type === 'gym') {
+    const exCount = liveSession.exercises.length;
+    let totalSets = 0, tonnage = 0;
+    liveSession.exercises.forEach(ex => {
+      ex.sets.forEach(s => {
+        if (s.done && s.reps > 0) {
+          totalSets++;
+          tonnage += (s.reps || 0) * (s.weight || 0);
+        }
+      });
+    });
+    summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Esercizi</span><span class="live-summary-value">${exCount}</span></div>`;
+    summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Serie completate</span><span class="live-summary-value">${totalSets}</span></div>`;
+    summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Tonnellaggio</span><span class="live-summary-value">${tonnage.toLocaleString()} kg</span></div>`;
+  }
+  document.getElementById('live-summary').innerHTML = summaryHTML;
+
+  liveStopTimer();
+  liveRestDismiss();
+  liveShowScreen('finish');
+}
+
+function liveBackToSession() {
+  liveShowScreen('active');
+  if (liveSession && !liveSession.paused) liveStartTimer();
+}
+
+async function liveSaveWorkout() {
+  if (!liveSession) return;
+  const elapsed = liveGetElapsed();
+  const durationMin = parseInt(document.getElementById('live-duration').value) || Math.round(elapsed / 60);
+  const rpe = parseInt(document.getElementById('live-rpe').value) || null;
+  const notes = document.getElementById('live-notes').value || '';
+
+  if (liveSession.type === 'gym') {
+    const exercises = [];
+    liveSession.exercises.forEach(ex => {
+      const sets = ex.sets.filter(s => s.done && s.reps > 0).map(s => ({reps: s.reps, weight: s.weight, rpe: s.rpe}));
+      if (sets.length) exercises.push({name: ex.name, muscle: ex.muscle, sets});
+    });
+    if (!exercises.length) { toast('Nessuna serie completata!', 'error'); return; }
+    const workout = { id: uid(), type: 'gym', date: liveSession.date, duration: durationMin, rpe, notes, exercises };
+    let tonnage = 0;
+    exercises.forEach(ex => ex.sets.forEach(s => tonnage += (s.reps||0) * (s.weight||0)));
+    workout._tonnage = tonnage;
+    workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
+    workout.advice = getAdvice(workout);
+    await saveWorkout(workout);
+    workoutsCache.push(workout);
+    toast('Palestra salvata! Score: ' + workout.scores.overall, 'success');
+    fetchPubMedForWorkout(workout);
+  } else {
+    const tmpl = SPORT_TEMPLATES[liveSession.type];
+    const workout = { id: uid(), type: liveSession.type, date: liveSession.date, notes, duration: durationMin };
+    if (rpe) workout.rpe = rpe;
+    // Copy sport fields
+    Object.entries(liveSession.sportFields).forEach(([key, val]) => {
+      const f = FIELD_DEFS[key];
+      if (f?.type === 'number') workout[key] = parseFloat(val) || null;
+      else workout[key] = val || null;
+    });
+    if (liveSession.type === 'running') {
+      const paceStr = workout.pace;
+      workout.paceInput = paceStr;
+      workout._pace = paceToSeconds(paceStr) || (workout.duration && workout.distance ? (workout.duration*60)/workout.distance : 0);
+      delete workout.pace;
+    }
+    workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
+    workout.advice = getAdvice(workout);
+    await saveWorkout(workout);
+    workoutsCache.push(workout);
+    const sportName = tmpl?.name || liveSession.type;
+    toast(sportName + ' salvato! Score: ' + workout.scores.overall, 'success');
+    if (liveSession.type === 'running') fetchPubMedForWorkout(workout);
+  }
+
+  // Cleanup
+  liveStopTimer();
+  liveRestDismiss();
+  liveSession = null;
+  liveClearDraft();
+  document.getElementById('live-fab').style.display = 'none';
+  showPage('dashboard');
 }
 
 // ==================== DASHBOARD ====================
@@ -1610,6 +2104,7 @@ function initApp() {
   if(weightDateEl) weightDateEl.value = todayStr();
   updateSyncStatus();
   renderDashboard();
+  liveCheckDraft();
 }
 
 // ==================== BACKWARD COMPATIBILITY (window.*) ====================
@@ -1682,7 +2177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     signOut: () => logout().then(() => { showScreen('login'); setupLoginUI(); }),
     exportAllData: () => window.exportAllData(),
     triggerImportJSON: () => document.getElementById('import-json')?.click(),
-    openExerciseSheet: () => openExerciseSheet(),
+    openExerciseSheet: () => openExerciseSheet(addWizExercise),
     closeExerciseSheet: () => closeExerciseSheet(),
     wizGoStep3: () => wizGoStep(3),
     wizGoStep4: () => wizGoStep(4),
@@ -1710,10 +2205,25 @@ document.addEventListener('DOMContentLoaded', () => {
     selectAll: () => selectAllVisible(),
     deselectAll: () => deselectAll(),
     deleteSelected: () => deleteSelected(),
+    // Live workout actions
+    liveStart: () => liveStart(),
+    livePauseResume: () => livePauseResume(),
+    liveFinishPrompt: () => liveFinishPrompt(),
+    liveBackToSession: () => liveBackToSession(),
+    liveSaveWorkout: () => liveSaveWorkout(),
+    liveOpenSheet: () => liveOpenSheet(),
+    liveRestDismiss: () => liveRestDismiss(),
+    liveResumeDraft: () => liveResumeDraft(),
+    liveDiscardDraft: () => liveDiscardDraft(),
   };
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
+    // Special handling for rest adjust (needs data-adj parameter)
+    if (btn.dataset.action === 'liveRestAdjust') {
+      liveRestAdjust(parseInt(btn.dataset.adj) || 0);
+      return;
+    }
     const handler = actionMap[btn.dataset.action];
     if (handler) handler();
   });

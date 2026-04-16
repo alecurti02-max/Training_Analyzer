@@ -501,3 +501,35 @@ canvas{max-width:100%}
 .login-form-group label { display:block; font-size:.82rem; font-weight:600; color:var(--text); margin-bottom:4px; }
 .login-form-group input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg3); color:var(--text); font-size:.95rem; font-family:var(--font); }
 .login-form-group input:focus { outline:none; border-color:var(--accent); }
+
+/* ==================== LIVE WORKOUT ==================== */
+.live-screen{display:none}
+.live-screen.active{display:block}
+.live-active-header{position:sticky;top:52px;z-index:40;background:var(--bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:16px 0;margin:-20px -16px 16px;padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.live-timer{font-family:var(--font-heading);font-size:2rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.live-timer.paused{color:var(--text2);animation:liveBlink 1s ease-in-out infinite}
+@keyframes liveBlink{0%,100%{opacity:1}50%{opacity:.3}}
+.live-rest-overlay{position:fixed;bottom:20px;right:20px;z-index:160;animation:liveSlideUp .3s ease}
+@keyframes liveSlideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.live-rest-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-lg);text-align:center;min-width:200px}
+.live-rest-circle-container{position:relative;width:120px;height:120px;margin:0 auto}
+.live-rest-circle-container svg{display:block}
+.live-rest-time{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.set-inline.done{opacity:.55;background:var(--accent-bg);border-radius:var(--radius-sm);padding:4px 6px;margin-left:-6px;margin-right:-6px}
+.set-inline.done .set-num{background:var(--green)}
+.btn-fatto{background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:var(--transition)}
+.btn-fatto:hover{filter:brightness(1.1)}
+.set-done-check{color:var(--green);font-size:1.1rem;font-weight:700;padding:0 8px}
+.live-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.8rem;font-weight:700;cursor:pointer;z-index:45;box-shadow:var(--shadow-lg);display:flex;align-items:center;justify-content:center;transition:var(--transition);line-height:1}
+.live-fab:hover{background:var(--accent-light);transform:scale(1.05)}
+.live-summary-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.live-summary-row:last-child{border-bottom:none}
+.live-summary-label{color:var(--text2);font-weight:600}
+.live-summary-value{font-weight:700;color:var(--text)}
+@media(max-width:600px){
+  .live-timer{font-size:1.5rem}
+  .live-active-header{margin:-20px -16px 12px;padding:12px 16px}
+  .live-rest-overlay{bottom:12px;right:12px;left:12px}
+  .live-rest-card{min-width:unset}
+  .live-fab{bottom:16px;right:16px;width:50px;height:50px;font-size:1.5rem}
+}

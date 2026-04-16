@@ -59,6 +59,7 @@
   <div class="nav-scroll">
     <button class="nav-btn active" data-page="dashboard">Dashboard</button>
     <button class="nav-btn" data-page="log">Log</button>
+    <button class="nav-btn" data-page="live">Live</button>
     <button class="nav-btn" data-page="history">Storico</button>
     <button class="nav-btn" data-page="progress">Progressi</button>
     <button class="nav-btn" data-page="weight">Peso</button>
@@ -177,6 +178,52 @@
       <button class="btn btn-secondary" id="wiz-back-btn" data-action="wizGoBack" style="display:none">&#8592; Indietro</button>
     </div>
   </div>
+</div>
+
+<!-- LIVE WORKOUT -->
+<div id="page-live" class="page">
+  <!-- Start screen -->
+  <div class="live-screen active" id="live-start">
+    <div class="card">
+      <div class="card-title">Allenamento Live</div>
+      <div class="form-group"><label>Data</label><input type="date" id="live-date" class="date-picker-big"></div>
+      <div class="type-cards-grid" id="live-sport-grid"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:12px" id="live-start-btn" data-action="liveStart" disabled>Inizia Allenamento</button>
+    </div>
+  </div>
+  <!-- Active session -->
+  <div class="live-screen" id="live-active">
+    <div class="live-active-header">
+      <div class="live-timer" id="live-timer">00:00:00</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" id="live-pause-btn" data-action="livePauseResume">Pausa</button>
+        <button class="btn btn-danger btn-sm" data-action="liveFinishPrompt">Termina</button>
+      </div>
+    </div>
+    <div id="live-exercises"></div>
+    <div id="live-sport-fields-container" style="display:none">
+      <div class="card">
+        <div class="card-title" id="live-sport-title">Dati Allenamento</div>
+        <div id="live-sport-fields"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Finish screen -->
+  <div class="live-screen" id="live-finish">
+    <div class="card">
+      <div class="card-title">Riepilogo Sessione</div>
+      <div id="live-summary"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Durata (min)</label><input type="number" id="live-duration" readonly></div>
+        <div class="form-group"><label>RPE (1-10)</label><input type="number" id="live-rpe" min="1" max="10" placeholder="7"></div>
+      </div>
+      <div class="form-group"><label>Note (opzionale)</label><textarea id="live-notes" placeholder="Come ti sei sentito, sensazioni..." style="min-height:80px;font-size:1rem"></textarea></div>
+      <button class="btn btn-primary save-workout-big" data-action="liveSaveWorkout">Salva Allenamento</button>
+      <button class="btn btn-secondary" style="width:100%;margin-top:8px" data-action="liveBackToSession">Torna alla Sessione</button>
+    </div>
+  </div>
+  <!-- FAB -->
+  <button class="live-fab" id="live-fab" data-action="liveOpenSheet" style="display:none">+</button>
 </div>
 
 <!-- HISTORY -->
@@ -474,6 +521,38 @@
   <div class="bottom-sheet-handle"></div>
   <input type="text" class="bottom-sheet-search" id="exercise-search" placeholder="Cerca esercizio...">
   <div id="exercise-sheet-list"></div>
+</div>
+
+<!-- LIVE REST TIMER OVERLAY -->
+<div class="live-rest-overlay" id="live-rest-overlay" style="display:none">
+  <div class="live-rest-card">
+    <div class="live-rest-circle-container">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle cx="60" cy="60" r="54" fill="none" stroke="var(--border)" stroke-width="8"/>
+        <circle cx="60" cy="60" r="54" fill="none" stroke="var(--accent)" stroke-width="8"
+          stroke-dasharray="339.292" stroke-dashoffset="0" stroke-linecap="round"
+          id="live-rest-progress" transform="rotate(-90 60 60)"/>
+      </svg>
+      <div class="live-rest-time" id="live-rest-time">1:30</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <button class="btn btn-secondary btn-sm" data-action="liveRestAdjust" data-adj="-15">-15s</button>
+      <button class="btn btn-secondary btn-sm" data-action="liveRestAdjust" data-adj="15">+15s</button>
+    </div>
+    <button class="btn btn-sm" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text2)" data-action="liveRestDismiss">Salta</button>
+  </div>
+</div>
+
+<!-- LIVE RECOVERY MODAL -->
+<div class="modal-overlay" id="live-recovery-modal">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <h3 style="margin-bottom:8px">Sessione in corso</h3>
+    <p style="color:var(--text2);margin-bottom:20px">Hai una sessione live non terminata. Vuoi riprenderla?</p>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button class="btn btn-primary" data-action="liveResumeDraft">Riprendi</button>
+      <button class="btn btn-secondary" data-action="liveDiscardDraft">Scarta</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
