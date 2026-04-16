@@ -214,7 +214,10 @@ export function render1RMChart(workouts, exercisesCache) {
   const names=Object.keys(exerciseData).filter(n=>exerciseData[n].length>=2);
   const sel=document.getElementById('orm-select-container');
   if(!names.length){if(sel)sel.innerHTML='<p style="font-size:.85rem;color:var(--text2)">Servono almeno 2 sessioni per il 1RM stimato.</p>';return;}
-  if(sel) sel.innerHTML=`<select id="orm-exercise-select" onchange="updateORMChart()" style="max-width:250px">${names.map(n=>`<option value="${n}">${n}</option>`).join('')}</select>`;
+  if(sel) {
+    sel.innerHTML=`<select id="orm-exercise-select" style="max-width:250px">${names.map(n=>`<option value="${n}">${n}</option>`).join('')}</select>`;
+    document.getElementById('orm-exercise-select').addEventListener('change', updateORMChart);
+  }
   window._ormData=exerciseData;
   updateORMChart();
 }
