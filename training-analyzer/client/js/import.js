@@ -30,7 +30,14 @@ export function handleGPXFiles(files, callbacks) {
         const data=parseGPX(xml);
         if(data){
           const card=document.createElement('div');card.className='card';
-          card.innerHTML=`<div class="card-title">${file.name}</div><p style="font-size:.85rem;color:var(--text2)">Distanza: ${data.distance.toFixed(2)} km | Durata: ${data.duration} min | Pace: ${secondsToPace(data.pace)}/km<br>${data.avghr?'FC Media: '+data.avghr+' bpm | ':''}Dislivello: ${data.elevation} m | Data: ${data.date}</p>
+          let info=`Distanza: ${data.distance.toFixed(2)} km | Durata: ${data.duration} min | Pace: ${secondsToPace(data.pace)}/km`;
+          if(data.avghr) info+=`<br>FC: ${data.minhr||'?'}-${data.avghr}-${data.maxhr||'?'} bpm`;
+          if(data.avgCadence) info+=` | Cadenza: ${data.avgCadence} spm`;
+          info+=` | Dislivello: ${data.elevation} m`;
+          if(data.splits) info+=` | ${data.splits.length} splits`;
+          info+=` | Data: ${data.date}`;
+          const title=data.activityName||file.name;
+          card.innerHTML=`<div class="card-title">${title}</div><p style="font-size:.85rem;color:var(--text2)">${info}</p>
             <button class="btn btn-primary btn-sm" data-gpx-import='${JSON.stringify(data)}'>Importa</button>`;
           card.querySelector('[data-gpx-import]').addEventListener('click', async function() {
             await importGPXWorkout(JSON.parse(this.dataset.gpxImport), callbacks?.workoutsCache || [], callbacks?.settingsCache || {});
@@ -48,33 +55,115 @@ export function handleGPXFiles(files, callbacks) {
 export function parseGPX(xml) {
   const trkpts=xml.querySelectorAll('trkpt');
   if(!trkpts.length) return null;
-  let totalDist=0,totalElevGain=0,prevLat=null,prevLon=null,prevEle=null,maxHR=0,sumHR=0,hrCount=0,startTime=null,endTime=null;
+
+  // Track metadata
+  const trkEl=xml.querySelector('trk');
+  const activityName=trkEl?.querySelector('name')?.textContent||'';
+  const activityType=trkEl?.querySelector('type')?.textContent||'running';
+
+  // Accumulators
+  let totalDist=0,totalElevGain=0,prevLat=null,prevLon=null,prevEle=null;
+  let maxHR=0,minHR=999,sumHR=0,hrCount=0;
+  let sumCad=0,cadCount=0,maxCad=0;
+  let startTime=null,endTime=null;
+
+  // Series (sampled every ~30s) and splits
+  const hrSeries=[],eleSeries=[];
+  const splits=[];
+  let lastSampleTime=0, lastSplitDist=0, lastSplitTime=null, splitKm=1;
+
+  function _getNS(pt,tag){
+    const el=pt.querySelector(tag)||pt.querySelector('*|'+tag);
+    if(el) return el;
+    const ns=pt.getElementsByTagNameNS('*',tag);
+    return ns.length?ns[0]:null;
+  }
+
   trkpts.forEach((pt,i)=>{
     const lat=parseFloat(pt.getAttribute('lat')),lon=parseFloat(pt.getAttribute('lon'));
     const eleEl=pt.querySelector('ele'),ele=eleEl?parseFloat(eleEl.textContent):null;
     const timeEl=pt.querySelector('time'),time=timeEl?new Date(timeEl.textContent):null;
-    const hrEl=pt.querySelector('hr')||pt.querySelector('*|hr');
-    if(hrEl){const hr=parseInt(hrEl.textContent);if(hr>0){sumHR+=hr;hrCount++;if(hr>maxHR)maxHR=hr;}}
-    const nsHR=pt.getElementsByTagNameNS('*','hr');
-    if(nsHR.length&&!hrEl){const hr=parseInt(nsHR[0].textContent);if(hr>0){sumHR+=hr;hrCount++;if(hr>maxHR)maxHR=hr;}}
-    if(i===0&&time)startTime=time;if(time)endTime=time;
-    if(prevLat!==null){totalDist+=haversine(prevLat,prevLon,lat,lon);if(ele!==null&&prevEle!==null&&ele>prevEle)totalElevGain+=ele-prevEle;}
+
+    // Heart rate (Garmin ns3:hr or Apple)
+    const hrEl=_getNS(pt,'hr');
+    let hr=0;
+    if(hrEl){hr=parseInt(hrEl.textContent);if(hr>0){sumHR+=hr;hrCount++;if(hr>maxHR)maxHR=hr;if(hr<minHR)minHR=hr;}}
+
+    // Cadence (Garmin ns3:cad — half-cycles, x2 for steps/min)
+    const cadEl=_getNS(pt,'cad');
+    if(cadEl){const c=parseInt(cadEl.textContent);if(c>0){sumCad+=c*2;cadCount++;if(c*2>maxCad)maxCad=c*2;}}
+
+    // Timestamps
+    if(i===0&&time){startTime=time;lastSplitTime=time;}
+    if(time)endTime=time;
+
+    // Distance & elevation
+    if(prevLat!==null){
+      totalDist+=haversine(prevLat,prevLon,lat,lon);
+      if(ele!==null&&prevEle!==null&&ele>prevEle)totalElevGain+=ele-prevEle;
+    }
     prevLat=lat;prevLon=lon;if(ele!==null)prevEle=ele;
+
+    // Sample series every ~30s for charts
+    const elapsed=startTime&&time?(time-startTime)/1000:0;
+    if(elapsed-lastSampleTime>=30||i===0){
+      lastSampleTime=elapsed;
+      if(hr>0) hrSeries.push({t:Math.round(elapsed),hr});
+      if(ele!==null) eleSeries.push({t:Math.round(elapsed),ele:Math.round(ele*10)/10});
+    }
+
+    // Splits per km
+    if(totalDist>=splitKm&&time&&lastSplitTime){
+      const splitSec=(time-lastSplitTime)/1000;
+      const splitDist=totalDist-lastSplitDist;
+      if(splitDist>0) splits.push({km:splitKm,pace:Math.round(splitSec/splitDist)});
+      lastSplitTime=time;lastSplitDist=totalDist;splitKm++;
+    }
   });
+
+  // Add final partial km if >0.2 km
+  if(endTime&&lastSplitTime&&totalDist-lastSplitDist>0.2){
+    const rem=totalDist-lastSplitDist;
+    const remSec=(endTime-lastSplitTime)/1000;
+    if(rem>0) splits.push({km:splitKm,pace:Math.round(remSec/rem),partial:true});
+  }
+
   const durationMin=startTime&&endTime?Math.round((endTime-startTime)/60000):0;
-  return{date:startTime?startTime.toISOString().slice(0,10):todayStr(),distance:Math.round(totalDist*100)/100,duration:durationMin,
-    pace:totalDist>0&&durationMin>0?(durationMin*60)/totalDist:0,avghr:hrCount>0?Math.round(sumHR/hrCount):null,maxhr:maxHR>0?maxHR:null,elevation:Math.round(totalElevGain)};
+  const result={
+    date:startTime?startTime.toISOString().slice(0,10):todayStr(),
+    distance:Math.round(totalDist*100)/100,
+    duration:durationMin,
+    pace:totalDist>0&&durationMin>0?(durationMin*60)/totalDist:0,
+    elevation:Math.round(totalElevGain),
+    activityType, activityName,
+  };
+  // Only add fields with real data
+  if(hrCount){result.avghr=Math.round(sumHR/hrCount);result.maxhr=maxHR;if(minHR<999)result.minhr=minHR;}
+  if(cadCount){result.avgCadence=Math.round(sumCad/cadCount);result.maxCadence=maxCad;}
+  if(splits.length)result.splits=splits;
+  if(hrSeries.length>2)result.hrSeries=hrSeries;
+  if(eleSeries.length>2)result.eleSeries=eleSeries;
+  return result;
 }
 
 export function haversine(lat1,lon1,lat2,lon2){const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180,a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 
 export async function importGPXWorkout(data, workoutsCache, settingsCache) {
-  const workout={id:uid(),type:'running',date:data.date,distance:data.distance,duration:data.duration,_pace:data.pace,paceInput:secondsToPace(data.pace),
-    avghr:data.avghr,maxhr:data.maxhr,elevation:data.elevation,runType:'easy',notes:'Importato da GPX',imported:true};
+  const workout={id:uid(), type:data.activityType||'running', date:data.date,
+    distance:data.distance, duration:data.duration, _pace:data.pace,
+    elevation:data.elevation, notes:data.activityName||'Importato da GPX (Garmin)', imported:true};
+  // Add all available fields (only if present)
+  if(data.avghr) workout.avghr=data.avghr;
+  if(data.maxhr) workout.maxhr=data.maxhr;
+  if(data.minhr) workout.minhr=data.minhr;
+  if(data.avgCadence) workout.avgCadence=data.avgCadence;
+  if(data.splits) workout.splits=data.splits;
+  if(data.hrSeries) workout.hrSeries=data.hrSeries;
+  if(data.eleSeries) workout.eleSeries=data.eleSeries;
   workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
   workout.advice=getAdvice(workout);
   await api.post('/api/workouts', _wrapForAPI(workout));
-  toast('Corsa importata!','success');
+  toast('Importato!','success');
 }
 
 // ==================== CSV IMPORT ====================

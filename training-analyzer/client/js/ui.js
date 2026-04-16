@@ -752,8 +752,27 @@ function showWorkoutDetail(id) {
     if(w.groundContact) rd4.push('Ground Contact: '+w.groundContact+' ms');
     if(w.vertOsc) rd4.push('Osc. Verticale: '+w.vertOsc+' cm');
     if(rd4.length) html+='<p style="font-size:.85rem;color:var(--text2)">'+rd4.join(' | ')+'</p>';
+    if(w.avgCadence) rd4.push('Cadenza: '+w.avgCadence+' spm');
+    if(rd4.length) html+='<p style="font-size:.85rem;color:var(--text2)">'+rd4.join(' | ')+'</p>';
     if(w.runType&&w.runType!=='easy') html+='<p style="font-size:.85rem;color:var(--text2)">Tipo: '+w.runType+'</p>';
     if(w.indoor) html+='<p style="font-size:.85rem;color:var(--text2)">Indoor</p>';
+    // Splits table
+    if(w.splits?.length){
+      html+='<div style="margin-top:12px"><h4 style="font-size:.9rem;font-weight:600;margin-bottom:6px">Splits per km</h4>';
+      html+='<table style="width:100%;font-size:.82rem;border-collapse:collapse"><tr style="color:var(--text2)"><td>Km</td><td>Pace</td></tr>';
+      w.splits.forEach(s=>{html+=`<tr><td>${s.km}${s.partial?' (parziale)':''}</td><td>${secondsToPace(s.pace)}/km</td></tr>`;});
+      html+='</table></div>';
+    }
+    // HR chart placeholder
+    if(w.hrSeries?.length>2){
+      html+='<div style="margin-top:12px"><h4 style="font-size:.9rem;font-weight:600;margin-bottom:6px">Frequenza Cardiaca</h4>';
+      html+='<div style="height:160px"><canvas id="modal-hr-chart"></canvas></div></div>';
+    }
+    // Elevation chart placeholder
+    if(w.eleSeries?.length>2){
+      html+='<div style="margin-top:12px"><h4 style="font-size:.9rem;font-weight:600;margin-bottom:6px">Profilo Altimetrico</h4>';
+      html+='<div style="height:140px"><canvas id="modal-ele-chart"></canvas></div></div>';
+    }
   }
   else if(w.type==='karting') html+=`<p style="font-size:.85rem;color:var(--text2)">Circuito: ${w.track||'--'} | Durata: ${w.duration||'--'} min | Giri: ${w.laps||'--'}<br>Miglior Giro: ${w.bestLap||'--'}s | Giro Medio: ${w.avgLap||'--'}s | RPE: ${w.rpe||'--'}</p>`;
   else if (w.type !== 'gym') {
@@ -777,10 +796,49 @@ function showWorkoutDetail(id) {
       html+='<p style="font-size:.85rem;color:var(--text2)">'+row+'</p>';
     }
     if(w.indoor) html+='<p style="font-size:.85rem;color:var(--text2)">Indoor</p>';
+    // Splits and charts for non-running GPX imports too (walking, cycling, hiking)
+    if(w.splits?.length){
+      html+='<div style="margin-top:12px"><h4 style="font-size:.9rem;font-weight:600;margin-bottom:6px">Splits per km</h4>';
+      html+='<table style="width:100%;font-size:.82rem;border-collapse:collapse"><tr style="color:var(--text2)"><td>Km</td><td>Pace</td></tr>';
+      w.splits.forEach(s=>{html+=`<tr><td>${s.km}${s.partial?' (parziale)':''}</td><td>${secondsToPace(s.pace)}/km</td></tr>`;});
+      html+='</table></div>';
+    }
+    if(w.hrSeries?.length>2){
+      html+='<div style="margin-top:12px"><h4 style="font-size:.9rem;font-weight:600;margin-bottom:6px">Frequenza Cardiaca</h4>';
+      html+='<div style="height:160px"><canvas id="modal-hr-chart"></canvas></div></div>';
+    }
+    if(w.eleSeries?.length>2){
+      html+='<div style="margin-top:12px"><h4 style="font-size:.9rem;font-weight:600;margin-bottom:6px">Profilo Altimetrico</h4>';
+      html+='<div style="height:140px"><canvas id="modal-ele-chart"></canvas></div></div>';
+    }
   }
   if(w.notes) html+=`<p style="margin-top:10px;font-size:.85rem;font-style:italic;color:var(--text2)">"${w.notes}"</p>`;
   html+='</div><div id="modal-pubmed"></div>';
   document.getElementById('modal-body').innerHTML=html;
+
+  // Render HR chart if data exists
+  const hrCanvas=document.getElementById('modal-hr-chart');
+  if(hrCanvas&&w.hrSeries?.length){
+    new Chart(hrCanvas,{type:'line',data:{
+      labels:w.hrSeries.map(p=>{const m=Math.floor(p.t/60);return m+'\'';} ),
+      datasets:[{data:w.hrSeries.map(p=>p.hr),borderColor:'#e74c3c',backgroundColor:'rgba(231,76,60,.1)',fill:true,
+        borderWidth:1.5,pointRadius:0,tension:.3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#888'}},
+          y:{display:true,ticks:{font:{size:10},color:'#888'},title:{display:true,text:'bpm',font:{size:10}}}}}});
+  }
+  // Render elevation chart if data exists
+  const eleCanvas=document.getElementById('modal-ele-chart');
+  if(eleCanvas&&w.eleSeries?.length){
+    new Chart(eleCanvas,{type:'line',data:{
+      labels:w.eleSeries.map(p=>{const m=Math.floor(p.t/60);return m+'\'';} ),
+      datasets:[{data:w.eleSeries.map(p=>p.ele),borderColor:'#27ae60',backgroundColor:'rgba(39,174,96,.15)',fill:true,
+        borderWidth:1.5,pointRadius:0,tension:.3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#888'}},
+          y:{display:true,ticks:{font:{size:10},color:'#888'},title:{display:true,text:'m',font:{size:10}}}}}});
+  }
+
   document.getElementById('modal-delete-btn').onclick=async ()=>{
     if(confirm('Eliminare questo allenamento?')){
       await deleteWorkout(id);
