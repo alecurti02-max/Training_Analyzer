@@ -533,3 +533,20 @@ canvas{max-width:100%}
   .live-rest-card{min-width:unset}
   .live-fab{bottom:16px;right:16px;width:50px;height:50px;font-size:1.5rem}
 }
+
+/* Weight mode / barbell / unilateral UI */
+.opt-tag{display:inline-block;font-size:.65rem;padding:1px 6px;border-radius:10px;background:var(--bg2);color:var(--text2);font-weight:500;margin-left:4px}
+.opt-tag-uni{background:rgba(241,196,15,.18);color:var(--yellow)}
+.barbell-tag{font-size:.72rem;color:var(--text2);margin:2px 0 6px;padding-left:34px;opacity:.8}
+.weight-opts-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.75rem;color:var(--text2);padding:4px 0;margin-bottom:4px}
+.btn-link-sm{background:none;border:none;color:var(--blue);font-size:.75rem;cursor:pointer;padding:2px 4px;text-decoration:underline}
+.weight-opts-override{background:var(--bg2);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px}
+.wopts-row{display:flex;align-items:center;gap:8px;font-size:.78rem}
+.wopts-row label{font-size:.75rem;color:var(--text2);min-width:70px;margin:0}
+.wopts-row select{flex:1;min-width:0;padding:4px 6px;font-size:.8rem;border-radius:var(--radius-sm)}
+.wopts-row input.wopts-custom{width:70px;padding:4px 6px;font-size:.8rem;text-align:center;border-radius:var(--radius-sm)}
+.weight-uni{display:flex;gap:4px;flex-shrink:0}
+.set-inline input.w-uni{width:52px;padding:10px 4px}
+@media(max-width:600px){
+  .set-inline input.w-uni{width:46px;padding:8px 2px;font-size:.85rem}
+}

@@ -297,6 +297,35 @@
           <option value="calories">Calorie (kcal)</option>
         </select>
       </div>
+    </div>
+    <div class="form-row" id="lib-weight-options">
+      <div class="form-group"><label>Modalita peso</label>
+        <select id="lib-weightmode">
+          <option value="total">Peso totale</option>
+          <option value="per_side">Peso per lato</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Bilanciere</label>
+        <select id="lib-barbell">
+          <option value="">Nessun bilanciere</option>
+          <option value="20">Olimpico (20 kg)</option>
+          <option value="10">EZ (10 kg)</option>
+          <option value="25">Trap Bar (25 kg)</option>
+          <option value="custom">Personalizzato...</option>
+        </select>
+      </div>
+      <div class="form-group" id="lib-barbell-custom-group" style="display:none">
+        <label>Peso bilanciere (kg)</label>
+        <input type="number" step="0.5" id="lib-barbell-custom" placeholder="15">
+      </div>
+      <div class="form-group" style="align-self:flex-end">
+        <label style="display:flex;align-items:center;gap:6px;margin-bottom:0">
+          <input type="checkbox" id="lib-unilateral" style="width:auto">
+          <span>Unilaterale</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-row">
       <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary btn-sm" data-action="addExerciseToLibrary">Aggiungi</button></div>
     </div>
   </div>

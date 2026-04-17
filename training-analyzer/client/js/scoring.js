@@ -8,11 +8,39 @@ function daysBetween(d1,d2) { return Math.abs(Math.floor((new Date(d1)-new Date(
 function paceToSeconds(p) { if(!p)return 0; const parts=String(p).split(':'); return parts.length===2?parseInt(parts[0])*60+parseInt(parts[1]):parseFloat(p)*60; }
 function secondsToPace(s) { if(!s||s<=0)return'--'; const m=Math.floor(s/60),sec=Math.round(s%60); return m+':'+String(sec).padStart(2,'0'); }
 
+// ==================== TONNAGE ====================
+// Computes effective tonnage accounting for weightMode (total | per_side),
+// barbellWeight, and unilateral exercises (weightLeft + weightRight).
+export function calcTonnage(exercises) {
+  let tonnage = 0;
+  (exercises || []).forEach(ex => {
+    const wm = ex.weightMode || 'total';
+    const bw = ex.barbellWeight || 0;
+    const uni = ex.isUnilateral || false;
+    (ex.sets || []).forEach(s => {
+      if (uni) {
+        const wL = (s.weightLeft || 0) + bw;
+        const wR = (s.weightRight || 0) + bw;
+        if (wm === 'per_side') {
+          tonnage += (s.reps || 0) * (wL + wR) * 2;
+        } else {
+          tonnage += (s.reps || 0) * (wL + wR);
+        }
+      } else {
+        let ew = s.weight || 0;
+        if (wm === 'per_side') ew *= 2;
+        ew += bw;
+        tonnage += (s.reps || 0) * ew;
+      }
+    });
+  });
+  return tonnage;
+}
+
 // ==================== SCORING ====================
 export function scoreGymWorkout(workout, workoutsCache, settingsCache) {
   const scores = {};
-  let tonnage = 0;
-  (workout.exercises||[]).forEach(ex => (ex.sets||[]).forEach(s => { tonnage += (s.reps||0)*(s.weight||0); }));
+  const tonnage = calcTonnage(workout.exercises);
   workout._tonnage = tonnage;
   const recentGym = workoutsCache.filter(w => w.type==='gym' && w.id!==workout.id).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
   const avgTonnage = recentGym.length ? recentGym.reduce((s,w)=>s+(w._tonnage||0),0)/recentGym.length : tonnage;
@@ -21,12 +49,16 @@ export function scoreGymWorkout(workout, workoutsCache, settingsCache) {
   const muscles = new Set();
   (workout.exercises||[]).forEach(ex => { if(ex.muscle) muscles.add(ex.muscle); });
   scores.variety = Math.min(10, Math.max(3, muscles.size*2));
+  const maxSetWeight = (ex) => {
+    if (ex.isUnilateral) return Math.max(...(ex.sets||[]).map(s => Math.max(s.weightLeft||0, s.weightRight||0)), 0);
+    return Math.max(...(ex.sets||[]).map(s => s.weight||0), 0);
+  };
   let prog=0, tot=0;
   (workout.exercises||[]).forEach(ex => {
     const prev = recentGym.find(w => (w.exercises||[]).some(e => e.name===ex.name));
     if (prev) {
       const prevEx = prev.exercises.find(e => e.name===ex.name);
-      if (Math.max(...(ex.sets||[]).map(s=>s.weight||0)) >= Math.max(...(prevEx.sets||[]).map(s=>s.weight||0))) prog++;
+      if (maxSetWeight(ex) >= maxSetWeight(prevEx)) prog++;
       tot++;
     }
   });
@@ -177,7 +209,16 @@ export function getFitnessAssessment(workoutsCache, settingsCache, weightsCache,
       let best1RM = 0;
       workoutsCache.filter(w => w.type === 'gym').forEach(w => (w.exercises||[]).forEach(ex => {
         if (['Squat','Panca Piana','Stacco da Terra','Military Press','Stacco Rumeno'].some(n => ex.name.includes(n))) {
-          (ex.sets||[]).forEach(s => { const orm = (s.weight||0)*(1+(s.reps||0)/30); if(orm > best1RM) best1RM = orm; });
+          const wm = ex.weightMode || 'total';
+          const bw = ex.barbellWeight || 0;
+          (ex.sets||[]).forEach(s => {
+            let ew = s.weight || 0;
+            if (ex.isUnilateral) ew = Math.max(s.weightLeft||0, s.weightRight||0);
+            if (wm === 'per_side') ew *= 2;
+            ew += bw;
+            const orm = ew * (1 + (s.reps || 0) / 30);
+            if (orm > best1RM) best1RM = orm;
+          });
         }
       }));
       if (best1RM > 0) relStrength = Math.min(10, Math.max(1, Math.round((best1RM / weight) * 5)));

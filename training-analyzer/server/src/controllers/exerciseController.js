@@ -14,7 +14,7 @@ async function list(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const { name, muscle, param } = req.body;
+    const { name, muscle, param, weightMode, barbellWeight, isUnilateral } = req.body;
     if (!name || !muscle) {
       return res.status(400).json({ error: { message: 'name and muscle are required' } });
     }
@@ -24,6 +24,9 @@ async function create(req, res, next) {
       name: name.trim(),
       muscle,
       param: param || 'reps',
+      weightMode: weightMode || 'total',
+      barbellWeight: barbellWeight ?? null,
+      isUnilateral: !!isUnilateral,
     });
 
     res.status(201).json(exercise);
@@ -42,10 +45,13 @@ async function update(req, res, next) {
     });
     if (!exercise) return res.status(404).json({ error: { message: 'Exercise not found' } });
 
-    const { name, muscle, param } = req.body;
+    const { name, muscle, param, weightMode, barbellWeight, isUnilateral } = req.body;
     if (name) exercise.name = name.trim();
     if (muscle) exercise.muscle = muscle;
     if (param) exercise.param = param;
+    if (weightMode !== undefined) exercise.weightMode = weightMode;
+    if (barbellWeight !== undefined) exercise.barbellWeight = barbellWeight;
+    if (isUnilateral !== undefined) exercise.isUnilateral = !!isUnilateral;
     await exercise.save();
 
     res.json(exercise);

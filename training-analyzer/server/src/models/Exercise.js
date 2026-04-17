@@ -26,6 +26,19 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         defaultValue: 'reps',
       },
+      weightMode: {
+        type: DataTypes.STRING,
+        defaultValue: 'total',
+      },
+      barbellWeight: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      isUnilateral: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
       tableName: 'exercises',
