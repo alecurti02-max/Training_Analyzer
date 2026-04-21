@@ -1,9 +1,31 @@
 # Training Analyzer
 
-Web app full-stack per tracciare allenamenti multi-sport, analizzare progressi e confrontarsi con amici.
+Web app per tracciare allenamenti multi-sport, analizzare progressi e confrontarsi con amici.
 
-**Versione:** 3.2.1
-**Live:** https://training-analyzer-oiu2.onrender.com
+---
+
+## Stato attuale del repository (aprile 2026)
+
+In questo repo convivono **due versioni** dell'app. NON modificare i file della versione legacy nella root: sono ancora in produzione su GitHub Pages.
+
+### Versione legacy (v3.1) — root del repo
+
+I file nella root (`index.html`, `js/app.js`, `css/style.css`, `fonts/`, `manifest.json`, `logo_ta.png`) sono la **vecchia versione client-only con Firebase** come backend. Questa versione:
+
+- E **ancora in produzione** su GitHub Pages e viene usata dagli utenti attuali
+- **Non va toccata** finche gli utenti non avranno fatto l'export dei propri dati
+- Verra ritirata dopo la migrazione completa a v3.2
+
+### Versione attiva (v3.2) — `training-analyzer/`
+
+Tutto lo sviluppo avviene dentro **[`training-analyzer/`](training-analyzer/)**. Questa e l'architettura full-stack che sostituira la versione legacy:
+
+- **Client:** `training-analyzer/client/` — Vanilla JS (ES modules), Chart.js, PWA
+- **Server:** `training-analyzer/server/` — Node.js 20, Express 4, PostgreSQL 16, Sequelize 6
+- **Deploy:** Render (auto-deploy da `main`, root dir impostata su `training-analyzer`)
+- **Live:** https://training-analyzer-oiu2.onrender.com
+
+> Quando si lavora su bugfix o nuove feature, si modifica SOLO il codice dentro `training-analyzer/`. I file nella root sono congelati.
 
 ---
 
@@ -11,8 +33,8 @@ Web app full-stack per tracciare allenamenti multi-sport, analizzare progressi e
 
 ```
 .
-├── training-analyzer/               App full-stack (v3.2)
-│   ├── client/                      Frontend (Vanilla JS, ES modules)
+├── training-analyzer/               <-- VERSIONE ATTIVA (v3.2, full-stack)
+│   ├── client/                      Frontend
 │   │   ├── index.html               HTML (login, nav, pagine, modali)
 │   │   ├── css/style.css            Stili (tema rosso, dark/light, responsive)
 │   │   ├── manifest.json            PWA manifest
@@ -50,51 +72,56 @@ Web app full-stack per tracciare allenamenti multi-sport, analizzare progressi e
 │   ├── .env.example                 Template variabili d'ambiente
 │   └── .gitignore
 │
-├── index.html                       Legacy frontend (v3.1, client-only + Firebase)
-├── css/style.css
-├── js/app.js
-├── fonts/
-├── manifest.json
-├── logo_ta.png
-└── logica_valutazione_forma_fisica.md
+├── index.html                       LEGACY v3.1 — NON TOCCARE (GitHub Pages)
+├── css/style.css                    LEGACY
+├── js/app.js                        LEGACY (tutto in un file singolo, ~115KB)
+├── fonts/                           LEGACY
+├── manifest.json                    LEGACY
+├── logo_ta.png                      LEGACY
+├── graphic_adj/                     LEGACY (screenshot di riferimento)
+└── logica_valutazione_forma_fisica.md  LEGACY (doc sulla logica di scoring)
 ```
-
-> I file nella root (`index.html`, `js/app.js`, `css/style.css`) sono la versione legacy 3.1 (client-only con Firebase). La versione attiva e in sviluppo e dentro `training-analyzer/`.
 
 ---
 
-## Stack tecnologico
+## Stack tecnologico (v3.2)
 
 | Layer | Tecnologia |
 |---|---|
 | Frontend | Vanilla JS (ES modules), Chart.js 4.4.1, no framework, no build step |
 | Backend | Node.js 20, Express 4 |
-| Database | PostgreSQL 16 |
+| Database | Neon PostgreSQL 16 (serverless, prod) · PostgreSQL 16 in Docker (dev) |
 | ORM | Sequelize 6 |
 | Auth | Passport.js (Google OAuth2 + Local), JWT (access 15min + refresh 7gg) |
 | Security | helmet, cors, express-rate-limit, bcryptjs |
 | Container | Docker, docker-compose |
-| Hosting | Render (Web Service + PostgreSQL) |
+| Hosting | Render (Web Service) + Neon (database) |
 
 ---
 
-## Deploy attuale (Render)
+## Deploy
 
-L'app e in produzione su Render:
+### Versione attiva (Render + Neon)
 
-- **Web Service:** `training-analyzer` (Node runtime, root dir `training-analyzer`)
-- **Database:** PostgreSQL managed su Render (Frankfurt)
+- **Web Service:** Render, root dir `training-analyzer`, Node runtime
+- **Database:** Neon PostgreSQL (serverless, region AWS `eu-central-1` Frankfurt, stessa area di Render)
 - **Build command:** `cd server && npm install`
 - **Start command:** `cd server && node src/index.js`
-- **Auto-deploy:** su ogni push a `main`
+- **Auto-deploy:** su ogni push a `main` (solo `training-analyzer/` viene usato da Render)
+- Le tabelle vengono create automaticamente (`sequelize.sync()`)
+- Google OAuth e opzionale: il server parte anche senza le credenziali Google
 
-Le tabelle vengono create automaticamente all'avvio del server (`sequelize.sync()`).
+> Il `DATABASE_URL` di produzione punta a Neon e deve contenere `?sslmode=require`. Connessione, pool e timeout sono tarati per Neon in [`server/src/config/database.js`](training-analyzer/server/src/config/database.js) (cold-start tollerante, idle sotto la soglia di auto-suspend). La migrazione Render PostgreSQL → Neon è stata completata il 2026-04-21; la procedura usata è documentata in [`MIGRATION_RENDER_TO_NEON.md`](training-analyzer/MIGRATION_RENDER_TO_NEON.md) come riferimento storico.
 
-Google OAuth e opzionale: il server parte anche senza le credenziali Google (login email/password sempre disponibile).
+### Versione legacy (GitHub Pages)
+
+- Servita direttamente dalla root del repo (branch `main`)
+- Backend: Firebase Realtime Database (configurato in `js/app.js`)
+- Verra spenta dopo la migrazione degli utenti alla v3.2
 
 ---
 
-## Quick Start (locale)
+## Quick Start (v3.2 locale)
 
 ### Con Docker
 
@@ -134,10 +161,10 @@ npm run dev
 
 | Variabile | Richiesta | Descrizione |
 |---|---|---|
-| `DATABASE_URL` | Si | Connection string PostgreSQL |
+| `DATABASE_URL` | Si | Connection string PostgreSQL. In prod: Neon (`postgres://…neon.tech/…?sslmode=require`). In dev: Docker locale. |
 | `JWT_SECRET` | Si | Segreto per access token (64 char random) |
 | `JWT_REFRESH_SECRET` | Si | Segreto per refresh token (64 char random) |
-| `NODE_ENV` | No | `production` o `development` (default) |
+| `NODE_ENV` | No | `production` o `development` (default). In prod abilita SSL + pool tarato per Neon. |
 | `PORT` | No | Porta server (default `3000`) |
 | `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
@@ -165,12 +192,13 @@ Se le variabili Google OAuth non sono configurate, il login Google viene disabil
 
 | Metodo | Endpoint | Descrizione |
 |---|---|---|
-| GET | `/api/workouts?type=&from=&to=&limit=&offset=` | Lista con filtri (default limit 50, max 200) |
+| GET | `/api/workouts?type=&from=&to=&limit=&offset=` | Lista con filtri (default limit 50, max 5000) |
 | GET | `/api/workouts/:id` | Dettaglio singolo |
 | POST | `/api/workouts` | Crea nuovo (`{ type, date, data }`) |
 | PUT | `/api/workouts/:id` | Aggiorna |
 | DELETE | `/api/workouts` | Elimina tutti i workout dell'utente |
 | DELETE | `/api/workouts/:id` | Elimina singolo |
+| DELETE | `/api/workouts/bulk` | Elimina multipli (`{ ids: [...] }`) |
 | POST | `/api/workouts/import` | Import file (multipart) |
 
 ### Esercizi, Settings, Peso
@@ -226,9 +254,11 @@ Il client fa il flatten dei workout (merge di `.data` nel top-level) per compati
 - **Valutazione forma fisica** su 7 componenti pesate
 - **Streak tracking** con record storico
 - **Sistema amici** con follow, ricerca e confronto statistiche
-- **Import multi-formato:** GPX, CSV, Apple Health XML, FIT, JSON backup
-- **Export/Import backup** JSON completo con cancellazione dati esistenti
-- **PubMed integration** per articoli scientifici correlati all'allenamento
+- **Import multi-formato:** GPX (con split e grafici), CSV, Apple Health XML, FIT, JSON backup
+- **Export/Import backup** JSON completo
+- **Live Workout** per il tracking in tempo reale delle sessioni
+- **Multi-select e bulk delete** nella cronologia workout
+- **PubMed integration** per articoli scientifici correlati
 - **Recovery status** per gruppo muscolare
 - **PWA installabile** (standalone, icona adattiva)
 - **Tema dark/light** automatico (OS) + override manuale
@@ -247,24 +277,13 @@ Il calcolo dello score e **client-side** (`client/js/scoring.js`). Il server ric
 
 ---
 
-## Migrazione da Firebase (v3.1 → v3.2)
+## Piano di migrazione (legacy → v3.2)
 
-Due metodi disponibili:
-
-### Metodo 1: Export/Import JSON (consigliato)
-
-1. Vai sul sito vecchio (GitHub Pages) → Impostazioni → Export JSON
-2. Vai sul sito nuovo (Render) → Import → Import JSON → carica il file
-
-### Metodo 2: Script server-side
-
-```bash
-cd training-analyzer/server
-npm install firebase-admin --save-dev
-# Scarica firebase-service-account.json da Firebase Console
-npm run migrate:firebase -- --dry-run
-npm run migrate:firebase
-```
+1. Completare le feature e i bugfix sulla v3.2 (in corso)
+2. Gli utenti attuali fanno export JSON dalla versione legacy (GitHub Pages)
+3. Gli utenti importano i dati sulla v3.2 (Render)
+4. Spegnere GitHub Pages e spostare i file legacy in `_legacy/`
+5. Aggiornare il README (rimuovere sezione legacy)
 
 ---
 
