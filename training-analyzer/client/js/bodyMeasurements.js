@@ -241,9 +241,9 @@ function renderControls(tab) {
   }
   const vis = _visibility[tab];
   el.innerHTML = fields.map((f) => (
-    `<label class="bm-toggle" style="display:inline-flex;gap:4px;align-items:center;margin:2px 8px 2px 0;font-size:.8rem">
+    `<label class="bm-toggle">
       <input type="checkbox" data-bm-vis="${f.key}" ${vis.has(f.key) ? 'checked' : ''}>
-      <span style="width:10px;height:10px;border-radius:50%;background:${f.color};display:inline-block"></span>
+      <span class="bm-dot" style="background:${f.color}"></span>
       ${f.label}
     </label>`
   )).join('');

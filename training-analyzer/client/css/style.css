@@ -557,8 +557,11 @@ canvas{max-width:100%}
 .bm-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .bm-pill{background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:16px;cursor:pointer;font-size:.75rem;font-weight:600;font-family:var(--font);transition:var(--transition)}
 .bm-pill:hover{background:var(--bg3);color:var(--text)}
-.bm-pill.active{background:var(--text);color:var(--bg1);border-color:var(--text)}
-.bm-toggle{user-select:none}
+.bm-pill.active{background:var(--accent-bg);color:var(--accent);border-color:var(--accent)}
+/* Compact toggle rows: override global input{width:100%} for their checkboxes */
+.bm-toggle{user-select:none;display:inline-flex;gap:6px;align-items:center;margin:2px 10px 2px 0;font-size:.8rem;color:var(--text)}
+.bm-toggle input[type="checkbox"]{width:14px;height:14px;padding:0;margin:0;flex:none;flex-shrink:0;accent-color:var(--accent);cursor:pointer}
+.bm-toggle .bm-dot{width:10px;height:10px;border-radius:50%;flex:none;flex-shrink:0;display:inline-block}
 .bm-table th,.bm-table td{padding:8px 10px}
 .bm-table tbody tr{border-bottom:1px solid var(--border)}
 .bm-table tbody tr:last-child{border-bottom:none}
