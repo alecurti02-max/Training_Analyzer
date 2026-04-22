@@ -1984,10 +1984,30 @@ function renderAthleticFitnessAssessment() {
     html += `<div class="fitness-bar-row"><span class="fb-label">${d.label}</span><div class="fb-track"><div class="fb-fill" style="width:${d.pct}%;background:${d.color}"></div></div><span style="font-size:.75rem;width:80px;text-align:right;color:var(--text2)">${d.value}</span></div>
     <div style="font-size:.78rem;color:var(--text2);margin-left:90px;margin-bottom:8px">${d.sublabel||''}</div>`;
   });
-  html += `</div></div>
-  <div class="advice-box" style="margin-top:12px">
+  html += `</div></div>`;
+
+  // Breakdown composizione corporea: card dettagliata se abbiamo dati
+  const bc = fa.bodyComp;
+  if (bc && bc.components && bc.components.length > 0) {
+    html += `<div class="card" style="margin-top:12px"><div class="card-title">Composizione Corporea — Dettaglio</div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Peso nel punteggio totale: <strong>${bc.weight}%</strong> (più dati inserisci, più peso ha).</p>
+      <div class="fitness-bars">`;
+    bc.components.forEach(c => {
+      const pct = Math.round((c.score / 10) * 100);
+      const color = c.score >= 7 ? 'var(--green)' : c.score >= 4 ? 'var(--yellow)' : 'var(--red)';
+      const tag = c.fallback ? ' <span style="color:var(--text2);font-size:.7rem">(fallback)</span>' : '';
+      html += `<div class="fitness-bar-row"><span class="fb-label">${c.label}${tag}</span><div class="fb-track"><div class="fb-fill" style="width:${pct}%;background:${color}"></div></div><span style="font-size:.75rem;width:80px;text-align:right;color:var(--text2)">${c.value} · ${c.score.toFixed(1)}/10</span></div>`;
+    });
+    html += `</div></div>`;
+  } else if (bc && bc.reason === 'gender-missing') {
+    html += `<div class="advice-box" style="margin-top:12px;border-left:3px solid var(--yellow)">
+      <strong>Composizione corporea non valutata:</strong> imposta il <strong>sesso</strong> in Impostazioni per attivare la valutazione (le soglie di riferimento sono differenti per uomo e donna).</div>`;
+  }
+
+  html += `<div class="advice-box" style="margin-top:12px">
     <strong>Calcolati automaticamente:</strong> Forza (1RM e carichi), Cardio (pace e FC), Endurance (consistenza e km), Atleticita (varieta sport).<br>
-    <strong>Da inserire manualmente:</strong> VO2 Max, FC Riposo, Peso, Altezza, Flessibilita (in Impostazioni).
+    <strong>Da inserire manualmente:</strong> VO2 Max, FC Riposo, Peso, Altezza, Flessibilita (Impostazioni).<br>
+    <strong>Composizione corporea (opzionale):</strong> circonferenze e valori bilancia impedenziometrica aumentano il peso del sub-score nel punteggio totale (15% → 35%).
   </div>`;
   el.innerHTML = html;
 }

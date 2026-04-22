@@ -186,6 +186,116 @@ export function calculateStreak(workoutsCache) {
   return { current, record };
 }
 
+// ==================== BODY COMPOSITION SUB-SCORE ====================
+// Ritorna sub-score 0-10 + peso dinamico nel punteggio totale (15-35%) in base
+// a quanti componenti sono disponibili. Soglie età-continue (Jackson-Pollock
+// linearizzato) per massa grassa e massa muscolare. `gender` è obbligatorio.
+export function bodyCompositionSubScore(s) {
+  const gender = s.gender || null;
+  if (!gender) return { score: null, weight: 15, components: [], reason: 'gender-missing' };
+  const age = s.age || null;
+  const height = s.height || null;
+  const weight = s.bodyweight || null;
+  const bf = s.bodyFat, vf = s.visceralFat, sm = s.skeletalMuscle;
+  const cw = s.circWaist, ch = s.circHips;
+  const components = [];
+
+  // 1) Waist-to-height ratio (35%) — fallback BMI se manca la vita
+  if (cw && height) {
+    const whtr = cw / height;
+    let score;
+    if (whtr < 0.42) score = 7;
+    else if (whtr <= 0.50) score = 10;
+    else if (whtr <= 0.55) score = 10 - (whtr - 0.50) / 0.05 * 3;
+    else if (whtr <= 0.60) score = 7 - (whtr - 0.55) / 0.05 * 3;
+    else score = Math.max(1, 4 - (whtr - 0.60) * 20);
+    components.push({ key: 'whtr', label: 'Vita/Altezza', weight: 35, score, value: whtr.toFixed(2) });
+  } else if (weight && height) {
+    const bmi = weight / ((height / 100) ** 2);
+    let score;
+    if (bmi < 17) score = 3;
+    else if (bmi < 18.5) score = 6;
+    else if (bmi < 25) score = 9;
+    else if (bmi < 27) score = 7;
+    else if (bmi < 30) score = 5;
+    else score = Math.max(1, 5 - (bmi - 30) * 0.5);
+    components.push({ key: 'bmi', label: 'BMI', weight: 35, score, value: bmi.toFixed(1), fallback: true });
+  }
+
+  // 2) Massa grassa % (35%) — soglie lineari con età (J-P)
+  if (bf != null && age) {
+    const d = age - 25;
+    let atl, fit, med, acc;
+    if (gender === 'M') {
+      atl = 11 + 0.125 * d; fit = 13 + 0.125 * d; med = 17 + 0.125 * d; acc = 22 + 0.100 * d;
+    } else {
+      atl = 14 + 0.150 * d; fit = 16 + 0.175 * d; med = 19 + 0.200 * d; acc = 23 + 0.175 * d;
+    }
+    let score;
+    if (bf <= atl) score = 10;
+    else if (bf <= fit) score = 10 - (bf - atl) / (fit - atl) * 1.5;
+    else if (bf <= med) score = 8.5 - (bf - fit) / (med - fit) * 1.5;
+    else if (bf <= acc) score = 7 - (bf - med) / (acc - med) * 2;
+    else score = Math.max(1, 5 - (bf - acc) * 0.3);
+    components.push({ key: 'bf', label: 'Massa grassa', weight: 35, score, value: bf.toFixed(1) + '%' });
+  }
+
+  // 3) Grasso viscerale (15%) — indice bilancia impedenziometrica
+  if (vf != null) {
+    let score;
+    if (vf <= 9) score = 10;
+    else if (vf <= 12) score = 10 - (vf - 9);
+    else if (vf <= 14) score = 7 - (vf - 12) * 1.5;
+    else score = Math.max(1, 4 - (vf - 14) * 0.5);
+    components.push({ key: 'vf', label: 'Grasso viscerale', weight: 15, score, value: String(vf) });
+  }
+
+  // 4) Waist-to-hip ratio (10%)
+  if (cw && ch) {
+    const whr = cw / ch;
+    const lo = gender === 'M' ? 0.90 : 0.80;
+    const hi = gender === 'M' ? 0.95 : 0.85;
+    let score;
+    if (whr <= lo) score = 10;
+    else if (whr <= hi) score = 10 - (whr - lo) / (hi - lo) * 5;
+    else score = Math.max(1, 5 - (whr - hi) * 30);
+    components.push({ key: 'whr', label: 'Vita/Fianchi', weight: 10, score, value: whr.toFixed(2) });
+  }
+
+  // 5) Massa muscolare % (5% bonus) — sarcopenia ~-0.05%/anno
+  if (sm != null && age) {
+    const d = age - 25;
+    let low, mid, hi;
+    if (gender === 'M') { low = 33 - 0.05 * d; mid = 37 - 0.05 * d; hi = 40 - 0.05 * d; }
+    else { low = 24 - 0.05 * d; mid = 28 - 0.05 * d; hi = 31 - 0.05 * d; }
+    let score;
+    if (sm >= hi) score = 10;
+    else if (sm >= mid) score = 7.5 + (sm - mid) / (hi - mid) * 2.5;
+    else if (sm >= low) score = 5 + (sm - low) / (mid - low) * 2.5;
+    else score = Math.max(2, 5 - (low - sm) * 0.5);
+    components.push({ key: 'sm', label: 'Massa muscolare', weight: 5, score, value: sm.toFixed(1) + '%' });
+  }
+
+  if (components.length === 0) return { score: null, weight: 15, components: [], reason: 'no-data' };
+
+  const totalW = components.reduce((a, c) => a + c.weight, 0);
+  const subScore = components.reduce((a, c) => a + c.score * c.weight, 0) / totalW;
+
+  // Peso dinamico nel totale: più dati = più peso (min 15, max 35)
+  const k = new Set(components.map(c => c.key));
+  const hasWaist = k.has('whtr');
+  const hasBF = k.has('bf');
+  const hasVF = k.has('vf');
+  const hasMod = k.has('whr') || k.has('sm');
+  let dynWeight;
+  if (hasWaist && hasBF && hasVF) dynWeight = hasMod ? 35 : 30;
+  else if (hasWaist && (hasBF || hasVF)) dynWeight = 25;
+  else if (hasWaist || hasBF) dynWeight = 20;
+  else dynWeight = 15;
+
+  return { score: subScore, weight: dynWeight, components, reason: null };
+}
+
 // ==================== FITNESS ASSESSMENT ====================
 export function getFitnessAssessment(workoutsCache, settingsCache, weightsCache, muscleGroups) {
   const gender = settingsCache.gender || null;
@@ -200,6 +310,13 @@ export function getFitnessAssessment(workoutsCache, settingsCache, weightsCache,
   const runW30 = last30.filter(w => w.type === 'running');
   let totalScore = 0;
   const details = [];
+
+  // Body-comp sub-score: peso dinamico 15-35 in base ai dati inseriti.
+  // Gli altri sub-score (forza, cardio, endurance, flex, atleticità) vengono
+  // rescalati proporzionalmente in modo che il totale resti 100.
+  const bc = bodyCompositionSubScore(settingsCache);
+  const WB = bc.weight;
+  const scale = (100 - WB) / 85;
 
   // 1. FORZA MUSCOLARE (25%)
   let forzaScore = 0;
@@ -230,8 +347,10 @@ export function getFitnessAssessment(workoutsCache, settingsCache, weightsCache,
     const progression = gymW30.reduce((s,w) => s + (w.scores?.progression||5), 0) / gymW30.length;
     forzaScore = (relStrength/10 * 12) + (volumeTrend/10 * 8) + (progression/10 * 5);
   } else { forzaScore = 5; }
-  totalScore += forzaScore;
-  details.push({ label: 'Forza', value: `${Math.round(forzaScore)}/25`, pct: Math.round((forzaScore/25)*100), color: forzaScore/25 >= 0.7 ? 'var(--green)' : forzaScore/25 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: gymW30.length ? `${gymW30.length} sessioni palestra` : 'Nessun dato palestra' });
+  const forzaMax = 25 * scale;
+  const forzaContrib = forzaScore * scale;
+  totalScore += forzaContrib;
+  details.push({ label: 'Forza', value: `${Math.round(forzaContrib)}/${Math.round(forzaMax)}`, pct: Math.round((forzaScore/25)*100), color: forzaScore/25 >= 0.7 ? 'var(--green)' : forzaScore/25 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: gymW30.length ? `${gymW30.length} sessioni palestra` : 'Nessun dato palestra' });
 
   // 2. RESISTENZA CARDIOVASCOLARE (25%)
   let cardioScore = 0;
@@ -256,8 +375,10 @@ export function getFitnessAssessment(workoutsCache, settingsCache, weightsCache,
   let hrScore = 5;
   if (resthr) { hrScore = resthr <= 50 ? 10 : resthr <= 60 ? 8 : resthr <= 70 ? 6 : resthr <= 80 ? 4 : 2; }
   cardioScore += (hrScore/10 * 5);
-  totalScore += cardioScore;
-  details.push({ label: 'Cardio', value: `${Math.round(cardioScore)}/25`, pct: Math.round((cardioScore/25)*100), color: cardioScore/25 >= 0.7 ? 'var(--green)' : cardioScore/25 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: vo2max ? `VO2 ${vo2max} ml/kg/min` : 'Inserisci VO2 Max' });
+  const cardioMax = 25 * scale;
+  const cardioContrib = cardioScore * scale;
+  totalScore += cardioContrib;
+  details.push({ label: 'Cardio', value: `${Math.round(cardioContrib)}/${Math.round(cardioMax)}`, pct: Math.round((cardioScore/25)*100), color: cardioScore/25 >= 0.7 ? 'var(--green)' : cardioScore/25 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: vo2max ? `VO2 ${vo2max} ml/kg/min` : 'Inserisci VO2 Max' });
 
   // 3. ENDURANCE (20%)
   let enduranceScore = 0;
@@ -267,36 +388,54 @@ export function getFitnessAssessment(workoutsCache, settingsCache, weightsCache,
   enduranceScore += ((avgDuration >= 60 ? 10 : avgDuration >= 45 ? 8 : avgDuration >= 30 ? 6 : avgDuration >= 15 ? 4 : 2)/10 * 7);
   const totalKm30 = runW30.reduce((s,w) => s + (w.distance||0), 0);
   enduranceScore += ((totalKm30 >= 80 ? 10 : totalKm30 >= 50 ? 8 : totalKm30 >= 25 ? 6 : totalKm30 >= 10 ? 4 : 2)/10 * 5);
-  totalScore += enduranceScore;
-  details.push({ label: 'Endurance', value: `${Math.round(enduranceScore)}/20`, pct: Math.round((enduranceScore/20)*100), color: enduranceScore/20 >= 0.7 ? 'var(--green)' : enduranceScore/20 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `${trainingDays30} gg attivi, ${totalKm30.toFixed(0)} km` });
+  const endMax = 20 * scale;
+  const endContrib = enduranceScore * scale;
+  totalScore += endContrib;
+  details.push({ label: 'Endurance', value: `${Math.round(endContrib)}/${Math.round(endMax)}`, pct: Math.round((enduranceScore/20)*100), color: enduranceScore/20 >= 0.7 ? 'var(--green)' : enduranceScore/20 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `${trainingDays30} gg attivi, ${totalKm30.toFixed(0)} km` });
 
-  // 4. COMPOSIZIONE CORPOREA (15%)
-  let bodyScore = 0;
-  if (weight && height) {
+  // 4. COMPOSIZIONE CORPOREA (peso dinamico 15-35%)
+  let bodyContrib, bodySub, bodySublabel;
+  if (bc.score != null) {
+    bodyContrib = (bc.score / 10) * WB;
+    bodySub = bc.components.map(c => `${c.label} ${c.value}`).join(', ');
+  } else if (bc.reason === 'gender-missing') {
+    // Senza sesso non possiamo interpretare le soglie: contributo neutro 5/15
+    bodyContrib = 0.5 * WB;
+    bodySub = 'Imposta il sesso in Impostazioni per attivare la valutazione';
+  } else if (weight && height) {
+    // Nessun dato di composizione ma abbiamo peso+altezza: BMI fallback leggero
     const bmi = weight / ((height/100) ** 2);
-    bodyScore += ((bmi >= 18.5 && bmi < 25 ? 10 : bmi >= 17 && bmi < 27 ? 7 : bmi >= 15 && bmi < 30 ? 4 : 2)/10 * 10);
-    if (weightsCache && weightsCache.length >= 2) {
-      const target = settingsCache.weightTarget || null;
-      if (target) {
-        const recent = weightsCache[weightsCache.length - 1].value;
-        const older = weightsCache[Math.max(0, weightsCache.length - 5)].value;
-        bodyScore += Math.abs(recent - target) < Math.abs(older - target) ? 5 : 2;
-      } else { bodyScore += 3; }
-    } else { bodyScore += 3; }
-  } else { bodyScore = 5; }
-  totalScore += bodyScore;
-  details.push({ label: 'Composizione', value: `${Math.round(bodyScore)}/15`, pct: Math.round((bodyScore/15)*100), color: bodyScore/15 >= 0.7 ? 'var(--green)' : bodyScore/15 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: weight && height ? `${weight} kg, BMI ${(weight/((height/100)**2)).toFixed(1)}` : 'Inserisci peso e altezza' });
+    const bmiS = bmi >= 18.5 && bmi < 25 ? 9 : bmi >= 17 && bmi < 27 ? 7 : bmi >= 15 && bmi < 30 ? 4 : 2;
+    bodyContrib = (bmiS / 10) * WB;
+    bodySub = `BMI ${bmi.toFixed(1)} — aggiungi circonferenza vita o massa grassa per una valutazione più accurata`;
+  } else {
+    bodyContrib = 0.5 * WB;
+    bodySub = 'Inserisci peso, altezza e (opzionale) dati bilancia impedenziometrica';
+  }
+  totalScore += bodyContrib;
+  details.push({
+    label: 'Composizione',
+    value: `${Math.round(bodyContrib)}/${Math.round(WB)}`,
+    pct: Math.round((bodyContrib / WB) * 100),
+    color: bodyContrib/WB >= 0.7 ? 'var(--green)' : bodyContrib/WB >= 0.4 ? 'var(--yellow)' : 'var(--red)',
+    sublabel: bodySub,
+    bodyComponents: bc.components,
+  });
 
   // 5. FLESSIBILITA (10%)
   let flexScore = (flexibility / 10) * 10;
-  totalScore += flexScore;
-  details.push({ label: 'Flessibilita', value: `${Math.round(flexScore)}/10`, pct: Math.round((flexScore/10)*100), color: flexScore/10 >= 0.7 ? 'var(--green)' : flexScore/10 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `Auto-valutazione: ${flexibility}/10` });
+  const flexMax = 10 * scale;
+  const flexContrib = flexScore * scale;
+  totalScore += flexContrib;
+  details.push({ label: 'Flessibilita', value: `${Math.round(flexContrib)}/${Math.round(flexMax)}`, pct: Math.round((flexScore/10)*100), color: flexScore/10 >= 0.7 ? 'var(--green)' : flexScore/10 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `Auto-valutazione: ${flexibility}/10` });
 
   // 6. ATLETICITA INTEGRATA (5%)
   const sportTypes = new Set(last30.map(w => w.type)).size;
   let athleticScore = Math.min(5, sportTypes * 1.5 + (trainingDays30 >= 12 ? 1 : 0));
-  totalScore += athleticScore;
-  details.push({ label: 'Atleticita', value: `${Math.round(athleticScore*10)/10}/5`, pct: Math.round((athleticScore/5)*100), color: athleticScore/5 >= 0.7 ? 'var(--green)' : athleticScore/5 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `${sportTypes} sport praticati` });
+  const atlMax = 5 * scale;
+  const atlContrib = athleticScore * scale;
+  totalScore += atlContrib;
+  details.push({ label: 'Atleticita', value: `${Math.round(atlContrib*10)/10}/${Math.round(atlMax*10)/10}`, pct: Math.round((athleticScore/5)*100), color: athleticScore/5 >= 0.7 ? 'var(--green)' : athleticScore/5 >= 0.4 ? 'var(--yellow)' : 'var(--red)', sublabel: `${sportTypes} sport praticati` });
 
   const finalPct = Math.round(totalScore);
   let level, levelColor;
@@ -305,5 +444,5 @@ export function getFitnessAssessment(workoutsCache, settingsCache, weightsCache,
   else if (finalPct >= 50) { level = 'Nella media'; levelColor = 'var(--yellow)'; }
   else if (finalPct >= 30) { level = 'Da migliorare'; levelColor = 'var(--orange)'; }
   else { level = 'Insufficiente'; levelColor = 'var(--red)'; }
-  return { score: finalPct, level, levelColor, details };
+  return { score: finalPct, level, levelColor, details, bodyComp: bc };
 }
