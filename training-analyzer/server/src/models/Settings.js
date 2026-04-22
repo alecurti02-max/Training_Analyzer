@@ -19,6 +19,7 @@ module.exports = (sequelize) => {
       flexibility: { type: DataTypes.INTEGER, allowNull: true },
       weekgoal: { type: DataTypes.INTEGER, defaultValue: 4 },
       kmgoal: { type: DataTypes.INTEGER, allowNull: true },
+      weightTarget: { type: DataTypes.FLOAT, allowNull: true },
       activeSports: {
         type: DataTypes.JSONB,
         defaultValue: ['gym', 'running'],

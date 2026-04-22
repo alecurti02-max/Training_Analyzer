@@ -2,7 +2,7 @@ const { Settings } = require('../models');
 
 const ALLOWED_FIELDS = [
   'maxhr', 'resthr', 'bodyweight', 'height', 'vo2max', 'age', 'gender',
-  'flexibility', 'weekgoal', 'kmgoal', 'activeSports', 'muscleGroups',
+  'flexibility', 'weekgoal', 'kmgoal', 'weightTarget', 'activeSports', 'muscleGroups',
   // Circonferenze corporee
   'circChest', 'circWaist', 'circHips', 'circShoulders',
   'circBicep', 'circNeck', 'circThigh', 'circCalf',
