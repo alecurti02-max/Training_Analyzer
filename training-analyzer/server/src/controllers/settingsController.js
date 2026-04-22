@@ -1,8 +1,14 @@
 const { Settings } = require('../models');
 
 const ALLOWED_FIELDS = [
-  'fcMax', 'fcRest', 'weight', 'height', 'vo2max', 'age', 'sex',
-  'flexibility', 'weekgoal', 'kmgoal', 'activeSports', 'activeGroups',
+  'maxhr', 'resthr', 'bodyweight', 'height', 'vo2max', 'age', 'gender',
+  'flexibility', 'weekgoal', 'kmgoal', 'activeSports', 'muscleGroups',
+  // Circonferenze corporee
+  'circChest', 'circWaist', 'circHips', 'circShoulders',
+  'circBicep', 'circNeck', 'circThigh', 'circCalf',
+  // Composizione corporea (opzionale)
+  'bodyFat', 'skeletalMuscle', 'subcutaneousFat', 'visceralFat',
+  'bodyWater', 'muscleMass', 'boneMass', 'protein',
 ];
 
 async function get(req, res, next) {
@@ -26,12 +32,11 @@ async function update(req, res, next) {
       }
     }
 
-    // Basic validation for numeric fields
-    if (updates.fcMax != null && (updates.fcMax < 100 || updates.fcMax > 250)) {
-      return res.status(400).json({ error: { message: 'fcMax must be between 100 and 250' } });
+    if (updates.maxhr != null && (updates.maxhr < 100 || updates.maxhr > 250)) {
+      return res.status(400).json({ error: { message: 'maxhr must be between 100 and 250' } });
     }
-    if (updates.fcRest != null && (updates.fcRest < 30 || updates.fcRest > 120)) {
-      return res.status(400).json({ error: { message: 'fcRest must be between 30 and 120' } });
+    if (updates.resthr != null && (updates.resthr < 30 || updates.resthr > 120)) {
+      return res.status(400).json({ error: { message: 'resthr must be between 30 and 120' } });
     }
     if (updates.flexibility != null && (updates.flexibility < 1 || updates.flexibility > 10)) {
       return res.status(400).json({ error: { message: 'flexibility must be between 1 and 10' } });

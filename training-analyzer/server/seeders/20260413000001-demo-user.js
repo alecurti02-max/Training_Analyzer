@@ -26,18 +26,18 @@ module.exports = {
     await queryInterface.bulkInsert('settings', [
       {
         userId: DEMO_UID,
-        fcMax: 190,
-        fcRest: 55,
-        weight: 78,
+        maxhr: 190,
+        resthr: 55,
+        bodyweight: 78,
         height: 180,
         vo2max: 48,
         age: 25,
-        sex: 'M',
+        gender: 'M',
         flexibility: 6,
         weekgoal: 4,
         kmgoal: 20,
         activeSports: JSON.stringify(['gym', 'running', 'karting']),
-        activeGroups: JSON.stringify([
+        muscleGroups: JSON.stringify([
           'Petto', 'Schiena', 'Spalle', 'Bicipiti', 'Tricipiti',
           'Quadricipiti', 'Femorali', 'Glutei', 'Polpacci',
           'Addominali', 'Avambracci', 'Trapezio', 'Full Body',

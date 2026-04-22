@@ -510,6 +510,25 @@
     </div>
   </div>
   <div class="card">
+    <div class="card-title">Composizione Corporea (opzionale)</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Valori tipicamente forniti da bilance impedenziometriche. Compila solo i campi che puoi misurare.</p>
+    <div class="form-row">
+      <div class="form-group"><label>Massa grassa (%)</label><input type="number" id="set-body-fat" step="0.1" min="0" max="70" placeholder="%" data-settings="true"></div>
+      <div class="form-group"><label>Muscoli scheletrici (%)</label><input type="number" id="set-skeletal-muscle" step="0.1" min="0" max="70" placeholder="%" data-settings="true"></div>
+      <div class="form-group"><label>Acqua corporea (%)</label><input type="number" id="set-body-water" step="0.1" min="0" max="90" placeholder="%" data-settings="true"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Grasso sottocutaneo (%)</label><input type="number" id="set-subcutaneous-fat" step="0.1" min="0" max="60" placeholder="%" data-settings="true"></div>
+      <div class="form-group"><label>Grasso viscerale</label><input type="number" id="set-visceral-fat" step="0.1" min="0" max="60" placeholder="indice" data-settings="true"></div>
+      <div class="form-group"><label>Proteine (%)</label><input type="number" id="set-protein" step="0.1" min="0" max="40" placeholder="%" data-settings="true"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Massa muscolare (kg)</label><input type="number" id="set-muscle-mass" step="0.1" min="0" max="120" placeholder="kg" data-settings="true"></div>
+      <div class="form-group"><label>Massa ossea (kg)</label><input type="number" id="set-bone-mass" step="0.1" min="0" max="10" placeholder="kg" data-settings="true"></div>
+      <div class="form-group"></div>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-title">I Miei Sport</div>
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Palestra e Corsa sono sempre attivi. Aggiungi gli sport che pratichi.</p>
     <div id="active-sports-list" style="margin-bottom:12px"></div>

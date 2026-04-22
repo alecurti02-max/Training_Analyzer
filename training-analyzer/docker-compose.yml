@@ -26,7 +26,10 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
+      # Force local Docker PostgreSQL for dev — overrides any DATABASE_URL
+      # (e.g. Neon) that might be set in .env.
       DATABASE_URL: postgres://ta_user:ta_pass@db:5432/training_analyzer
+      NODE_ENV: development
     volumes:
       - ./server/src:/app/src
       - ./client:/app/public

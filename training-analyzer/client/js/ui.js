@@ -2306,6 +2306,15 @@ async function saveSettings(){
     circCalf:parseFloat(document.getElementById('set-circ-calf')?.value)||null,
     circNeck:parseFloat(document.getElementById('set-circ-neck')?.value)||null,
     circShoulders:parseFloat(document.getElementById('set-circ-shoulders')?.value)||null,
+    // Composizione corporea (opzionale)
+    bodyFat:parseFloat(document.getElementById('set-body-fat')?.value)||null,
+    skeletalMuscle:parseFloat(document.getElementById('set-skeletal-muscle')?.value)||null,
+    subcutaneousFat:parseFloat(document.getElementById('set-subcutaneous-fat')?.value)||null,
+    visceralFat:parseFloat(document.getElementById('set-visceral-fat')?.value)||null,
+    bodyWater:parseFloat(document.getElementById('set-body-water')?.value)||null,
+    muscleMass:parseFloat(document.getElementById('set-muscle-mass')?.value)||null,
+    boneMass:parseFloat(document.getElementById('set-bone-mass')?.value)||null,
+    protein:parseFloat(document.getElementById('set-protein')?.value)||null,
     activeSports: activeSports,
     muscleGroups: muscleGroups
   };
@@ -2336,6 +2345,15 @@ function populateSettingsUI(){
   setVal('set-circ-calf', s.circCalf);
   setVal('set-circ-neck', s.circNeck);
   setVal('set-circ-shoulders', s.circShoulders);
+  // Composizione corporea
+  setVal('set-body-fat', s.bodyFat);
+  setVal('set-skeletal-muscle', s.skeletalMuscle);
+  setVal('set-subcutaneous-fat', s.subcutaneousFat);
+  setVal('set-visceral-fat', s.visceralFat);
+  setVal('set-body-water', s.bodyWater);
+  setVal('set-muscle-mass', s.muscleMass);
+  setVal('set-bone-mass', s.boneMass);
+  setVal('set-protein', s.protein);
   if(s.activeSports) activeSports = s.activeSports;
   if(s.muscleGroups) muscleGroups = s.muscleGroups;
   populateMuscleSelect();
