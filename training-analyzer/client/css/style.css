@@ -550,3 +550,21 @@ canvas{max-width:100%}
 @media(max-width:600px){
   .set-inline input.w-uni{width:46px;padding:8px 2px;font-size:.85rem}
 }
+
+/* Body measurements (Peso & Composizione page) */
+.bm-tab{background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:.8rem;font-weight:600;font-family:var(--font);transition:var(--transition)}
+.bm-tab:hover{background:var(--bg3);color:var(--text)}
+.bm-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.bm-pill{background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:16px;cursor:pointer;font-size:.75rem;font-weight:600;font-family:var(--font);transition:var(--transition)}
+.bm-pill:hover{background:var(--bg3);color:var(--text)}
+.bm-pill.active{background:var(--text);color:var(--bg1);border-color:var(--text)}
+.bm-toggle{user-select:none}
+.bm-table th,.bm-table td{padding:8px 10px}
+.bm-table tbody tr{border-bottom:1px solid var(--border)}
+.bm-table tbody tr:last-child{border-bottom:none}
+.bm-section summary{list-style:none}
+.bm-section summary::-webkit-details-marker{display:none}
+.bm-section summary::before{content:'▸ ';color:var(--text2);font-size:.8rem}
+.bm-section[open] > summary::before{content:'▾ '}
+.btn-icon{background:none;border:none;color:var(--text2);cursor:pointer;padding:4px 8px;border-radius:4px;font-size:.9rem}
+.btn-icon:hover{background:var(--bg2);color:var(--red)}

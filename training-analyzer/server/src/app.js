@@ -67,6 +67,7 @@ app.use('/api/workouts', require('./routes/workouts'));
 app.use('/api/exercises', require('./routes/exercises'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/weights', require('./routes/weights'));
+app.use('/api/body-measurements', require('./routes/bodyMeasurements'));
 app.use('/api/users', require('./routes/users'));
 
 // --- Health check ---

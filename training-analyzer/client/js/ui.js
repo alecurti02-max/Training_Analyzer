@@ -7,6 +7,7 @@ import { initAuth, setupLoginUI, logout } from './auth.js';
 import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports } from './sports.js';
 import { scoreWorkout, getAdvice, getRecoveryStatus, calculateStreak, getFitnessAssessment, calcTonnage } from './scoring.js';
 import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
+import { loadMeasurements, renderMeasurementsPage } from './bodyMeasurements.js';
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
 
@@ -91,6 +92,7 @@ async function loadAllData() {
       api.get('/api/weights').catch(() => []),
       api.get('/api/users/me/following').catch(() => ({}))
     ]);
+    await loadMeasurements();
 
     // Normalize workouts: server returns { workouts: [...] } with data in JSONB .data field
     const rawWorkouts = Array.isArray(workoutsRes) ? workoutsRes
@@ -1885,41 +1887,59 @@ function renderProgress() {
   renderProgressCharts(workoutsCache, settingsCache);
 }
 
-// ==================== WEIGHT ====================
+// ==================== WEIGHT / BODY MEASUREMENTS ====================
 function renderWeightPage() {
-  document.getElementById('weight-date').value=todayStr();
-  const weights=weightsCache;
-  const statsEl=document.getElementById('weight-stats'), bmiEl=document.getElementById('weight-bmi-section');
-  if(!weights.length){if(statsEl)statsEl.innerHTML='';if(bmiEl)bmiEl.innerHTML='';renderWeightChart(weightsCache,settingsCache);return;}
-  const latest=weights[weights.length-1];
-  const weekAgo=weights.filter(w=>daysBetween(todayStr(),w.date)>=6&&daysBetween(todayStr(),w.date)<=8);
-  const monthAgo=weights.filter(w=>daysBetween(todayStr(),w.date)>=28&&daysBetween(todayStr(),w.date)<=32);
-  const weekDiff=weekAgo.length?(latest.value-weekAgo[0].value).toFixed(1):'--';
-  const monthDiff=monthAgo.length?(latest.value-monthAgo[0].value).toFixed(1):'--';
-  if(statsEl) statsEl.innerHTML=`
-    <div class="weight-stat"><div class="ws-value">${latest.value} kg</div><div class="ws-label">Peso attuale</div></div>
-    <div class="weight-stat"><div class="ws-value" style="color:${weekDiff>0?'var(--red)':weekDiff<0?'var(--green)':'var(--text2)'}">${weekDiff!=='--'?(weekDiff>0?'+':'')+weekDiff:'--'}</div><div class="ws-label">vs settimana scorsa</div></div>
-    <div class="weight-stat"><div class="ws-value" style="color:${monthDiff>0?'var(--red)':monthDiff<0?'var(--green)':'var(--text2)'}">${monthDiff!=='--'?(monthDiff>0?'+':'')+monthDiff:'--'}</div><div class="ws-label">vs mese scorso</div></div>`;
-  const height=settingsCache.height||parseInt(document.getElementById('weight-height')?.value);
-  if(height && bmiEl){
-    const heightM=height/100, bmi=(latest.value/(heightM*heightM)).toFixed(1);
-    let cat,cls;
-    if(bmi<18.5){cat='Sottopeso';cls='bmi-underweight';}
-    else if(bmi<25){cat='Normopeso';cls='bmi-normal';}
-    else if(bmi<30){cat='Sovrappeso';cls='bmi-overweight';}
-    else{cat='Obeso';cls='bmi-obese';}
-    bmiEl.innerHTML=`<div style="margin-bottom:16px"><span class="bmi-badge ${cls}">BMI ${bmi} - ${cat}</span></div>`;
-  } else if(bmiEl) bmiEl.innerHTML='<p style="font-size:.8rem;color:var(--text2);margin-bottom:12px">Inserisci l\'altezza per il BMI.</p>';
-  renderWeightChart(weightsCache, settingsCache);
+  // Date default for the simple weight log
+  const wd = document.getElementById('weight-date');
+  if (wd && !wd.value) wd.value = todayStr();
+
+  // BMI banner on the overview
+  renderBmiBanner();
+
+  // Delegate the rest to the measurements module
+  renderMeasurementsPage({
+    weights: weightsCache,
+    settings: settingsCache,
+    onChange: () => { renderMeasurementsPage({ weights: weightsCache, settings: settingsCache }); renderBmiBanner(); },
+    toast,
+  });
+
+  // Prefill obiettivo / altezza inputs
+  const tgt = document.getElementById('weight-target');
+  if (tgt && settingsCache.weightTarget != null) tgt.value = settingsCache.weightTarget;
+  const hIn = document.getElementById('weight-height');
+  if (hIn && settingsCache.height != null) hIn.value = settingsCache.height;
+}
+
+function renderBmiBanner() {
+  const bmiEl = document.getElementById('weight-bmi-section');
+  if (!bmiEl) return;
+  const latest = weightsCache.length ? weightsCache[weightsCache.length - 1] : null;
+  const height = settingsCache.height || parseInt(document.getElementById('weight-height')?.value);
+  if (!latest || !height) {
+    bmiEl.innerHTML = !height
+      ? '<p style="font-size:.8rem;color:var(--text2)">Inserisci l\'altezza per il BMI.</p>'
+      : '';
+    return;
+  }
+  const heightM = height / 100;
+  const bmi = (latest.value / (heightM * heightM)).toFixed(1);
+  let cat, cls;
+  if (bmi < 18.5) { cat = 'Sottopeso'; cls = 'bmi-underweight'; }
+  else if (bmi < 25) { cat = 'Normopeso'; cls = 'bmi-normal'; }
+  else if (bmi < 30) { cat = 'Sovrappeso'; cls = 'bmi-overweight'; }
+  else { cat = 'Obeso'; cls = 'bmi-obese'; }
+  bmiEl.innerHTML = `<span class="bmi-badge ${cls}">BMI ${bmi} — ${cat}</span>`;
 }
 
 async function saveWeight() {
   const date=document.getElementById('weight-date').value||todayStr();
   const value=parseFloat(document.getElementById('weight-value').value);
   if(!value){toast('Inserisci il peso!','error');return;}
-  const entry = {id:uid(),date,value};
-  await api.post('/api/weights', entry);
-  weightsCache.push(entry);
+  const saved = await api.post('/api/weights', { date, value });
+  const entry = saved && saved.id ? saved : { id: uid(), date, value };
+  const i = weightsCache.findIndex(w => w.date === entry.date);
+  if (i >= 0) weightsCache[i] = entry; else weightsCache.push(entry);
   weightsCache.sort((a,b) => new Date(a.date) - new Date(b.date));
   document.getElementById('weight-value').value='';
   toast('Peso registrato!','success');
@@ -2632,6 +2652,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (weightTarget) weightTarget.addEventListener('change', () => saveWeightTarget());
   const weightHeight = document.getElementById('weight-height');
   if (weightHeight) weightHeight.addEventListener('change', () => saveWeightHeight());
+
+  // Log-tab switcher on page-weight (Peso / Misurazione completa)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-bm-logtab]');
+    if (!btn) return;
+    const tab = btn.dataset.bmLogtab;
+    document.querySelectorAll('[data-bm-logtab]').forEach(b => b.classList.toggle('active', b === btn));
+    const wrapW = document.getElementById('bm-logtab-weight');
+    const wrapF = document.getElementById('bm-logtab-full');
+    if (wrapW) wrapW.style.display = tab === 'weight' ? '' : 'none';
+    if (wrapF) wrapF.style.display = tab === 'full' ? '' : 'none';
+  });
 
   // Modal close on outside click
   const modal = document.getElementById('workout-modal');
