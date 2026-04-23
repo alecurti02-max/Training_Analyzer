@@ -45,10 +45,11 @@ Tutto lo sviluppo avviene dentro **[`training-analyzer/`](training-analyzer/)**.
 │   │       ├── api.js               Layer HTTP centralizzato + JWT auto-refresh
 │   │       ├── auth.js              Login Google OAuth + email/password
 │   │       ├── sports.js            SPORT_TEMPLATES, FIELD_DEFS, costanti
-│   │       ├── scoring.js           Score workout, recovery, streak, fitness assessment
-│   │       ├── charts.js            Chart.js, heatmap canvas, tutti i grafici
+│   │       ├── scoring.js           Score workout, recovery, streak, fitness assessment (incl. body composition)
+│   │       ├── charts.js            Chart.js, heatmap canvas, tutti i grafici (incl. trend misure corporee)
 │   │       ├── import.js            GPX, CSV, Apple Health, FIT, JSON backup
-│   │       └── friends.js           Ricerca utenti, follow, confronto stats
+│   │       ├── friends.js           Ricerca utenti, follow, confronto stats
+│   │       └── bodyMeasurements.js  CRUD misure corporee + grafici trend
 │   ├── server/                      Backend (Node.js + Express)
 │   │   ├── src/
 │   │   │   ├── index.js             Entry point (listen + DB sync + connect)
@@ -57,12 +58,12 @@ Tutto lo sviluppo avviene dentro **[`training-analyzer/`](training-analyzer/)**.
 │   │   │   │   ├── database.js      Sequelize + PostgreSQL (SSL in prod)
 │   │   │   │   ├── passport.js      Google OAuth2 + Local (OAuth opzionale)
 │   │   │   │   └── env.js           Validazione env vars (Google OAuth opzionale)
-│   │   │   ├── models/              User, Workout, Exercise, Settings, Weight, Follow
-│   │   │   ├── routes/              auth, workouts, exercises, settings, weights, users
+│   │   │   ├── models/              User, Workout, Exercise, Settings, Weight, Follow, BodyMeasurement
+│   │   │   ├── routes/              auth, workouts, exercises, settings, weights, users, bodyMeasurements
 │   │   │   ├── controllers/         Logica business (un file per route)
 │   │   │   ├── middleware/          authenticate (JWT), authorize, errorHandler
 │   │   │   └── utils/jwt.js         Generazione/verifica JWT
-│   │   ├── migrations/              6 migration Sequelize
+│   │   ├── migrations/              10 migration Sequelize
 │   │   ├── seeders/                 Demo user + workout campione
 │   │   ├── scripts/
 │   │   │   └── migrateFromFirebase.js  Migrazione dati da Firebase
@@ -90,7 +91,7 @@ Tutto lo sviluppo avviene dentro **[`training-analyzer/`](training-analyzer/)**.
 |---|---|
 | Frontend | Vanilla JS (ES modules), Chart.js 4.4.1, no framework, no build step |
 | Backend | Node.js 20, Express 4 |
-| Database | Neon PostgreSQL 16 (serverless, prod) · PostgreSQL 16 in Docker (dev) |
+| Database | Neon PostgreSQL 18 (serverless, prod) · PostgreSQL 16 in Docker (dev) |
 | ORM | Sequelize 6 |
 | Auth | Passport.js (Google OAuth2 + Local), JWT (access 15min + refresh 7gg) |
 | Security | helmet, cors, express-rate-limit, bcryptjs |
@@ -201,13 +202,14 @@ Se le variabili Google OAuth non sono configurate, il login Google viene disabil
 | DELETE | `/api/workouts/bulk` | Elimina multipli (`{ ids: [...] }`) |
 | POST | `/api/workouts/import` | Import file (multipart) |
 
-### Esercizi, Settings, Peso
+### Esercizi, Settings, Peso, Misure corporee
 
 | Metodo | Endpoint | Descrizione |
 |---|---|---|
 | GET/POST/PUT/DELETE | `/api/exercises[/:id]` | CRUD libreria esercizi |
 | GET/PUT | `/api/settings` | Leggi/aggiorna impostazioni |
 | GET/POST/PUT/DELETE | `/api/weights[/:id]` | CRUD log peso |
+| GET/POST/PUT/DELETE | `/api/body-measurements[/:id]` | CRUD misure corporee: circonferenze (petto, vita, fianchi, spalle, bicipiti, collo, coscia, polpaccio) + composizione (body fat, massa muscolare, acqua, grasso viscerale, ossa, proteine, ecc.) |
 
 ### Utenti e Social
 
@@ -231,14 +233,15 @@ Se le variabili Google OAuth non sono configurate, il login Google viene disabil
 ## Schema Database
 
 ```
-users           1:N  workouts    (userId FK)
-users           1:N  exercises   (userId FK)
-users           1:1  settings    (userId PK/FK)
-users           1:N  weights     (userId FK)
+users           1:N  workouts            (userId FK)
+users           1:N  exercises           (userId FK)
+users           1:1  settings            (userId PK/FK)
+users           1:N  weights             (userId FK)
+users           1:N  body_measurements   (userId FK, unique su userId+date)
 users (follower) N:M users (following) via follows (PK composta)
 
 Workout.data    JSONB — dettagli completi (esercizi, serie, scores, advice)
-Settings        JSONB — activeSports, activeGroups, dati biometrici
+Settings        JSONB — activeSports, activeGroups, dati biometrici, weightTarget, body composition di base
 ```
 
 Il client fa il flatten dei workout (merge di `.data` nel top-level) per compatibilita con la logica di rendering. I campi `id`, `type`, `date` del DB hanno sempre priorita sui campi omonimi in `.data`.
@@ -249,12 +252,14 @@ Il client fa il flatten dei workout (merge di `.data` nel top-level) per compati
 
 - **20+ sport personalizzabili** con template e campi dedicati
 - **Wizard multi-step** per la registrazione allenamenti
-- **Scoring 0-10** per tipo di sport (palestra, corsa, karting, generico)
+- **Scoring 0-10** per tipo di sport (palestra, corsa, karting, generico) con scala colori 7 tier (rosso → arancio → giallo → verde chiaro → verde → fucsia → fucsia brillante)
 - **Profilo atletico** con radar chart su 6 dimensioni (forza, resistenza, consistenza, recupero, progressione, varieta)
-- **Valutazione forma fisica** su 7 componenti pesate
+- **Valutazione forma fisica** su 6 componenti pesate (forza, cardio, endurance, composizione corporea, flessibilita, atleticita); composizione corporea attiva se `gender` impostato
+- **Misure corporee** con tracking circonferenze e composizione (body fat, massa muscolare, acqua, grasso viscerale, ossa, proteine) e grafici trend
+- **Weight target** personalizzabile nelle impostazioni
 - **Streak tracking** con record storico
 - **Sistema amici** con follow, ricerca e confronto statistiche
-- **Import multi-formato:** GPX (con split e grafici), CSV, Apple Health XML, FIT, JSON backup
+- **Import multi-formato:** GPX (con split e grafici Garmin), CSV, Apple Health XML (full export, HR, RPE auto-calcolato dai METs), FIT, JSON backup
 - **Export/Import backup** JSON completo
 - **Live Workout** per il tracking in tempo reale delle sessioni
 - **Multi-select e bulk delete** nella cronologia workout
