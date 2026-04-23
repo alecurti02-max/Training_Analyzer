@@ -46,8 +46,13 @@ function toast(msg, type='') {
 }
 function todayStr() { return new Date().toISOString().slice(0,10); }
 function scoreColor(s) {
-  if (s >= 8) return 'var(--green)'; if (s >= 6) return 'var(--yellow)';
-  if (s >= 4) return 'var(--orange)'; return 'var(--red)';
+  if (s >= 10) return 'var(--fuchsia-bright)';
+  if (s >= 9) return 'var(--fuchsia)';
+  if (s >= 8) return 'var(--green)';
+  if (s >= 7) return 'var(--light-green)';
+  if (s >= 6) return 'var(--yellow)';
+  if (s >= 4) return 'var(--orange)';
+  return 'var(--red)';
 }
 function paceToSeconds(p) { if(!p)return 0; const parts=String(p).split(':'); return parts.length===2?parseInt(parts[0])*60+parseInt(parts[1]):parseFloat(p)*60; }
 function secondsToPace(s) { if(!s||s<=0)return'--'; const m=Math.floor(s/60),sec=Math.round(s%60); return m+':'+String(sec).padStart(2,'0'); }
