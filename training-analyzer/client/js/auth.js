@@ -97,17 +97,18 @@ export function setupLoginUI() {
     });
   }
 
-  // Register form (supports both ID conventions)
+  // Register form
   const registerForm = document.getElementById('email-register-form') || document.getElementById('register-form');
   if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = (document.getElementById('register-email') || document.getElementById('reg-email'))?.value;
+      const firstName = document.getElementById('reg-firstname')?.value?.trim();
+      const lastName = document.getElementById('reg-lastname')?.value?.trim();
+      const email = (document.getElementById('register-email') || document.getElementById('reg-email'))?.value?.trim();
       const password = (document.getElementById('register-password') || document.getElementById('reg-password'))?.value;
-      const displayName = (document.getElementById('register-name') || document.getElementById('reg-name'))?.value;
       if (statusEl) statusEl.textContent = 'Registrazione in corso...';
       try {
-        await register(email, password, displayName);
+        await register({ firstName, lastName, email, password });
         window.location.reload();
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Errore: ' + (err.message || 'Registrazione fallita');
@@ -132,8 +133,8 @@ export function loginWithGoogle() {
   window.location.href = '/api/auth/google';
 }
 
-export async function register(email, password, displayName) {
-  const data = await api.post('/api/auth/register', { email, password, displayName });
+export async function register({ firstName, lastName, email, password }) {
+  const data = await api.post('/api/auth/register', { firstName, lastName, email, password });
   setTokens(data.accessToken || data.token, data.refreshToken);
   return data.user || data;
 }

@@ -10,6 +10,7 @@ import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChar
 import { loadMeasurements, renderMeasurementsPage } from './bodyMeasurements.js';
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
+import { renderAdmin, setupAdminGating } from './admin.js';
 
 // ==================== GLOBAL STATE ====================
 let currentUser = null;
@@ -153,7 +154,7 @@ function showScreen(name) {
   if (name === 'app') initApp();
 }
 
-const pageMap = {dashboard:'Dashboard',log:'Log',live:'Live',history:'Storico',progress:'Progressi',weight:'Peso',library:'Libreria',import:'Import',friends:'Amici',settings:'Impostazioni',profile:'Profilo',athletic:'Profilo Atletico'};
+const pageMap = {dashboard:'Dashboard',log:'Log',live:'Live',history:'Storico',progress:'Progressi',weight:'Peso',library:'Libreria',import:'Import',friends:'Amici',settings:'Impostazioni',profile:'Profilo',athletic:'Profilo Atletico',admin:'Admin'};
 
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -174,6 +175,7 @@ function showPage(page) {
   if(page==='log') initLogWizard();
   if(page==='friends') renderFriendsPageLocal();
   if(page==='athletic') renderAthleticDetail();
+  if(page==='admin') renderAdmin();
 }
 
 function onDataChanged() {
@@ -2769,6 +2771,7 @@ initAuth(
       const avatar = document.getElementById('nav-avatar');
       if(avatar) { avatar.src = user.photoURL; avatar.style.display = 'block'; }
     }
+    setupAdminGating(user);
     showScreen('app');
     await loadAllData();
   },

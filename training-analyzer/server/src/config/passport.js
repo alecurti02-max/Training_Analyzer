@@ -18,19 +18,24 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           const email = profile.emails?.[0]?.value;
           if (!email) return done(null, false, { message: 'No email from Google' });
 
+          const firstName = profile.name?.givenName || null;
+          const lastName = profile.name?.familyName || null;
+
           let user = await User.findOne({ where: { email } });
 
           if (user) {
-            if (!user.photoURL || !user.displayName) {
-              await user.update({
-                displayName: user.displayName || profile.displayName,
-                photoURL: user.photoURL || profile.photos?.[0]?.value,
-              });
-            }
+            const updates = {};
+            if (!user.displayName) updates.displayName = profile.displayName;
+            if (!user.photoURL) updates.photoURL = profile.photos?.[0]?.value;
+            if (!user.firstName && firstName) updates.firstName = firstName;
+            if (!user.lastName && lastName) updates.lastName = lastName;
+            if (Object.keys(updates).length) await user.update(updates);
           } else {
             user = await User.create({
               email,
               displayName: profile.displayName,
+              firstName,
+              lastName,
               photoURL: profile.photos?.[0]?.value || null,
               provider: 'google',
             });

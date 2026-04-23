@@ -18,7 +18,18 @@ const registerValidation = [
     .withMessage('Password deve contenere almeno una maiuscola')
     .matches(/[0-9]/)
     .withMessage('Password deve contenere almeno un numero'),
-  body('displayName').trim().notEmpty().withMessage('Nome richiesto'),
+  body('firstName')
+    .trim()
+    .notEmpty()
+    .withMessage('Nome richiesto')
+    .isLength({ max: 60 })
+    .withMessage('Nome troppo lungo'),
+  body('lastName')
+    .trim()
+    .notEmpty()
+    .withMessage('Cognome richiesto')
+    .isLength({ max: 60 })
+    .withMessage('Cognome troppo lungo'),
 ];
 
 const loginValidation = [
@@ -49,7 +60,7 @@ async function register(req, res, next) {
     const invalid = handleValidation(req, res);
     if (invalid) return;
 
-    const { email, password, displayName } = req.body;
+    const { email, password, firstName, lastName } = req.body;
 
     const existing = await User.findOne({ where: { email } });
     if (existing) {
@@ -57,8 +68,11 @@ async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const displayName = `${firstName} ${lastName}`.trim();
     const user = await User.create({
       email,
+      firstName,
+      lastName,
       displayName,
       provider: 'local',
       passwordHash,

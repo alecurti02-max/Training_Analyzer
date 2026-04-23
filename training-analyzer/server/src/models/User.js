@@ -19,6 +19,14 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      firstName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      lastName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       photoURL: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -27,6 +35,11 @@ module.exports = (sequelize) => {
         type: DataTypes.ENUM('google', 'local'),
         defaultValue: 'google',
       },
+      role: {
+        type: DataTypes.ENUM('user', 'admin'),
+        allowNull: false,
+        defaultValue: 'user',
+      },
       passwordHash: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -34,6 +47,15 @@ module.exports = (sequelize) => {
       refreshToken: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      fullName: {
+        type: DataTypes.VIRTUAL,
+        get() {
+          const fn = this.getDataValue('firstName');
+          const ln = this.getDataValue('lastName');
+          if (fn || ln) return [fn, ln].filter(Boolean).join(' ');
+          return this.getDataValue('displayName') || null;
+        },
       },
     },
     {
@@ -52,7 +74,7 @@ module.exports = (sequelize) => {
   };
 
   User.prototype.toPublicJSON = function () {
-    const values = { ...this.get() };
+    const values = this.get({ plain: true });
     delete values.passwordHash;
     delete values.refreshToken;
     return values;
