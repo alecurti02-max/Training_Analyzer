@@ -246,3 +246,14 @@ cd server && npm run dev
 Il server serve sia l'API (`/api/*`) che i file statici del client (`/`). Non serve un server separato per il frontend.
 
 Hot reload del server con nodemon. Per il client, basta ricaricare il browser.
+
+---
+
+## License & Open Core
+
+Training Analyzer segue un modello **open core**.
+
+- **Free core** (questo repository, escluso `server/src/premium/`): licenziato sotto **GNU Affero General Public License v3.0** — vedi [LICENSE](LICENSE). Puoi self-hostare, modificare e redistribuire liberamente; se offri il servizio come SaaS modificato devi pubblicare le tue modifiche (clausola AGPL).
+- **Premium module** (`server/src/premium/`): codice proprietario riservato alla versione SaaS ospitata. Non coperto da AGPL. Vedi [server/src/premium/README.md](server/src/premium/README.md). Il core funziona senza questa directory.
+
+**Piani utente** (campo `plan` su `User`): `free` (default) o `premium`. Le feature premium (AI Coach, integrazioni Garmin/Strava, notifiche, export PDF coach) saranno gate-ate lato server dal middleware [`requirePremium`](server/src/middleware/requirePremium.js) e lato client dall'helper [`isPremium()`](client/js/plan.js).

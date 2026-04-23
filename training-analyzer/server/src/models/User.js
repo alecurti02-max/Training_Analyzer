@@ -40,6 +40,11 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 'user',
       },
+      plan: {
+        type: DataTypes.ENUM('free', 'premium'),
+        allowNull: false,
+        defaultValue: 'free',
+      },
       passwordHash: {
         type: DataTypes.STRING,
         allowNull: true,
