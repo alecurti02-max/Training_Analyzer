@@ -11,6 +11,7 @@ import { loadMeasurements, renderMeasurementsPage } from './bodyMeasurements.js'
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
 import { renderAdmin, setupAdminGating } from './admin.js';
+import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
 
 // ==================== GLOBAL STATE ====================
 let currentUser = null;
@@ -1690,7 +1691,14 @@ function showWorkoutDetail(id) {
   });
 }
 
-function closeModal(){document.getElementById('workout-modal').classList.remove('show');}
+function closeModal(){
+  document.getElementById('workout-modal').classList.remove('show');
+  // Restore default modal-header buttons visibility (some flows hide them)
+  const editBtn = document.getElementById('modal-edit-btn');
+  const delBtn = document.getElementById('modal-delete-btn');
+  if (editBtn) editBtn.style.display = '';
+  if (delBtn) delBtn.style.display = '';
+}
 
 // Edit existing workout — inline in modal
 let editingWorkoutId = null;
@@ -2111,7 +2119,30 @@ function renderAthleticFitnessAssessment() {
 }
 
 // ==================== ATHLETIC DETAIL ====================
+function openBodyPartModal(partKey) {
+  const info = getBodyPartInfo(partKey, settingsCache);
+  const modal = document.getElementById('workout-modal');
+  if (!modal) return;
+  document.getElementById('modal-title').textContent = info.title;
+  // Hide workout-specific buttons (used only for workout edit/delete flow)
+  const editBtn = document.getElementById('modal-edit-btn');
+  const delBtn = document.getElementById('modal-delete-btn');
+  if (editBtn) editBtn.style.display = 'none';
+  if (delBtn) delBtn.style.display = 'none';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="body-detail-row"><span>Valore corrente</span><strong>${info.valueStr}${info.delta || ''}</strong></div>
+    <div class="body-detail-row"><span>Range tipico</span><strong>${info.idealStr}</strong></div>
+    ${info.extra || ''}
+    <div class="body-detail-explanation">${info.explanation}</div>
+  `;
+  modal.classList.add('show');
+}
+
 function renderAthleticDetail() {
+  // Render body avatar (silhouette + side panel) at the top
+  const avatarEl = document.getElementById('body-avatar-container');
+  if (avatarEl) renderBodyAvatar(avatarEl, settingsCache);
+
   const workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const now=todayStr();
   const last30=workouts.filter(w=>daysBetween(now,w.date)<=30);
@@ -2641,12 +2672,12 @@ window.markNotifRead = () => {}; // placeholder - notifications handled server-s
 
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', () => {
-  // Navigation: click on nav buttons and any element with data-page
-  document.querySelectorAll('.nav-btn[data-page], [data-page]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const page = btn.dataset.page;
-      if (page) showPage(page);
-    });
+  // Navigation: click on any element with data-page (delegated → works for dynamic content too)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-page]');
+    if (!btn) return;
+    const page = btn.dataset.page;
+    if (page) showPage(page);
   });
 
   // Make nav-user clickable → go to profile
@@ -2742,6 +2773,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('[data-tab-group][data-tab]');
     if (!btn) return;
     showTab(btn.dataset.tabGroup, btn.dataset.tab);
+  });
+
+  // Body avatar — click on a silhouette part opens detail modal
+  document.addEventListener('click', (e) => {
+    const part = e.target.closest('.body-avatar-svg [data-body-part]');
+    if (!part) return;
+    openBodyPartModal(part.dataset.bodyPart);
   });
 
   // Log-tab switcher on body/quicklog (Peso / Misurazione completa) — nested tabs

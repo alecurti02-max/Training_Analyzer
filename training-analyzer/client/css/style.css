@@ -537,6 +537,30 @@ canvas{max-width:100%}
   .live-fab{bottom:16px;right:16px;width:50px;height:50px;font-size:1.5rem}
 }
 
+/* ==================== BODY AVATAR ==================== */
+.body-avatar-wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;justify-content:center}
+.body-avatar-svg{width:200px;height:400px;flex-shrink:0;display:block}
+.body-avatar-svg g[data-body-part]{transition:transform .4s ease;cursor:pointer;transform-box:fill-box}
+.body-avatar-svg g[data-body-part]:hover{filter:brightness(1.2) drop-shadow(0 0 4px var(--accent))}
+.body-avatar-side{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px}
+.body-avatar-stat{padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:4px;position:relative}
+.body-avatar-stat-label{font-size:.72rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.body-avatar-stat-value{font-family:var(--font-heading);font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums}
+.body-avatar-stat-hint{font-size:.78rem;color:var(--text2)}
+.body-avatar-bar{position:relative;height:6px;background:var(--bg3);border-radius:3px;margin:6px 0 4px;overflow:visible}
+.body-avatar-bar-fill{height:100%;border-radius:3px;transition:width .5s ease, background .5s ease}
+.body-avatar-bar-marker{position:absolute;top:-3px;width:2px;height:12px;background:var(--text);border-radius:1px;transform:translateX(-1px)}
+.body-avatar-ring{display:flex;align-items:center;gap:10px;position:relative}
+.body-avatar-ring-text{font-family:var(--font-heading);font-size:1.2rem;font-weight:800;font-variant-numeric:tabular-nums}
+.body-avatar-empty{text-align:center;padding:32px 16px;color:var(--text2)}
+.body-detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.body-detail-row:last-child{border-bottom:none}
+.body-detail-explanation{margin-top:12px;padding:12px;background:var(--bg2);border-radius:var(--radius-sm);font-size:.85rem;line-height:1.5;color:var(--text2)}
+@media(max-width:600px){
+  .body-avatar-svg{width:160px;height:320px}
+  .body-avatar-side{min-width:unset;width:100%}
+}
+
 /* Weight mode / barbell / unilateral UI */
 .opt-tag{display:inline-block;font-size:.65rem;padding:1px 6px;border-radius:10px;background:var(--bg2);color:var(--text2);font-weight:500;margin-left:4px}
 .opt-tag-uni{background:rgba(241,196,15,.18);color:var(--yellow)}
