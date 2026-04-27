@@ -508,7 +508,7 @@ canvas{max-width:100%}
 /* ==================== LIVE WORKOUT ==================== */
 .live-screen{display:none}
 .live-screen.active{display:block}
-.live-active-header{position:sticky;top:52px;z-index:40;background:var(--bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:16px 0;margin:-20px -16px 16px;padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.live-active-header{position:sticky;top:52px;z-index:40;background:var(--bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:16px 0;margin:0 -16px 16px;padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
 .live-timer{font-family:var(--font-heading);font-size:2rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .live-timer.paused{color:var(--text2);animation:liveBlink 1s ease-in-out infinite}
 @keyframes liveBlink{0%,100%{opacity:1}50%{opacity:.3}}
@@ -531,7 +531,7 @@ canvas{max-width:100%}
 .live-summary-value{font-weight:700;color:var(--text)}
 @media(max-width:600px){
   .live-timer{font-size:1.5rem}
-  .live-active-header{margin:-20px -16px 12px;padding:12px 16px}
+  .live-active-header{margin:0 -16px 12px;padding:12px 16px}
   .live-rest-overlay{bottom:12px;right:12px;left:12px}
   .live-rest-card{min-width:unset}
   .live-fab{bottom:16px;right:16px;width:50px;height:50px;font-size:1.5rem}

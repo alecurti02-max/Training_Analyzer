@@ -180,8 +180,9 @@
     <div class="live-screen" id="live-active">
       <div class="live-active-header">
         <div class="live-timer" id="live-timer">00:00:00</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-secondary btn-sm" id="live-pause-btn" data-action="livePauseResume">Pausa</button>
+          <button class="btn btn-secondary btn-sm" data-action="liveCancel">Annulla</button>
           <button class="btn btn-danger btn-sm" data-action="liveFinishPrompt">Termina</button>
         </div>
       </div>

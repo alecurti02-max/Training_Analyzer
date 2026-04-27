@@ -819,6 +819,16 @@ function liveDiscardDraft() {
   liveClearDraft();
   liveSession = null;
 }
+function liveCancel() {
+  if (!liveSession) return;
+  if (!confirm("Annullare l'allenamento? I dati non salvati saranno persi.")) return;
+  liveStopTimer();
+  liveRestDismiss();
+  liveClearDraft();
+  liveSession = null;
+  initLivePage();
+  toast('Allenamento annullato');
+}
 
 // --- Screen management ---
 function liveShowScreen(screen) {
@@ -2685,6 +2695,7 @@ document.addEventListener('DOMContentLoaded', () => {
     liveFinishPrompt: () => liveFinishPrompt(),
     liveBackToSession: () => liveBackToSession(),
     liveSaveWorkout: () => liveSaveWorkout(),
+    liveCancel: () => liveCancel(),
     liveOpenSheet: () => liveOpenSheet(),
     liveRestDismiss: () => liveRestDismiss(),
     liveResumeDraft: () => liveResumeDraft(),
