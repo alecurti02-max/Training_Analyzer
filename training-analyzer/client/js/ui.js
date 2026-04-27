@@ -134,7 +134,7 @@ async function loadAllData() {
     exercisesCache = exercisesRes;
     if (!exercisesCache || (Array.isArray(exercisesCache) && !exercisesCache.length)) {
       exercisesCache = getDefaultExercises();
-      api.post('/api/exercises', exercisesCache).catch(() => {});
+      api.put('/api/exercises', exercisesCache).catch(() => {});
     }
 
     weightsCache = Array.isArray(weightsRes) ? weightsRes : (weightsRes ? Object.values(weightsRes) : []);

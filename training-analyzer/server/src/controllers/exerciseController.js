@@ -74,4 +74,46 @@ async function destroy(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, destroy };
+// Replace the user's whole exercise library with the array in req.body.
+// The client manages the library as a single list and sends the full set
+// on every add/edit/duplicate/delete, so we wipe and re-insert atomically.
+async function bulkReplace(req, res, next) {
+  const { sequelize } = require('../config/database');
+  try {
+    if (!Array.isArray(req.body)) {
+      return res.status(400).json({ error: { message: 'Body must be an array of exercises' } });
+    }
+    const userId = req.user.uid;
+    // De-duplicate by name (DB has UNIQUE [userId, name])
+    const seen = new Set();
+    const rows = [];
+    for (const e of req.body) {
+      if (!e || !e.name || !e.muscle) continue;
+      const name = String(e.name).trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      rows.push({
+        userId,
+        name,
+        muscle: e.muscle,
+        param: e.param || 'reps',
+        weightMode: e.weightMode || 'total',
+        barbellWeight: e.barbellWeight ?? null,
+        isUnilateral: !!e.isUnilateral,
+      });
+    }
+    await sequelize.transaction(async (t) => {
+      await Exercise.destroy({ where: { userId }, transaction: t });
+      if (rows.length) await Exercise.bulkCreate(rows, { transaction: t });
+    });
+    const fresh = await Exercise.findAll({
+      where: { userId },
+      order: [['name', 'ASC']],
+    });
+    res.json(fresh);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, create, update, destroy, bulkReplace };
