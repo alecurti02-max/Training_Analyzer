@@ -59,16 +59,13 @@
   <img src="logo_ta.png" alt="TA" style="width:28px;height:28px;border-radius:6px;margin-right:4px">
   <div class="nav-scroll">
     <button class="nav-btn active" data-page="dashboard">Dashboard</button>
-    <button class="nav-btn" data-page="log">Log</button>
-    <button class="nav-btn" data-page="live">Live</button>
+    <button class="nav-btn" data-page="train">Allenamento</button>
     <button class="nav-btn" data-page="history">Storico</button>
     <button class="nav-btn" data-page="progress">Progressi</button>
-    <button class="nav-btn" data-page="weight">Peso</button>
-    <button class="nav-btn" data-page="library">Libreria</button>
-    <button class="nav-btn" data-page="import">Import</button>
-    <button class="nav-btn" data-page="friends">Amici</button>
+    <button class="nav-btn" data-page="body">Corpo</button>
+    <button class="nav-btn" data-page="profile">Profilo</button>
+    <button class="nav-btn" data-page="setup">Setup</button>
     <button class="nav-btn" data-page="admin" id="nav-admin" style="display:none">Admin</button>
-    <button class="nav-btn" data-page="settings">Impostazioni</button>
   </div>
   <div class="nav-right">
     <span class="sync-indicator sync-ok" id="sync-status">Sync OK</span>
@@ -114,118 +111,105 @@
   </div>
 </div>
 
-<!-- ATHLETIC PROFILE DETAIL -->
-<div id="page-athletic" class="page">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-    <button class="btn btn-secondary btn-sm" data-page="dashboard">&larr; Dashboard</button>
-    <h2 style="font-size:1.1rem;font-weight:800">Profilo Atletico</h2>
+<!-- TRAIN (Manuale + Live) -->
+<div id="page-train" class="page">
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="bm-tab active" data-tab-group="train" data-tab="manual">Manuale</button>
+    <button class="bm-tab" data-tab-group="train" data-tab="live">Live</button>
   </div>
-  <div class="card">
-    <div class="card-title">Radar ultimi 30 giorni</div>
-    <div class="chart-container" style="height:300px"><canvas id="chart-radar-detail"></canvas></div>
-  </div>
-  <div class="card-grid" id="athletic-detail-cards"></div>
-  <div class="card">
-    <div class="card-title">Valutazione Forma Fisica</div>
-    <div id="athletic-fitness-assessment"></div>
-  </div>
-</div>
-
-<!-- LOG WORKOUT (MOBILE-FIRST WIZARD) -->
-<div id="page-log" class="page">
-  <div class="log-wizard">
-    <div class="step-indicator" id="step-indicator">
-      <div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div>
-    </div>
-    <div class="log-step active" id="log-step-1">
-      <div class="card">
-        <div class="card-title">Quando e cosa?</div>
-        <div class="form-group"><label>Data</label><input type="date" id="wiz-date" class="date-picker-big"></div>
-        <div class="type-cards-grid" id="sport-type-grid"></div>
+  <div data-tab-content="manual">
+    <div class="log-wizard">
+      <div class="step-indicator" id="step-indicator">
+        <div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div>
       </div>
-    </div>
-    <div class="log-step" id="log-step-2">
-      <div id="wiz-gym-step2" style="display:none">
+      <div class="log-step active" id="log-step-1">
         <div class="card">
-          <div class="card-title">Esercizi</div>
-          <button class="exercise-add-btn" data-action="openExerciseSheet">+ Aggiungi Esercizio</button>
-          <div id="wiz-exercises"></div>
-          <button class="btn btn-primary" style="width:100%;margin-top:8px" data-action="wizGoStep3">Continua &#8594;</button>
+          <div class="card-title">Quando e cosa?</div>
+          <div class="form-group"><label>Data</label><input type="date" id="wiz-date" class="date-picker-big"></div>
+          <div class="type-cards-grid" id="sport-type-grid"></div>
         </div>
       </div>
-      <div id="wiz-sport-step2" style="display:none">
+      <div class="log-step" id="log-step-2">
+        <div id="wiz-gym-step2" style="display:none">
+          <div class="card">
+            <div class="card-title">Esercizi</div>
+            <button class="exercise-add-btn" data-action="openExerciseSheet">+ Aggiungi Esercizio</button>
+            <div id="wiz-exercises"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" data-action="wizGoStep3">Continua &#8594;</button>
+          </div>
+        </div>
+        <div id="wiz-sport-step2" style="display:none">
+          <div class="card">
+            <div class="card-title" id="wiz-sport-title">Dati Allenamento</div>
+            <div id="wiz-sport-fields"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" data-action="wizGoStep4">Continua &#8594;</button>
+          </div>
+        </div>
+      </div>
+      <div class="log-step" id="log-step-3">
         <div class="card">
-          <div class="card-title" id="wiz-sport-title">Dati Allenamento</div>
-          <div id="wiz-sport-fields"></div>
-          <button class="btn btn-primary" style="width:100%;margin-top:8px" data-action="wizGoStep4">Continua &#8594;</button>
+          <div class="card-title">Serie & Carichi</div>
+          <div id="wiz-sets-container"></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px" data-action="wizGoStep4">Continua &#8594;</button>
+        </div>
+      </div>
+      <div class="log-step" id="log-step-4">
+        <div class="card">
+          <div class="card-title">Note & Salvataggio</div>
+          <div id="wiz-extra-fields"></div>
+          <div class="form-group"><label>Note (opzionale)</label><textarea id="wiz-notes" placeholder="Come ti sei sentito, meteo, sensazioni..." style="min-height:80px;font-size:1rem"></textarea></div>
+          <button class="btn btn-primary save-workout-big" data-action="wizSaveWorkout">Salva Allenamento</button>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:8px">
+        <button class="btn btn-secondary" id="wiz-back-btn" data-action="wizGoBack" style="display:none">&#8592; Indietro</button>
+      </div>
+    </div>
+  </div>
+  <div data-tab-content="live" style="display:none">
+    <!-- Start screen -->
+    <div class="live-screen active" id="live-start">
+      <div class="card">
+        <div class="card-title">Allenamento Live</div>
+        <div class="form-group"><label>Data</label><input type="date" id="live-date" class="date-picker-big"></div>
+        <div class="type-cards-grid" id="live-sport-grid"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px" id="live-start-btn" data-action="liveStart" disabled>Inizia Allenamento</button>
+      </div>
+    </div>
+    <!-- Active session -->
+    <div class="live-screen" id="live-active">
+      <div class="live-active-header">
+        <div class="live-timer" id="live-timer">00:00:00</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" id="live-pause-btn" data-action="livePauseResume">Pausa</button>
+          <button class="btn btn-danger btn-sm" data-action="liveFinishPrompt">Termina</button>
+        </div>
+      </div>
+      <div id="live-exercises"></div>
+      <div id="live-sport-fields-container" style="display:none">
+        <div class="card">
+          <div class="card-title" id="live-sport-title">Dati Allenamento</div>
+          <div id="live-sport-fields"></div>
         </div>
       </div>
     </div>
-    <div class="log-step" id="log-step-3">
+    <!-- Finish screen -->
+    <div class="live-screen" id="live-finish">
       <div class="card">
-        <div class="card-title">Serie & Carichi</div>
-        <div id="wiz-sets-container"></div>
-        <button class="btn btn-primary" style="width:100%;margin-top:12px" data-action="wizGoStep4">Continua &#8594;</button>
+        <div class="card-title">Riepilogo Sessione</div>
+        <div id="live-summary"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Durata (min)</label><input type="number" id="live-duration" readonly></div>
+          <div class="form-group"><label>RPE (1-10)</label><input type="number" id="live-rpe" min="1" max="10" placeholder="7"></div>
+        </div>
+        <div class="form-group"><label>Note (opzionale)</label><textarea id="live-notes" placeholder="Come ti sei sentito, sensazioni..." style="min-height:80px;font-size:1rem"></textarea></div>
+        <button class="btn btn-primary save-workout-big" data-action="liveSaveWorkout">Salva Allenamento</button>
+        <button class="btn btn-secondary" style="width:100%;margin-top:8px" data-action="liveBackToSession">Torna alla Sessione</button>
       </div>
     </div>
-    <div class="log-step" id="log-step-4">
-      <div class="card">
-        <div class="card-title">Note & Salvataggio</div>
-        <div id="wiz-extra-fields"></div>
-        <div class="form-group"><label>Note (opzionale)</label><textarea id="wiz-notes" placeholder="Come ti sei sentito, meteo, sensazioni..." style="min-height:80px;font-size:1rem"></textarea></div>
-        <button class="btn btn-primary save-workout-big" data-action="wizSaveWorkout">Salva Allenamento</button>
-      </div>
-    </div>
-    <div style="text-align:center;margin-top:8px">
-      <button class="btn btn-secondary" id="wiz-back-btn" data-action="wizGoBack" style="display:none">&#8592; Indietro</button>
-    </div>
+    <!-- FAB -->
+    <button class="live-fab" id="live-fab" data-action="liveOpenSheet" style="display:none">+</button>
   </div>
-</div>
-
-<!-- LIVE WORKOUT -->
-<div id="page-live" class="page">
-  <!-- Start screen -->
-  <div class="live-screen active" id="live-start">
-    <div class="card">
-      <div class="card-title">Allenamento Live</div>
-      <div class="form-group"><label>Data</label><input type="date" id="live-date" class="date-picker-big"></div>
-      <div class="type-cards-grid" id="live-sport-grid"></div>
-      <button class="btn btn-primary" style="width:100%;margin-top:12px" id="live-start-btn" data-action="liveStart" disabled>Inizia Allenamento</button>
-    </div>
-  </div>
-  <!-- Active session -->
-  <div class="live-screen" id="live-active">
-    <div class="live-active-header">
-      <div class="live-timer" id="live-timer">00:00:00</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-secondary btn-sm" id="live-pause-btn" data-action="livePauseResume">Pausa</button>
-        <button class="btn btn-danger btn-sm" data-action="liveFinishPrompt">Termina</button>
-      </div>
-    </div>
-    <div id="live-exercises"></div>
-    <div id="live-sport-fields-container" style="display:none">
-      <div class="card">
-        <div class="card-title" id="live-sport-title">Dati Allenamento</div>
-        <div id="live-sport-fields"></div>
-      </div>
-    </div>
-  </div>
-  <!-- Finish screen -->
-  <div class="live-screen" id="live-finish">
-    <div class="card">
-      <div class="card-title">Riepilogo Sessione</div>
-      <div id="live-summary"></div>
-      <div class="form-row">
-        <div class="form-group"><label>Durata (min)</label><input type="number" id="live-duration" readonly></div>
-        <div class="form-group"><label>RPE (1-10)</label><input type="number" id="live-rpe" min="1" max="10" placeholder="7"></div>
-      </div>
-      <div class="form-group"><label>Note (opzionale)</label><textarea id="live-notes" placeholder="Come ti sei sentito, sensazioni..." style="min-height:80px;font-size:1rem"></textarea></div>
-      <button class="btn btn-primary save-workout-big" data-action="liveSaveWorkout">Salva Allenamento</button>
-      <button class="btn btn-secondary" style="width:100%;margin-top:8px" data-action="liveBackToSession">Torna alla Sessione</button>
-    </div>
-  </div>
-  <!-- FAB -->
-  <button class="live-fab" id="live-fab" data-action="liveOpenSheet" style="display:none">+</button>
 </div>
 
 <!-- HISTORY -->
@@ -248,331 +232,361 @@
   </div>
 </div>
 
-<!-- PROGRESS -->
+<!-- PROGRESS (Generali + Atletica) -->
 <div id="page-progress" class="page">
-  <div class="card"><div class="card-title">Andamento Score</div><div class="chart-container"><canvas id="chart-scores"></canvas></div></div>
-  <div class="card-grid">
-    <div class="card"><div class="card-title">Volume Palestra (tonnellaggio)</div><div class="chart-container"><canvas id="chart-gym-volume"></canvas></div></div>
-    <div class="card"><div class="card-title">Pace Corsa ponderato (min/km)</div><div class="chart-container"><canvas id="chart-run-pace"></canvas></div></div>
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="bm-tab active" data-tab-group="progress" data-tab="general">Generali</button>
+    <button class="bm-tab" data-tab-group="progress" data-tab="athletic">Atletica</button>
   </div>
-  <div class="card"><div class="card-title">1RM Stimato (Epley)</div><div id="orm-select-container" style="margin-bottom:8px"></div><div class="chart-container"><canvas id="chart-1rm"></canvas></div></div>
-  <div class="card"><div class="card-title">Heart Rate Zones (Corse)</div><div id="hr-zones-container"></div></div>
-  <div class="card"><div class="card-title">Distribuzione Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles"></canvas></div></div>
-  <div class="card"><div class="card-title">Frequenza Allenamenti per Settimana</div><div class="chart-container"><canvas id="chart-frequency"></canvas></div></div>
-</div>
-
-<!-- WEIGHT & BODY -->
-<div id="page-weight" class="page">
-  <!-- Panoramica attuale -->
-  <div class="card">
-    <div class="card-title">Panoramica</div>
-    <div id="bm-summary"></div>
-    <div id="weight-bmi-section" style="margin-top:12px"></div>
+  <div data-tab-content="general">
+    <div class="card"><div class="card-title">Andamento Score</div><div class="chart-container"><canvas id="chart-scores"></canvas></div></div>
+    <div class="card-grid">
+      <div class="card"><div class="card-title">Volume Palestra (tonnellaggio)</div><div class="chart-container"><canvas id="chart-gym-volume"></canvas></div></div>
+      <div class="card"><div class="card-title">Pace Corsa ponderato (min/km)</div><div class="chart-container"><canvas id="chart-run-pace"></canvas></div></div>
+    </div>
+    <div class="card"><div class="card-title">1RM Stimato (Epley)</div><div id="orm-select-container" style="margin-bottom:8px"></div><div class="chart-container"><canvas id="chart-1rm"></canvas></div></div>
+    <div class="card"><div class="card-title">Heart Rate Zones (Corse)</div><div id="hr-zones-container"></div></div>
+    <div class="card"><div class="card-title">Distribuzione Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles"></canvas></div></div>
+    <div class="card"><div class="card-title">Frequenza Allenamenti per Settimana</div><div class="chart-container"><canvas id="chart-frequency"></canvas></div></div>
   </div>
-
-  <!-- Log rapido (tabs: Peso / Misurazione completa) -->
-  <div class="card">
-    <div class="card-title">Registra</div>
-    <div class="bm-log-tabs" style="display:flex;gap:6px;margin-bottom:12px">
-      <button class="bm-tab active" data-bm-logtab="weight">Peso</button>
-      <button class="bm-tab" data-bm-logtab="full">Misurazione completa</button>
+  <div data-tab-content="athletic" style="display:none">
+    <div class="card">
+      <div class="card-title">Radar ultimi 30 giorni</div>
+      <div class="chart-container" style="height:300px"><canvas id="chart-radar-detail"></canvas></div>
     </div>
-    <div id="bm-logtab-weight">
-      <div class="weight-form">
-        <div class="form-group"><label>Data</label><input type="date" id="weight-date"></div>
-        <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="weight-value" placeholder="75.0" style="font-size:1.1rem"></div>
-        <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" data-action="saveWeight">Salva</button></div>
-      </div>
-    </div>
-    <div id="bm-logtab-full" style="display:none">
-      <div id="bm-form"></div>
-    </div>
-  </div>
-
-  <!-- Obiettivo / Altezza -->
-  <div class="card">
-    <div class="card-title">Obiettivo e altezza</div>
-    <div class="form-row">
-      <div class="form-group"><label>Peso Target (kg)</label><input type="number" step="0.1" id="weight-target" placeholder="70.0" data-action="saveWeightTarget"></div>
-      <div class="form-group"><label>Altezza (cm) per BMI</label><input type="number" id="weight-height" placeholder="175" data-action="saveWeightHeight"></div>
-    </div>
-  </div>
-
-  <!-- Andamenti con tab switcher -->
-  <div class="card">
-    <div class="card-title">Andamenti</div>
-    <div id="bm-tabs-container"></div>
-    <canvas id="chart-weight" style="display:none"></canvas>
-    <div id="weight-stats" style="display:none"></div>
-  </div>
-
-  <!-- Storico misurazioni -->
-  <div class="card">
-    <div class="card-title">Storico misurazioni</div>
-    <div id="bm-history"></div>
-  </div>
-</div>
-
-<!-- EXERCISE LIBRARY -->
-<div id="page-library" class="page">
-  <div class="card">
-    <div class="card-title">Aggiungi Esercizio</div>
-    <div class="form-row">
-      <div class="form-group"><label>Nome Esercizio</label><input type="text" id="lib-name" placeholder="Squat"></div>
-      <div class="form-group"><label>Gruppo Muscolare</label><select id="lib-muscle"></select></div>
-      <div class="form-group"><label>Parametro principale</label>
-        <select id="lib-param">
-          <option value="reps">Ripetizioni (reps)</option>
-          <option value="duration">Durata (secondi)</option>
-          <option value="distance">Distanza (metri)</option>
-          <option value="calories">Calorie (kcal)</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row" id="lib-weight-options">
-      <div class="form-group"><label>Modalita peso</label>
-        <select id="lib-weightmode">
-          <option value="total">Peso totale</option>
-          <option value="per_side">Peso per lato</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Bilanciere</label>
-        <select id="lib-barbell">
-          <option value="">Nessun bilanciere</option>
-          <option value="20">Olimpico (20 kg)</option>
-          <option value="10">EZ (10 kg)</option>
-          <option value="25">Trap Bar (25 kg)</option>
-          <option value="custom">Personalizzato...</option>
-        </select>
-      </div>
-      <div class="form-group" id="lib-barbell-custom-group" style="display:none">
-        <label>Peso bilanciere (kg)</label>
-        <input type="number" step="0.5" id="lib-barbell-custom" placeholder="15">
-      </div>
-      <div class="form-group" style="align-self:flex-end">
-        <label style="display:flex;align-items:center;gap:6px;margin-bottom:0">
-          <input type="checkbox" id="lib-unilateral" style="width:auto">
-          <span>Unilaterale</span>
-        </label>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary btn-sm" data-action="addExerciseToLibrary">Aggiungi</button></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Gruppi Muscolari</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Gestisci i gruppi muscolari. Quelli predefiniti non si possono rimuovere.</p>
-    <div id="muscle-groups-list" style="margin-bottom:12px"></div>
-    <div class="form-row" style="margin-bottom:0">
-      <div class="form-group" style="margin-bottom:0"><input type="text" id="new-muscle-group" placeholder="Nuovo gruppo muscolare..."></div>
-      <div class="form-group" style="align-self:flex-end;margin-bottom:0"><button class="btn btn-primary btn-sm" data-action="addMuscleGroup">Aggiungi</button></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Libreria Esercizi</div>
-    <div class="form-group" style="margin-bottom:12px">
-      <input type="text" id="lib-filter" placeholder="Filtra esercizi...">
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="lib-muscle-filters"></div>
-    <div id="exercise-library-list"></div>
-  </div>
-</div>
-
-<!-- IMPORT -->
-<div id="page-import" class="page">
-  <div class="card">
-    <div class="card-title">Import GPX (Garmin Running)</div>
-    <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Esporta i file .gpx da Garmin Connect e trascinali qui.</p>
-    <div class="drop-zone" id="gpx-drop">
-      <p>Trascina qui i file .gpx oppure clicca per selezionare</p>
-      <input type="file" id="gpx-file" accept=".gpx" multiple style="display:none">
-    </div>
-    <div id="gpx-preview" style="margin-top:12px"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Import CSV (Dati Palestra)</div>
-    <p style="font-size:.85rem;color:var(--text2);margin-bottom:8px">Formato: <code>data,esercizio,serie,reps,peso_kg,rpe</code></p>
-    <div class="drop-zone" id="csv-drop">
-      <p>Trascina qui un file .csv</p>
-      <input type="file" id="csv-file" accept=".csv" style="display:none">
-    </div>
-    <div id="csv-preview" style="margin-top:12px"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Import Apple Health (export.xml)</div>
-    <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Da iPhone: Salute > profilo > Esporta dati Salute.</p>
-    <div class="drop-zone" id="health-drop">
-      <p>Trascina qui export.xml da Apple Health</p>
-      <input type="file" id="health-file" accept=".xml" style="display:none">
-    </div>
-    <div class="import-progress" id="health-progress" style="display:none"><div class="import-progress-fill" id="health-progress-fill"></div></div>
-    <div id="health-preview" style="margin-top:12px"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Import FIT (Apple Watch / Garmin)</div>
-    <div class="drop-zone" id="fit-drop">
-      <p>Trascina qui file .fit</p>
-      <input type="file" id="fit-file" accept=".fit" style="display:none">
-    </div>
-    <div id="fit-preview" style="margin-top:12px"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Export / Backup</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-secondary" data-action="exportAllData">Export JSON</button>
-      <button class="btn btn-secondary" data-action="triggerImportJSON">Import JSON</button>
-      <button class="btn btn-danger btn-sm" data-action="deleteAllWorkouts">Cancella tutti gli allenamenti</button>
-      <input type="file" id="import-json" accept=".json" style="display:none">
+    <div class="card-grid" id="athletic-detail-cards"></div>
+    <div class="card">
+      <div class="card-title">Valutazione Forma Fisica</div>
+      <div id="athletic-fitness-assessment"></div>
     </div>
   </div>
 </div>
 
-<!-- PROFILE -->
+<!-- BODY (Quick log + Misure + Andamenti) -->
+<div id="page-body" class="page">
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="bm-tab active" data-tab-group="body" data-tab="quicklog">Log rapido</button>
+    <button class="bm-tab" data-tab-group="body" data-tab="measures">Misure</button>
+    <button class="bm-tab" data-tab-group="body" data-tab="trend">Andamenti</button>
+  </div>
+  <div data-tab-content="quicklog">
+    <!-- Panoramica attuale -->
+    <div class="card">
+      <div class="card-title">Panoramica</div>
+      <div id="bm-summary"></div>
+      <div id="weight-bmi-section" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Log rapido (sub-tabs: Peso / Misurazione completa) -->
+    <div class="card">
+      <div class="card-title">Registra</div>
+      <div class="bm-log-tabs" style="display:flex;gap:6px;margin-bottom:12px">
+        <button class="bm-tab active" data-bm-logtab="weight">Peso</button>
+        <button class="bm-tab" data-bm-logtab="full">Misurazione completa</button>
+      </div>
+      <div id="bm-logtab-weight">
+        <div class="weight-form">
+          <div class="form-group"><label>Data</label><input type="date" id="weight-date"></div>
+          <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="weight-value" placeholder="75.0" style="font-size:1.1rem"></div>
+          <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" data-action="saveWeight">Salva</button></div>
+        </div>
+      </div>
+      <div id="bm-logtab-full" style="display:none">
+        <div id="bm-form"></div>
+      </div>
+    </div>
+
+    <!-- Obiettivo / Altezza -->
+    <div class="card">
+      <div class="card-title">Obiettivo e altezza</div>
+      <div class="form-row">
+        <div class="form-group"><label>Peso Target (kg)</label><input type="number" step="0.1" id="weight-target" placeholder="70.0" data-action="saveWeightTarget"></div>
+        <div class="form-group"><label>Altezza (cm) per BMI</label><input type="number" id="weight-height" placeholder="175" data-action="saveWeightHeight"></div>
+      </div>
+    </div>
+  </div>
+  <div data-tab-content="measures" style="display:none">
+    <div class="card">
+      <div class="card-title">Circonferenze Corporee (cm)</div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Misurazioni per il profilo atletico e il monitoraggio della composizione corporea.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Petto</label><input type="number" id="set-circ-chest" step="0.5" placeholder="cm" data-settings="true"></div>
+        <div class="form-group"><label>Vita</label><input type="number" id="set-circ-waist" step="0.5" placeholder="cm" data-settings="true"></div>
+        <div class="form-group"><label>Fianchi</label><input type="number" id="set-circ-hips" step="0.5" placeholder="cm" data-settings="true"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Spalle</label><input type="number" id="set-circ-shoulders" step="0.5" placeholder="cm" data-settings="true"></div>
+        <div class="form-group"><label>Bicipite</label><input type="number" id="set-circ-bicep" step="0.5" placeholder="cm" data-settings="true"></div>
+        <div class="form-group"><label>Collo</label><input type="number" id="set-circ-neck" step="0.5" placeholder="cm" data-settings="true"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Coscia</label><input type="number" id="set-circ-thigh" step="0.5" placeholder="cm" data-settings="true"></div>
+        <div class="form-group"><label>Polpaccio</label><input type="number" id="set-circ-calf" step="0.5" placeholder="cm" data-settings="true"></div>
+        <div class="form-group"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Composizione Corporea (opzionale)</div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Valori tipicamente forniti da bilance impedenziometriche. Compila solo i campi che puoi misurare.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Massa grassa (%)</label><input type="number" id="set-body-fat" step="0.1" min="0" max="70" placeholder="%" data-settings="true"></div>
+        <div class="form-group"><label>Muscoli scheletrici (%)</label><input type="number" id="set-skeletal-muscle" step="0.1" min="0" max="70" placeholder="%" data-settings="true"></div>
+        <div class="form-group"><label>Acqua corporea (%)</label><input type="number" id="set-body-water" step="0.1" min="0" max="90" placeholder="%" data-settings="true"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Grasso sottocutaneo (%)</label><input type="number" id="set-subcutaneous-fat" step="0.1" min="0" max="60" placeholder="%" data-settings="true"></div>
+        <div class="form-group"><label>Grasso viscerale</label><input type="number" id="set-visceral-fat" step="0.1" min="0" max="60" placeholder="indice" data-settings="true"></div>
+        <div class="form-group"><label>Proteine (%)</label><input type="number" id="set-protein" step="0.1" min="0" max="40" placeholder="%" data-settings="true"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Massa muscolare (kg)</label><input type="number" id="set-muscle-mass" step="0.1" min="0" max="120" placeholder="kg" data-settings="true"></div>
+        <div class="form-group"><label>Massa ossea (kg)</label><input type="number" id="set-bone-mass" step="0.1" min="0" max="10" placeholder="kg" data-settings="true"></div>
+        <div class="form-group"></div>
+      </div>
+    </div>
+  </div>
+  <div data-tab-content="trend" style="display:none">
+    <!-- Andamenti con tab switcher -->
+    <div class="card">
+      <div class="card-title">Andamenti</div>
+      <div id="bm-tabs-container"></div>
+      <canvas id="chart-weight" style="display:none"></canvas>
+      <div id="weight-stats" style="display:none"></div>
+    </div>
+
+    <!-- Storico misurazioni -->
+    <div class="card">
+      <div class="card-title">Storico misurazioni</div>
+      <div id="bm-history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP (Library + Import + Settings non-body) -->
+<div id="page-setup" class="page">
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="bm-tab active" data-tab-group="setup" data-tab="library">Libreria</button>
+    <button class="bm-tab" data-tab-group="setup" data-tab="import">Import</button>
+    <button class="bm-tab" data-tab-group="setup" data-tab="settings">Impostazioni</button>
+  </div>
+  <div data-tab-content="library">
+    <div class="card">
+      <div class="card-title">Aggiungi Esercizio</div>
+      <div class="form-row">
+        <div class="form-group"><label>Nome Esercizio</label><input type="text" id="lib-name" placeholder="Squat"></div>
+        <div class="form-group"><label>Gruppo Muscolare</label><select id="lib-muscle"></select></div>
+        <div class="form-group"><label>Parametro principale</label>
+          <select id="lib-param">
+            <option value="reps">Ripetizioni (reps)</option>
+            <option value="duration">Durata (secondi)</option>
+            <option value="distance">Distanza (metri)</option>
+            <option value="calories">Calorie (kcal)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" id="lib-weight-options">
+        <div class="form-group"><label>Modalita peso</label>
+          <select id="lib-weightmode">
+            <option value="total">Peso totale</option>
+            <option value="per_side">Peso per lato</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Bilanciere</label>
+          <select id="lib-barbell">
+            <option value="">Nessun bilanciere</option>
+            <option value="20">Olimpico (20 kg)</option>
+            <option value="10">EZ (10 kg)</option>
+            <option value="25">Trap Bar (25 kg)</option>
+            <option value="custom">Personalizzato...</option>
+          </select>
+        </div>
+        <div class="form-group" id="lib-barbell-custom-group" style="display:none">
+          <label>Peso bilanciere (kg)</label>
+          <input type="number" step="0.5" id="lib-barbell-custom" placeholder="15">
+        </div>
+        <div class="form-group" style="align-self:flex-end">
+          <label style="display:flex;align-items:center;gap:6px;margin-bottom:0">
+            <input type="checkbox" id="lib-unilateral" style="width:auto">
+            <span>Unilaterale</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary btn-sm" data-action="addExerciseToLibrary">Aggiungi</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Gruppi Muscolari</div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Gestisci i gruppi muscolari. Quelli predefiniti non si possono rimuovere.</p>
+      <div id="muscle-groups-list" style="margin-bottom:12px"></div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-group" style="margin-bottom:0"><input type="text" id="new-muscle-group" placeholder="Nuovo gruppo muscolare..."></div>
+        <div class="form-group" style="align-self:flex-end;margin-bottom:0"><button class="btn btn-primary btn-sm" data-action="addMuscleGroup">Aggiungi</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Libreria Esercizi</div>
+      <div class="form-group" style="margin-bottom:12px">
+        <input type="text" id="lib-filter" placeholder="Filtra esercizi...">
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="lib-muscle-filters"></div>
+      <div id="exercise-library-list"></div>
+    </div>
+  </div>
+  <div data-tab-content="import" style="display:none">
+    <div class="card">
+      <div class="card-title">Import GPX (Garmin Running)</div>
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Esporta i file .gpx da Garmin Connect e trascinali qui.</p>
+      <div class="drop-zone" id="gpx-drop">
+        <p>Trascina qui i file .gpx oppure clicca per selezionare</p>
+        <input type="file" id="gpx-file" accept=".gpx" multiple style="display:none">
+      </div>
+      <div id="gpx-preview" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Import CSV (Dati Palestra)</div>
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:8px">Formato: <code>data,esercizio,serie,reps,peso_kg,rpe</code></p>
+      <div class="drop-zone" id="csv-drop">
+        <p>Trascina qui un file .csv</p>
+        <input type="file" id="csv-file" accept=".csv" style="display:none">
+      </div>
+      <div id="csv-preview" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Import Apple Health (export.xml)</div>
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Da iPhone: Salute > profilo > Esporta dati Salute.</p>
+      <div class="drop-zone" id="health-drop">
+        <p>Trascina qui export.xml da Apple Health</p>
+        <input type="file" id="health-file" accept=".xml" style="display:none">
+      </div>
+      <div class="import-progress" id="health-progress" style="display:none"><div class="import-progress-fill" id="health-progress-fill"></div></div>
+      <div id="health-preview" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Import FIT (Apple Watch / Garmin)</div>
+      <div class="drop-zone" id="fit-drop">
+        <p>Trascina qui file .fit</p>
+        <input type="file" id="fit-file" accept=".fit" style="display:none">
+      </div>
+      <div id="fit-preview" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Export / Backup</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary" data-action="exportAllData">Export JSON</button>
+        <button class="btn btn-secondary" data-action="triggerImportJSON">Import JSON</button>
+        <button class="btn btn-danger btn-sm" data-action="deleteAllWorkouts">Cancella tutti gli allenamenti</button>
+        <input type="file" id="import-json" accept=".json" style="display:none">
+      </div>
+    </div>
+  </div>
+  <div data-tab-content="settings" style="display:none">
+    <div class="card">
+      <div class="card-title">Profilo Atletico</div>
+      <div class="form-row">
+        <div class="form-group"><label>FC Max</label><input type="number" id="set-maxhr" placeholder="190" data-settings="true"></div>
+        <div class="form-group"><label>FC Riposo</label><input type="number" id="set-resthr" placeholder="55" data-settings="true"></div>
+        <div class="form-group"><label>Peso corporeo (kg)</label><input type="number" step="0.1" id="set-bodyweight" placeholder="75" data-settings="true"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Altezza (cm)</label><input type="number" id="set-height" placeholder="175" data-settings="true"></div>
+        <div class="form-group"><label>VO2 Max (ml/kg/min)</label><input type="number" step="0.1" id="set-vo2max" placeholder="45" data-settings="true"></div>
+        <div class="form-group"><label>Eta'</label><input type="number" id="set-age" placeholder="25" data-settings="true"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Obiettivo settimanale allenamenti</label><input type="number" id="set-weekgoal" placeholder="4" data-settings="true"></div>
+        <div class="form-group"><label>Obiettivo km/settimana (corsa)</label><input type="number" id="set-kmgoal" placeholder="20" data-settings="true"></div>
+        <div class="form-group"><label>Sesso</label>
+          <select id="set-gender" data-settings="true">
+            <option value="">--</option><option value="M">Maschio</option><option value="F">Femmina</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Flessibilit&agrave; / Mobilit&agrave; (1-10)</label><input type="number" id="set-flexibility" min="1" max="10" placeholder="5" data-settings="true"></div>
+        <div class="form-group"></div>
+        <div class="form-group"></div>
+      </div>
+      <p style="font-size:.78rem;color:var(--text2);margin-top:8px">La flessibilit&agrave; non pu&ograve; essere calcolata automaticamente. Inserisci un'auto-valutazione da 1 (scarsa) a 10 (eccellente).</p>
+    </div>
+    <div class="card">
+      <div class="card-title">I Miei Sport</div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Palestra e Corsa sono sempre attivi. Aggiungi gli sport che pratichi.</p>
+      <div id="active-sports-list" style="margin-bottom:12px"></div>
+      <div class="card-title" style="font-size:.8rem;margin-top:16px">Sport Disponibili</div>
+      <div id="available-sports-pool"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Notifiche</div>
+      <div id="notifications-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Info</div>
+      <p style="font-size:.85rem;color:var(--text2)">Training Analyzer v3.2</p>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE (Mio profilo + Amici) -->
 <div id="page-profile" class="page">
-  <div class="card">
-    <div class="profile-card">
-      <img class="profile-avatar-lg" id="profile-avatar" src="" alt="">
-      <div class="profile-info">
-        <h3 id="profile-name"></h3>
-        <p id="profile-email"></p>
-        <p id="profile-since"></p>
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="bm-tab active" data-tab-group="profile" data-tab="me">Mio profilo</button>
+    <button class="bm-tab" data-tab-group="profile" data-tab="friends">Amici</button>
+  </div>
+  <div data-tab-content="me">
+    <div class="card">
+      <div class="profile-card">
+        <img class="profile-avatar-lg" id="profile-avatar" src="" alt="">
+        <div class="profile-info">
+          <h3 id="profile-name"></h3>
+          <p id="profile-email"></p>
+          <p id="profile-since"></p>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Condividi il tuo profilo</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Gli amici possono trovarti cercando il tuo nome oppure con il tuo UID.</p>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-      <input type="text" id="profile-link" readonly style="flex:1;font-size:.82rem">
-      <button class="copy-link-btn" data-action="copyAppLink">Copia Link</button>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input type="text" id="profile-uid" readonly style="flex:1;font-size:.78rem;font-family:monospace;color:var(--text2)">
-      <button class="copy-link-btn" data-action="copyUID">Copia UID</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Valutazione Forma Fisica</div>
-    <div id="fitness-assessment"></div>
-  </div>
-  <div style="text-align:center;margin-top:12px">
-    <button class="btn btn-secondary" data-action="signOut">Esci dall'Account</button>
-  </div>
-</div>
-
-<!-- FRIENDS -->
-<div id="page-friends" class="page">
-  <div class="card">
-    <div class="card-title">Cerca Persone</div>
-    <div class="search-box">
-      <input type="text" id="friend-search" placeholder="Cerca per nome...">
-      <div class="search-results" id="friend-search-results"></div>
-    </div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <p style="font-size:.78rem;color:var(--text2);margin-bottom:8px">Oppure aggiungi direttamente con l'UID (lo trovi nel profilo dell'amico):</p>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="friend-uid-input" placeholder="Incolla UID amico..." style="flex:1;font-size:.85rem">
-        <button class="btn btn-primary btn-sm" data-action="addFriendByUID">Aggiungi</button>
+    <div class="card">
+      <div class="card-title">Condividi il tuo profilo</div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Gli amici possono trovarti cercando il tuo nome oppure con il tuo UID.</p>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <input type="text" id="profile-link" readonly style="flex:1;font-size:.82rem">
+        <button class="copy-link-btn" data-action="copyAppLink">Copia Link</button>
       </div>
-      <div id="uid-add-result" style="margin-top:8px"></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Persone che segui</div>
-    <div id="following-list"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Confronto</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Seleziona le persone che segui per confrontare le statistiche.</p>
-    <div id="compare-checkboxes" style="margin-bottom:12px"></div>
-    <button class="btn btn-primary btn-sm" data-action="compareSelected">Confronta Selezionati</button>
-    <div id="friend-compare-result" class="compare-section"></div>
-  </div>
-</div>
-
-<!-- SETTINGS -->
-<div id="page-settings" class="page">
-  <div class="card">
-    <div class="card-title">Profilo Atletico</div>
-    <div class="form-row">
-      <div class="form-group"><label>FC Max</label><input type="number" id="set-maxhr" placeholder="190" data-settings="true"></div>
-      <div class="form-group"><label>FC Riposo</label><input type="number" id="set-resthr" placeholder="55" data-settings="true"></div>
-      <div class="form-group"><label>Peso corporeo (kg)</label><input type="number" step="0.1" id="set-bodyweight" placeholder="75" data-settings="true"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>Altezza (cm)</label><input type="number" id="set-height" placeholder="175" data-settings="true"></div>
-      <div class="form-group"><label>VO2 Max (ml/kg/min)</label><input type="number" step="0.1" id="set-vo2max" placeholder="45" data-settings="true"></div>
-      <div class="form-group"><label>Eta'</label><input type="number" id="set-age" placeholder="25" data-settings="true"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>Obiettivo settimanale allenamenti</label><input type="number" id="set-weekgoal" placeholder="4" data-settings="true"></div>
-      <div class="form-group"><label>Obiettivo km/settimana (corsa)</label><input type="number" id="set-kmgoal" placeholder="20" data-settings="true"></div>
-      <div class="form-group"><label>Sesso</label>
-        <select id="set-gender" data-settings="true">
-          <option value="">--</option><option value="M">Maschio</option><option value="F">Femmina</option>
-        </select>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="profile-uid" readonly style="flex:1;font-size:.78rem;font-family:monospace;color:var(--text2)">
+        <button class="copy-link-btn" data-action="copyUID">Copia UID</button>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>Flessibilit&agrave; / Mobilit&agrave; (1-10)</label><input type="number" id="set-flexibility" min="1" max="10" placeholder="5" data-settings="true"></div>
-      <div class="form-group"></div>
-      <div class="form-group"></div>
-    </div>
-    <p style="font-size:.78rem;color:var(--text2);margin-top:8px">La flessibilit&agrave; non pu&ograve; essere calcolata automaticamente. Inserisci un'auto-valutazione da 1 (scarsa) a 10 (eccellente).</p>
-  </div>
-  <div class="card">
-    <div class="card-title">Circonferenze Corporee (cm)</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Misurazioni per il profilo atletico e il monitoraggio della composizione corporea.</p>
-    <div class="form-row">
-      <div class="form-group"><label>Petto</label><input type="number" id="set-circ-chest" step="0.5" placeholder="cm" data-settings="true"></div>
-      <div class="form-group"><label>Vita</label><input type="number" id="set-circ-waist" step="0.5" placeholder="cm" data-settings="true"></div>
-      <div class="form-group"><label>Fianchi</label><input type="number" id="set-circ-hips" step="0.5" placeholder="cm" data-settings="true"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>Spalle</label><input type="number" id="set-circ-shoulders" step="0.5" placeholder="cm" data-settings="true"></div>
-      <div class="form-group"><label>Bicipite</label><input type="number" id="set-circ-bicep" step="0.5" placeholder="cm" data-settings="true"></div>
-      <div class="form-group"><label>Collo</label><input type="number" id="set-circ-neck" step="0.5" placeholder="cm" data-settings="true"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>Coscia</label><input type="number" id="set-circ-thigh" step="0.5" placeholder="cm" data-settings="true"></div>
-      <div class="form-group"><label>Polpaccio</label><input type="number" id="set-circ-calf" step="0.5" placeholder="cm" data-settings="true"></div>
-      <div class="form-group"></div>
+    <div style="text-align:center;margin-top:12px">
+      <button class="btn btn-secondary" data-action="signOut">Esci dall'Account</button>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">Composizione Corporea (opzionale)</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Valori tipicamente forniti da bilance impedenziometriche. Compila solo i campi che puoi misurare.</p>
-    <div class="form-row">
-      <div class="form-group"><label>Massa grassa (%)</label><input type="number" id="set-body-fat" step="0.1" min="0" max="70" placeholder="%" data-settings="true"></div>
-      <div class="form-group"><label>Muscoli scheletrici (%)</label><input type="number" id="set-skeletal-muscle" step="0.1" min="0" max="70" placeholder="%" data-settings="true"></div>
-      <div class="form-group"><label>Acqua corporea (%)</label><input type="number" id="set-body-water" step="0.1" min="0" max="90" placeholder="%" data-settings="true"></div>
+  <div data-tab-content="friends" style="display:none">
+    <div class="card">
+      <div class="card-title">Cerca Persone</div>
+      <div class="search-box">
+        <input type="text" id="friend-search" placeholder="Cerca per nome...">
+        <div class="search-results" id="friend-search-results"></div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <p style="font-size:.78rem;color:var(--text2);margin-bottom:8px">Oppure aggiungi direttamente con l'UID (lo trovi nel profilo dell'amico):</p>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="friend-uid-input" placeholder="Incolla UID amico..." style="flex:1;font-size:.85rem">
+          <button class="btn btn-primary btn-sm" data-action="addFriendByUID">Aggiungi</button>
+        </div>
+        <div id="uid-add-result" style="margin-top:8px"></div>
+      </div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>Grasso sottocutaneo (%)</label><input type="number" id="set-subcutaneous-fat" step="0.1" min="0" max="60" placeholder="%" data-settings="true"></div>
-      <div class="form-group"><label>Grasso viscerale</label><input type="number" id="set-visceral-fat" step="0.1" min="0" max="60" placeholder="indice" data-settings="true"></div>
-      <div class="form-group"><label>Proteine (%)</label><input type="number" id="set-protein" step="0.1" min="0" max="40" placeholder="%" data-settings="true"></div>
+    <div class="card">
+      <div class="card-title">Persone che segui</div>
+      <div id="following-list"></div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>Massa muscolare (kg)</label><input type="number" id="set-muscle-mass" step="0.1" min="0" max="120" placeholder="kg" data-settings="true"></div>
-      <div class="form-group"><label>Massa ossea (kg)</label><input type="number" id="set-bone-mass" step="0.1" min="0" max="10" placeholder="kg" data-settings="true"></div>
-      <div class="form-group"></div>
+    <div class="card">
+      <div class="card-title">Confronto</div>
+      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Seleziona le persone che segui per confrontare le statistiche.</p>
+      <div id="compare-checkboxes" style="margin-bottom:12px"></div>
+      <button class="btn btn-primary btn-sm" data-action="compareSelected">Confronta Selezionati</button>
+      <div id="friend-compare-result" class="compare-section"></div>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-title">I Miei Sport</div>
-    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Palestra e Corsa sono sempre attivi. Aggiungi gli sport che pratichi.</p>
-    <div id="active-sports-list" style="margin-bottom:12px"></div>
-    <div class="card-title" style="font-size:.8rem;margin-top:16px">Sport Disponibili</div>
-    <div id="available-sports-pool"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Notifiche</div>
-    <div id="notifications-list"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Info</div>
-    <p style="font-size:.85rem;color:var(--text2)">Training Analyzer v3.2</p>
   </div>
 </div>
 
@@ -643,7 +657,14 @@
       </svg>
       <div class="live-rest-time" id="live-rest-time">1:30</div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+      <button class="bm-tab" data-action="liveRestPreset" data-rest="30">30s</button>
+      <button class="bm-tab" data-action="liveRestPreset" data-rest="60">60s</button>
+      <button class="bm-tab" data-action="liveRestPreset" data-rest="90">90s</button>
+      <button class="bm-tab" data-action="liveRestPreset" data-rest="120">2:00</button>
+      <button class="bm-tab" data-action="liveRestPreset" data-rest="180">3:00</button>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
       <button class="btn btn-secondary btn-sm" data-action="liveRestAdjust" data-adj="-15">-15s</button>
       <button class="btn btn-secondary btn-sm" data-action="liveRestAdjust" data-adj="15">+15s</button>
     </div>

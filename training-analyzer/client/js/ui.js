@@ -30,7 +30,11 @@ let _sheetCallback = null;
 let liveSession = null;
 let liveTimerInterval = null;
 let liveRestInterval = null;
-let liveRestTotal = 90;
+const LIVE_REST_PRESETS = [30, 60, 90, 120, 180];
+let liveRestTotal = (function() {
+  const v = parseInt(localStorage.getItem('ta_live_rest_default'));
+  return (Number.isFinite(v) && v >= 15 && v <= 600) ? v : 90;
+})();
 let liveRestRemaining = 0;
 let liveSelectedType = '';
 
@@ -154,9 +158,37 @@ function showScreen(name) {
   if (name === 'app') initApp();
 }
 
-const pageMap = {dashboard:'Dashboard',log:'Log',live:'Live',history:'Storico',progress:'Progressi',weight:'Peso',library:'Libreria',import:'Import',friends:'Amici',settings:'Impostazioni',profile:'Profilo',athletic:'Profilo Atletico',admin:'Admin'};
+const pageMap = {dashboard:'Dashboard',train:'Allenamento',history:'Storico',progress:'Progressi',body:'Corpo',profile:'Profilo',setup:'Setup',admin:'Admin'};
+
+// Old slugs → new page + tab (for backward compat with internal data-page="X" links and bookmarks)
+const PAGE_ALIAS = {
+  log:      { page: 'train',    tab: 'manual' },
+  live:     { page: 'train',    tab: 'live' },
+  athletic: { page: 'progress', tab: 'athletic' },
+  weight:   { page: 'body',     tab: 'quicklog' },
+  library:  { page: 'setup',    tab: 'library' },
+  import:   { page: 'setup',    tab: 'import' },
+  settings: { page: 'setup',    tab: 'settings' },
+  friends:  { page: 'profile',  tab: 'friends' },
+};
+
+// Default tab per consolidated page (used when no localStorage value)
+const PAGE_DEFAULT_TAB = {
+  train:    'manual',
+  progress: 'general',
+  body:     'quicklog',
+  profile:  'me',
+  setup:    'library',
+};
 
 function showPage(page) {
+  // Redirect old slugs to consolidated page+tab
+  if (PAGE_ALIAS[page]) {
+    const a = PAGE_ALIAS[page];
+    showPage(a.page);
+    showTab(a.page, a.tab);
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl = document.getElementById('page-'+page);
   if (pageEl) pageEl.classList.add('active');
@@ -166,16 +198,34 @@ function showPage(page) {
   });
   if(page==='dashboard') renderDashboard();
   if(page==='history') renderHistory();
-  if(page==='progress') renderProgress();
-  if(page==='weight') renderWeightPage();
-  if(page==='library') { renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect(); }
-  if(page==='settings') { populateSettingsUI(); renderSportsManager(); renderNotifications(); }
-  if(page==='profile') renderProfile();
-  if(page==='live') initLivePage();
-  if(page==='log') initLogWizard();
-  if(page==='friends') renderFriendsPageLocal();
-  if(page==='athletic') renderAthleticDetail();
+  if(page==='progress') { renderProgress(); renderAthleticDetail(); }
+  if(page==='body') { renderWeightPage(); populateSettingsUI(); }
+  if(page==='profile') { renderProfile(); renderFriendsPageLocal(); }
+  if(page==='train') { initLogWizard(); initLivePage(); }
+  if(page==='setup') {
+    renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect();
+    populateSettingsUI(); renderSportsManager(); renderNotifications();
+  }
   if(page==='admin') renderAdmin();
+  // Restore last-active sub-tab (if any)
+  if (PAGE_DEFAULT_TAB[page]) {
+    let savedTab;
+    try { savedTab = localStorage.getItem('ta_tab_' + page); } catch(e) {}
+    showTab(page, savedTab || PAGE_DEFAULT_TAB[page]);
+  }
+}
+
+function showTab(group, tab) {
+  // Toggle nav buttons
+  document.querySelectorAll('[data-tab-group="'+group+'"]').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  // Toggle sub-section visibility
+  document.querySelectorAll('#page-'+group+' [data-tab-content]').forEach(s => {
+    s.style.display = s.dataset.tabContent === tab ? '' : 'none';
+  });
+  // Persist
+  try { localStorage.setItem('ta_tab_' + group, tab); } catch(e) {}
 }
 
 function onDataChanged() {
@@ -184,8 +234,8 @@ function onDataChanged() {
   const id = activePage.id;
   if (id === 'page-dashboard') renderDashboard();
   if (id === 'page-history') renderHistory();
-  if (id === 'page-progress') renderProgress();
-  if (id === 'page-weight') renderWeightPage();
+  if (id === 'page-progress') { renderProgress(); renderAthleticDetail(); }
+  if (id === 'page-body') renderWeightPage();
 }
 
 // ==================== SAVE HELPERS (API calls) ====================
@@ -772,7 +822,7 @@ function liveDiscardDraft() {
 
 // --- Screen management ---
 function liveShowScreen(screen) {
-  document.querySelectorAll('#page-live .live-screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.live-screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('live-' + screen);
   if (el) el.classList.add('active');
 }
@@ -964,11 +1014,11 @@ function liveCompleteSet(exIdx, sIdx) {
 
 // --- Rest timer ---
 function liveRestStart() {
-  liveRestTotal = 90;
-  liveRestRemaining = 90;
+  liveRestRemaining = liveRestTotal;
   liveRestDismiss(); // clear any existing
   const overlay = document.getElementById('live-rest-overlay');
   overlay.style.display = '';
+  liveRestRenderPresets();
   liveRestUpdate();
   liveRestInterval = setInterval(() => {
     liveRestRemaining--;
@@ -1006,6 +1056,18 @@ function liveRestDismiss() {
   if (liveRestInterval) { clearInterval(liveRestInterval); liveRestInterval = null; }
   const overlay = document.getElementById('live-rest-overlay');
   if (overlay) overlay.style.display = 'none';
+}
+function liveRestPreset(seconds) {
+  const sec = Math.max(15, Math.min(600, parseInt(seconds) || 90));
+  liveRestTotal = sec;
+  try { localStorage.setItem('ta_live_rest_default', String(sec)); } catch(e) {}
+  liveRestStart();
+}
+function liveRestRenderPresets() {
+  document.querySelectorAll('[data-action="liveRestPreset"]').forEach(btn => {
+    const v = parseInt(btn.dataset.rest);
+    btn.classList.toggle('active', v === liveRestTotal);
+  });
 }
 
 // --- Rendering ---
@@ -1976,7 +2038,6 @@ function renderProfile() {
   if(currentUser.createdAt) {
     document.getElementById('profile-since').textContent='Registrato dal '+formatDate(currentUser.createdAt);
   }
-  renderFitnessAssessment();
 }
 
 function copyAppLink(){navigator.clipboard.writeText(window.location.href).then(()=>toast('Link copiato!')).catch(()=>toast('Errore copia','error'));}
@@ -2637,6 +2698,11 @@ document.addEventListener('DOMContentLoaded', () => {
       liveRestAdjust(parseInt(btn.dataset.adj) || 0);
       return;
     }
+    // Special handling for rest preset (needs data-rest parameter)
+    if (btn.dataset.action === 'liveRestPreset') {
+      liveRestPreset(parseInt(btn.dataset.rest) || 90);
+      return;
+    }
     const handler = actionMap[btn.dataset.action];
     if (handler) handler();
   });
@@ -2660,7 +2726,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const weightHeight = document.getElementById('weight-height');
   if (weightHeight) weightHeight.addEventListener('change', () => saveWeightHeight());
 
-  // Log-tab switcher on page-weight (Peso / Misurazione completa)
+  // Generic tab switcher (data-tab-group + data-tab)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-tab-group][data-tab]');
+    if (!btn) return;
+    showTab(btn.dataset.tabGroup, btn.dataset.tab);
+  });
+
+  // Log-tab switcher on body/quicklog (Peso / Misurazione completa) — nested tabs
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-bm-logtab]');
     if (!btn) return;
