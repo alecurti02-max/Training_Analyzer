@@ -87,180 +87,198 @@ function getWhtrTint(whtr) {
 }
 
 // ==================== SVG SILHOUETTE ====================
-// Lean athletic silhouette, viewBox 0 0 200 440. The torso parts
-// (chest/waist/hips) share matching X coordinates at every seam so the
-// fills meet seamlessly with the same color — no visible boundary lines.
-// Limbs overlap into torso/shoulder zones so joints look connected.
+// Single continuous body outline (head + arms + torso + legs) with
+// vertical gradient fill and outer glow filter — visual style of a
+// medical/anatomy reference figure. Click hotspots are added separately
+// (invisible rects) so each body region is still independently clickable.
+// ViewBox is 0 0 240 500 to give room for hands and feet.
 const BODY_SVG = `
-<svg class="body-avatar-svg" viewBox="0 0 200 440" xmlns="http://www.w3.org/2000/svg">
+<svg class="body-avatar-svg" viewBox="0 0 240 500" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="body-tint" x1="0" y1="0" x2="0" y2="1">
       <stop id="body-tint-stop-top"    offset="0%"   stop-color="var(--text2)"/>
-      <stop id="body-tint-stop-bottom" offset="100%" stop-color="var(--text2)"/>
+      <stop id="body-tint-stop-mid"    offset="50%"  stop-color="var(--text2)" stop-opacity="0.85"/>
+      <stop id="body-tint-stop-bottom" offset="100%" stop-color="var(--text2)" stop-opacity="0.95"/>
     </linearGradient>
+    <radialGradient id="body-shine" cx="35%" cy="22%" r="65%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.28)"/>
+      <stop offset="55%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <filter id="body-glow" x="-20%" y="-10%" width="140%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="b2"/>
+      <feMerge>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
     <filter id="visceral-glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="7"/>
+      <feGaussianBlur stdDeviation="8"/>
     </filter>
   </defs>
 
-  <!-- LEGS (drawn first; hip will overlap thigh tops) -->
-  <!-- Left thigh: slim, tapered toward knee -->
-  <g data-body-part="thigh-l" style="transform-origin:82px 280px">
-    <path d="M 68,228
-             L 100,228
-             L 100,332
-             C 100,335 94,337 86,337
-             C 76,337 70,335 69,332
-             Q 66,300 65,265
-             Q 65,245 68,228 Z"/>
-  </g>
-  <!-- Right thigh -->
-  <g data-body-part="thigh-r" style="transform-origin:118px 280px">
-    <path d="M 132,228
-             L 100,228
-             L 100,332
-             C 100,335 106,337 114,337
-             C 124,337 130,335 131,332
-             Q 134,300 135,265
-             Q 135,245 132,228 Z"/>
-  </g>
-
-  <!-- Left calf: tapered with subtle outer curve -->
-  <g data-body-part="calf-l" style="transform-origin:82px 380px">
-    <path d="M 69,332
-             L 100,332
-             L 96,418
-             C 96,424 92,426 87,426
-             C 80,426 76,424 75,418
-             Q 73,400 71,378
-             Q 69,355 69,332 Z"/>
-  </g>
-  <!-- Right calf -->
-  <g data-body-part="calf-r" style="transform-origin:118px 380px">
-    <path d="M 131,332
-             L 100,332
-             L 104,418
-             C 104,424 108,426 113,426
-             C 120,426 124,424 125,418
-             Q 127,400 129,378
-             Q 131,355 131,332 Z"/>
-  </g>
-
-  <!-- ARMS — slim, hanging close to torso. Top extends into shoulder/chest
-       area so the painters z-order hides the inner edge cleanly. Outer
-       edge stays inside the shoulder yoke width (no shoulder-pad effect). -->
-  <!-- Left bicep -->
-  <g data-body-part="bicep-l" style="transform-origin:60px 130px">
-    <path d="M 78,100
-             C 68,104 62,118 60,138
-             C 60,156 63,166 67,170
-             L 73,170
-             Q 76,150 77,128
-             Q 78,110 78,100 Z"/>
-  </g>
-  <!-- Right bicep -->
-  <g data-body-part="bicep-r" style="transform-origin:140px 130px">
-    <path d="M 122,100
-             C 132,104 138,118 140,138
-             C 140,156 137,166 133,170
-             L 127,170
-             Q 124,150 123,128
-             Q 122,110 122,100 Z"/>
-  </g>
-  <!-- Left forearm — continues bicep down, tapers slightly to wrist -->
-  <g data-body-part="forearm-l" style="transform-origin:62px 206px">
-    <path d="M 67,170 L 73,170
-             Q 71,200 69,234
-             C 69,238 66,240 62,240
-             C 58,240 56,238 56,234
-             Q 59,200 63,170
-             Q 65,172 67,170 Z"/>
-  </g>
-  <!-- Right forearm -->
-  <g data-body-part="forearm-r" style="transform-origin:138px 206px">
-    <path d="M 133,170 L 127,170
-             Q 129,200 131,234
-             C 131,238 134,240 138,240
-             C 142,240 144,238 144,234
-             Q 141,200 137,170
-             Q 135,172 133,170 Z"/>
-  </g>
-
-  <!-- TORSO — z-order: hips → waist → chest → shoulders (top) -->
-  <!-- Hips: matches waist bottom at seam, flares outward -->
-  <g data-body-part="hips" style="transform-origin:100px 210px">
-    <path d="M 70,184
-             L 130,184
-             Q 138,200 142,232
-             Q 142,236 136,236
-             L 64,236
-             Q 58,236 58,232
-             Q 62,200 70,184 Z"/>
-  </g>
-
-  <!-- Waist: matches chest bottom (top) and hips top (bottom) exactly -->
-  <g data-body-part="waist" style="transform-origin:100px 164px">
-    <path d="M 68,144
-             L 132,144
-             C 130,156 126,166 124,170
-             C 124,176 127,182 130,184
-             L 70,184
-             C 73,182 76,176 76,170
-             C 74,166 70,156 68,144 Z"/>
-  </g>
-
-  <!-- Chest: tapers from shoulder area down to waist width -->
-  <g data-body-part="chest" style="transform-origin:100px 120px">
-    <path d="M 62,100
-             Q 100,98 138,100
-             C 137,114 134,130 132,144
-             L 68,144
-             C 66,130 63,114 62,100 Z"/>
-  </g>
-
-  <!-- Shoulders: athletic deltoids, widest part — covers top of biceps and chest top -->
-  <g data-body-part="shoulders" style="transform-origin:100px 86px">
-    <path d="M 50,104
-             C 48,84 62,68 82,64
-             Q 100,62 118,64
-             C 138,68 152,84 150,104
-             C 148,108 142,110 134,108
-             Q 116,104 100,104
-             Q 84,104 66,108
-             C 58,110 52,108 50,104 Z"/>
-  </g>
-
-  <!-- Neck -->
-  <g data-body-part="neck" style="transform-origin:100px 68px">
-    <path d="M 93,58
-             Q 100,57 107,58
-             L 109,76
-             Q 100,77 91,76
-             L 93,58 Z"/>
-  </g>
-
-  <!-- Head: oval, balanced size -->
-  <g data-body-part="head" style="transform-origin:100px 36px">
-    <ellipse cx="100" cy="36" rx="16" ry="20"/>
+  <!-- BODY — single continuous outline. Gradient fill + glow filter. -->
+  <g id="body-shape" filter="url(#body-glow)">
+    <path id="body-outline" d="
+      M 120,18
+      C 140,18 154,32 154,52
+      C 154,66 148,76 138,80
+      L 134,90
+      C 144,93 158,97 170,103
+      C 182,109 192,118 196,128
+      C 198,142 196,158 192,176
+      C 188,196 184,216 182,236
+      C 180,254 180,270 184,284
+      C 188,296 192,306 192,316
+      C 192,326 184,332 174,330
+      C 168,328 164,322 162,314
+      C 160,300 158,284 158,266
+      C 158,244 158,222 156,200
+      C 154,180 150,166 144,156
+      C 142,166 142,180 142,196
+      C 142,216 144,238 144,256
+      C 144,274 148,292 152,310
+      C 158,332 158,356 154,378
+      C 150,400 144,422 140,442
+      C 138,456 138,468 140,472
+      L 156,472
+      C 162,472 162,478 158,480
+      L 116,480
+      L 116,468
+      C 116,448 118,422 118,398
+      C 118,372 116,348 116,322
+      L 116,288
+      L 120,286
+      L 124,288
+      L 124,322
+      C 124,348 122,372 122,398
+      C 122,422 124,448 124,468
+      L 124,480
+      L 82,480
+      C 78,478 78,472 84,472
+      L 100,472
+      C 102,468 102,456 100,442
+      C 96,422 90,400 86,378
+      C 82,356 82,332 88,310
+      C 92,292 96,274 96,256
+      C 96,238 98,216 98,196
+      C 98,180 98,166 96,156
+      C 90,166 86,180 84,200
+      C 82,222 82,244 82,266
+      C 82,284 82,300 80,314
+      C 78,322 74,328 68,330
+      C 58,332 50,326 50,316
+      C 50,306 54,296 58,284
+      C 62,270 62,254 60,236
+      C 58,216 54,196 50,176
+      C 46,158 44,142 46,128
+      C 50,118 60,109 72,103
+      C 84,97 98,93 108,90
+      L 104,80
+      C 94,76 88,66 88,52
+      C 88,32 102,18 120,18
+      Z
+    " fill="url(#body-tint)"/>
+    <path d="
+      M 120,18
+      C 140,18 154,32 154,52
+      C 154,66 148,76 138,80
+      L 134,90
+      C 144,93 158,97 170,103
+      C 182,109 192,118 196,128
+      C 198,142 196,158 192,176
+      C 188,196 184,216 182,236
+      C 180,254 180,270 184,284
+      C 188,296 192,306 192,316
+      C 192,326 184,332 174,330
+      C 168,328 164,322 162,314
+      C 160,300 158,284 158,266
+      C 158,244 158,222 156,200
+      C 154,180 150,166 144,156
+      C 142,166 142,180 142,196
+      C 142,216 144,238 144,256
+      C 144,274 148,292 152,310
+      C 158,332 158,356 154,378
+      C 150,400 144,422 140,442
+      C 138,456 138,468 140,472
+      L 156,472
+      C 162,472 162,478 158,480
+      L 116,480
+      L 116,468
+      C 116,448 118,422 118,398
+      C 118,372 116,348 116,322
+      L 116,288
+      L 120,286
+      L 124,288
+      L 124,322
+      C 124,348 122,372 122,398
+      C 122,422 124,448 124,468
+      L 124,480
+      L 82,480
+      C 78,478 78,472 84,472
+      L 100,472
+      C 102,468 102,456 100,442
+      C 96,422 90,400 86,378
+      C 82,356 82,332 88,310
+      C 92,292 96,274 96,256
+      C 96,238 98,216 98,196
+      C 98,180 98,166 96,156
+      C 90,166 86,180 84,200
+      C 82,222 82,244 82,266
+      C 82,284 82,300 80,314
+      C 78,322 74,328 68,330
+      C 58,332 50,326 50,316
+      C 50,306 54,296 58,284
+      C 62,270 62,254 60,236
+      C 58,216 54,196 50,176
+      C 46,158 44,142 46,128
+      C 50,118 60,109 72,103
+      C 84,97 98,93 108,90
+      L 104,80
+      C 94,76 88,66 88,52
+      C 88,32 102,18 120,18
+      Z
+    " fill="url(#body-shine)" pointer-events="none"/>
   </g>
 
   <!-- Visceral hotspot (only visible when visceralFat is set) -->
-  <circle id="visceral-hotspot" cx="100" cy="160" r="14" fill="transparent" filter="url(#visceral-glow)" pointer-events="none"/>
+  <circle id="visceral-hotspot" cx="120" cy="200" r="22" fill="transparent" filter="url(#visceral-glow)" pointer-events="none"/>
+
+  <!-- INVISIBLE CLICK HOTSPOTS — capture clicks for body-part details modal.
+       Stacked over the silhouette without affecting the visual. -->
+  <g class="body-avatar-hotspots" fill="rgba(0,0,0,0)">
+    <rect data-body-part="head"      x="92"  y="14"  width="56" height="68"/>
+    <rect data-body-part="neck"      x="100" y="78"  width="40" height="20"/>
+    <rect data-body-part="shoulders" x="60"  y="92"  width="120" height="32"/>
+    <rect data-body-part="chest"     x="68"  y="118" width="104" height="56"/>
+    <rect data-body-part="waist"     x="80"  y="170" width="80"  height="48"/>
+    <rect data-body-part="hips"      x="74"  y="216" width="92"  height="56"/>
+    <rect data-body-part="bicep-l"   x="40"  y="118" width="34"  height="74"/>
+    <rect data-body-part="bicep-r"   x="166" y="118" width="34"  height="74"/>
+    <rect data-body-part="forearm-l" x="46"  y="190" width="32"  height="120"/>
+    <rect data-body-part="forearm-r" x="162" y="190" width="32"  height="120"/>
+    <rect data-body-part="thigh-l"   x="76"  y="270" width="46"  height="84"/>
+    <rect data-body-part="thigh-r"   x="118" y="270" width="46"  height="84"/>
+    <rect data-body-part="calf-l"   x="80"  y="354" width="42"  height="120"/>
+    <rect data-body-part="calf-r"   x="118" y="354" width="42"  height="120"/>
+  </g>
 </svg>
 `;
 
 // ==================== TINT APPLICATION ====================
-// Apply body fat color to all silhouette parts via gradient stops.
-// We don't use fill="url(#body-tint)" because gradient updates require setting
-// stop-color JS. Simpler: set fill on every <g> path directly.
+// Single-path body uses a gradient fill — update the gradient stops to
+// tint the whole figure. The radial highlight (body-shine) stays unchanged
+// so we keep the depth/lighting effect across all tints.
 function applyTint(svg, color) {
-  svg.querySelectorAll('g[data-body-part] path, g[data-body-part] circle, g[data-body-part] rect, g[data-body-part] ellipse')
-    .forEach(el => { el.setAttribute('fill', color); });
+  ['body-tint-stop-top','body-tint-stop-mid','body-tint-stop-bottom'].forEach(id => {
+    const stop = svg.querySelector('#'+id);
+    if (stop) stop.setAttribute('stop-color', color);
+  });
 }
 
 // ==================== MORPHING ====================
-// Apply scaleX based on user circumference vs reference.
-// Map of body part → settings field name.
+// Map of body part → settings field name. Kept for getBodyPartInfo().
 const PART_TO_FIELD = {
   shoulders: 'circShoulders',
   chest: 'circChest',
@@ -275,23 +293,13 @@ const PART_TO_FIELD = {
   neck: 'circNeck',
 };
 
-function applyMorphing(svg, settings, ref) {
-  Object.entries(PART_TO_FIELD).forEach(([part, field]) => {
-    const userVal = settings[field];
-    const refVal = ref[field.replace('circ', '').toLowerCase()] || ref[partRefKey(part)];
-    const g = svg.querySelector(`g[data-body-part="${part}"]`);
-    if (!g) return;
-    if (userVal && refVal) {
-      const scale = clamp(userVal / refVal, 0.75, 1.3);
-      g.style.transform = `scaleX(${scale})`;
-    } else {
-      g.style.transform = '';
-    }
-  });
-}
+// Per-part SVG morphing was tried with a multi-part figure but the seams
+// always showed and looked ugly. Visual quality of a single anatomical
+// path beats per-part scaling — circumferences are still surfaced via
+// the click-to-detail modal and the side panel.
+function applyMorphing() { /* no-op: single-path silhouette */ }
 
 function partRefKey(part) {
-  // Strip -l/-r suffix and lowercase
   return part.replace(/-(l|r)$/, '');
 }
 
@@ -452,15 +460,11 @@ export function renderBodyAvatar(container, settings) {
   const svg = container.querySelector('.body-avatar-svg');
   if (!svg) return;
 
-  // Apply tint
+  // Apply tint to the gradient stops
   const bfTint = getBodyFatTint(settings.bodyFat, settings.gender, settings.age);
   applyTint(svg, bfTint.color);
 
-  // Apply morphing
-  const ref = getReferenceCircumferences(settings.height, settings.gender);
-  applyMorphing(svg, settings, ref);
-
-  // Visceral + WHtR overlays
+  // Visceral overlay
   applyVisceralAndWhtr(svg, settings);
 }
 
