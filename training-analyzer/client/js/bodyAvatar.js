@@ -87,10 +87,10 @@ function getWhtrTint(whtr) {
 }
 
 // ==================== SVG SILHOUETTE ====================
-// Front-view human silhouette, viewBox 0 0 200 440.
-// Drawn entirely with Bezier curves. Body parts overlap at joints so morphing
-// any one part doesn't reveal seams. Each <g data-body-part> can be
-// transformed independently along the X axis.
+// Lean athletic silhouette, viewBox 0 0 200 440. The torso parts
+// (chest/waist/hips) share matching X coordinates at every seam so the
+// fills meet seamlessly with the same color — no visible boundary lines.
+// Limbs overlap into torso/shoulder zones so joints look connected.
 const BODY_SVG = `
 <svg class="body-avatar-svg" viewBox="0 0 200 440" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -98,167 +98,154 @@ const BODY_SVG = `
       <stop id="body-tint-stop-top"    offset="0%"   stop-color="var(--text2)"/>
       <stop id="body-tint-stop-bottom" offset="100%" stop-color="var(--text2)"/>
     </linearGradient>
-    <radialGradient id="body-shine" cx="35%" cy="20%" r="80%">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
-      <stop offset="60%" stop-color="rgba(255,255,255,0)"/>
-    </radialGradient>
     <filter id="visceral-glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="7"/>
     </filter>
-    <filter id="body-soft" x="-5%" y="-5%" width="110%" height="110%">
-      <feGaussianBlur stdDeviation="0.4"/>
-    </filter>
   </defs>
 
-  <!-- LEGS first (drawn under torso so hip flare overlaps thigh tops) -->
-  <!-- Left thigh -->
-  <g data-body-part="thigh-l" style="transform-origin:84px 285px">
-    <path d="M 60,225
-             C 60,225 80,222 100,225
-             C 100,250 99,290 97,330
-             C 96,335 92,338 84,338
-             C 70,338 62,334 60,328
-             C 56,295 56,255 60,225 Z"/>
+  <!-- LEGS (drawn first; hip will overlap thigh tops) -->
+  <!-- Left thigh: slim, tapered toward knee -->
+  <g data-body-part="thigh-l" style="transform-origin:82px 280px">
+    <path d="M 68,228
+             L 100,228
+             L 100,332
+             C 100,335 94,337 86,337
+             C 76,337 70,335 69,332
+             Q 66,300 65,265
+             Q 65,245 68,228 Z"/>
   </g>
   <!-- Right thigh -->
-  <g data-body-part="thigh-r" style="transform-origin:116px 285px">
-    <path d="M 140,225
-             C 140,225 120,222 100,225
-             C 100,250 101,290 103,330
-             C 104,335 108,338 116,338
-             C 130,338 138,334 140,328
-             C 144,295 144,255 140,225 Z"/>
+  <g data-body-part="thigh-r" style="transform-origin:118px 280px">
+    <path d="M 132,228
+             L 100,228
+             L 100,332
+             C 100,335 106,337 114,337
+             C 124,337 130,335 131,332
+             Q 134,300 135,265
+             Q 135,245 132,228 Z"/>
   </g>
 
-  <!-- Left calf -->
-  <g data-body-part="calf-l" style="transform-origin:80px 380px">
-    <path d="M 62,330
-             C 62,330 80,328 96,330
-             C 96,345 95,360 92,378
-             C 90,395 88,415 87,425
-             C 86,430 82,432 78,432
-             C 72,432 68,430 67,425
-             C 64,400 60,365 62,330 Z"/>
+  <!-- Left calf: tapered with subtle outer curve -->
+  <g data-body-part="calf-l" style="transform-origin:82px 380px">
+    <path d="M 69,332
+             L 100,332
+             L 96,418
+             C 96,424 92,426 87,426
+             C 80,426 76,424 75,418
+             Q 73,400 71,378
+             Q 69,355 69,332 Z"/>
   </g>
   <!-- Right calf -->
-  <g data-body-part="calf-r" style="transform-origin:120px 380px">
-    <path d="M 138,330
-             C 138,330 120,328 104,330
-             C 104,345 105,360 108,378
-             C 110,395 112,415 113,425
-             C 114,430 118,432 122,432
-             C 128,432 132,430 133,425
-             C 136,400 140,365 138,330 Z"/>
+  <g data-body-part="calf-r" style="transform-origin:118px 380px">
+    <path d="M 131,332
+             L 100,332
+             L 104,418
+             C 104,424 108,426 113,426
+             C 120,426 124,424 125,418
+             Q 127,400 129,378
+             Q 131,355 131,332 Z"/>
   </g>
 
-  <!-- ARMS first (drawn under shoulders so shoulder cap overlaps bicep top) -->
+  <!-- ARMS — slim, hanging close to torso. Top extends into shoulder/chest
+       area so the painters z-order hides the inner edge cleanly. Outer
+       edge stays inside the shoulder yoke width (no shoulder-pad effect). -->
   <!-- Left bicep -->
-  <g data-body-part="bicep-l" style="transform-origin:50px 130px">
-    <path d="M 64,92
-             C 48,96 40,108 38,130
-             C 37,148 40,162 46,168
-             C 50,170 56,170 60,168
-             C 63,158 64,140 64,118
-             C 64,108 64,98 64,92 Z"/>
+  <g data-body-part="bicep-l" style="transform-origin:60px 130px">
+    <path d="M 78,100
+             C 68,104 62,118 60,138
+             C 60,156 63,166 67,170
+             L 73,170
+             Q 76,150 77,128
+             Q 78,110 78,100 Z"/>
   </g>
   <!-- Right bicep -->
-  <g data-body-part="bicep-r" style="transform-origin:150px 130px">
-    <path d="M 136,92
-             C 152,96 160,108 162,130
-             C 163,148 160,162 154,168
-             C 150,170 144,170 140,168
-             C 137,158 136,140 136,118
-             C 136,108 136,98 136,92 Z"/>
+  <g data-body-part="bicep-r" style="transform-origin:140px 130px">
+    <path d="M 122,100
+             C 132,104 138,118 140,138
+             C 140,156 137,166 133,170
+             L 127,170
+             Q 124,150 123,128
+             Q 122,110 122,100 Z"/>
   </g>
-  <!-- Left forearm -->
-  <g data-body-part="forearm-l" style="transform-origin:48px 200px">
-    <path d="M 46,168
-             C 50,170 56,170 60,168
-             C 60,180 58,205 55,225
-             C 53,232 50,234 47,234
-             C 43,234 41,232 41,228
-             C 41,210 43,185 46,168 Z"/>
+  <!-- Left forearm — continues bicep down, tapers slightly to wrist -->
+  <g data-body-part="forearm-l" style="transform-origin:62px 206px">
+    <path d="M 67,170 L 73,170
+             Q 71,200 69,234
+             C 69,238 66,240 62,240
+             C 58,240 56,238 56,234
+             Q 59,200 63,170
+             Q 65,172 67,170 Z"/>
   </g>
   <!-- Right forearm -->
-  <g data-body-part="forearm-r" style="transform-origin:152px 200px">
-    <path d="M 154,168
-             C 150,170 144,170 140,168
-             C 140,180 142,205 145,225
-             C 147,232 150,234 153,234
-             C 157,234 159,232 159,228
-             C 159,210 157,185 154,168 Z"/>
+  <g data-body-part="forearm-r" style="transform-origin:138px 206px">
+    <path d="M 133,170 L 127,170
+             Q 129,200 131,234
+             C 131,238 134,240 138,240
+             C 142,240 144,238 144,234
+             Q 141,200 137,170
+             Q 135,172 133,170 Z"/>
   </g>
 
-  <!-- TORSO (top to bottom; later parts cover earlier ones at seams) -->
-  <!-- Hips: flares from waist down -->
-  <g data-body-part="hips" style="transform-origin:100px 215px">
-    <path d="M 78,180
-             C 78,180 90,178 100,178
-             C 110,178 122,180 122,180
-             C 130,190 142,205 144,228
-             C 144,233 140,235 134,235
-             C 122,236 108,236 100,236
-             C 92,236 78,236 66,235
-             C 60,235 56,233 56,228
-             C 58,205 70,190 78,180 Z"/>
+  <!-- TORSO — z-order: hips → waist → chest → shoulders (top) -->
+  <!-- Hips: matches waist bottom at seam, flares outward -->
+  <g data-body-part="hips" style="transform-origin:100px 210px">
+    <path d="M 70,184
+             L 130,184
+             Q 138,200 142,232
+             Q 142,236 136,236
+             L 64,236
+             Q 58,236 58,232
+             Q 62,200 70,184 Z"/>
   </g>
 
-  <!-- Waist: hourglass narrow zone -->
-  <g data-body-part="waist" style="transform-origin:100px 158px">
-    <path d="M 72,140
-             C 72,140 86,138 100,138
-             C 114,138 128,140 128,140
-             C 128,152 127,168 122,182
-             C 115,185 108,186 100,186
-             C 92,186 85,185 78,182
-             C 73,168 72,152 72,140 Z"/>
+  <!-- Waist: matches chest bottom (top) and hips top (bottom) exactly -->
+  <g data-body-part="waist" style="transform-origin:100px 164px">
+    <path d="M 68,144
+             L 132,144
+             C 130,156 126,166 124,170
+             C 124,176 127,182 130,184
+             L 70,184
+             C 73,182 76,176 76,170
+             C 74,166 70,156 68,144 Z"/>
   </g>
 
-  <!-- Chest: pectorals, slight inverse-V from shoulders -->
-  <g data-body-part="chest" style="transform-origin:100px 118px">
-    <path d="M 64,98
-             C 64,98 82,96 100,96
-             C 118,96 136,98 136,98
-             C 135,108 133,124 130,140
-             C 122,144 112,146 100,146
-             C 88,146 78,144 70,140
-             C 67,124 65,108 64,98 Z"/>
+  <!-- Chest: tapers from shoulder area down to waist width -->
+  <g data-body-part="chest" style="transform-origin:100px 120px">
+    <path d="M 62,100
+             Q 100,98 138,100
+             C 137,114 134,130 132,144
+             L 68,144
+             C 66,130 63,114 62,100 Z"/>
   </g>
 
-  <!-- Shoulders: rounded yoke covering top of biceps -->
-  <g data-body-part="shoulders" style="transform-origin:100px 88px">
-    <path d="M 50,98
-             C 48,82 60,68 78,64
-             C 86,62 92,62 100,62
-             C 108,62 114,62 122,64
-             C 140,68 152,82 150,98
-             C 148,103 142,106 134,106
-             C 122,104 110,103 100,103
-             C 90,103 78,104 66,106
-             C 58,106 52,103 50,98 Z"/>
+  <!-- Shoulders: athletic deltoids, widest part — covers top of biceps and chest top -->
+  <g data-body-part="shoulders" style="transform-origin:100px 86px">
+    <path d="M 50,104
+             C 48,84 62,68 82,64
+             Q 100,62 118,64
+             C 138,68 152,84 150,104
+             C 148,108 142,110 134,108
+             Q 116,104 100,104
+             Q 84,104 66,108
+             C 58,110 52,108 50,104 Z"/>
   </g>
 
   <!-- Neck -->
-  <g data-body-part="neck" style="transform-origin:100px 70px">
-    <path d="M 90,58
-             C 90,58 95,58 100,58
-             C 105,58 110,58 110,58
-             C 110,66 110,72 110,76
-             C 107,77 103,77 100,77
-             C 97,77 93,77 90,76
-             C 90,72 90,66 90,58 Z"/>
+  <g data-body-part="neck" style="transform-origin:100px 68px">
+    <path d="M 93,58
+             Q 100,57 107,58
+             L 109,76
+             Q 100,77 91,76
+             L 93,58 Z"/>
   </g>
 
-  <!-- Head -->
-  <g data-body-part="head" style="transform-origin:100px 35px">
-    <ellipse cx="100" cy="35" rx="20" ry="24"/>
+  <!-- Head: oval, balanced size -->
+  <g data-body-part="head" style="transform-origin:100px 36px">
+    <ellipse cx="100" cy="36" rx="16" ry="20"/>
   </g>
 
-  <!-- WHtR ring (around waist) -->
-  <ellipse id="whtr-ring" cx="100" cy="160" rx="40" ry="7" fill="none" stroke="transparent" stroke-width="3" pointer-events="none"/>
-
-  <!-- Visceral hotspot (abdomen) -->
-  <circle id="visceral-hotspot" cx="100" cy="162" r="16" fill="transparent" filter="url(#visceral-glow)" pointer-events="none"/>
+  <!-- Visceral hotspot (only visible when visceralFat is set) -->
+  <circle id="visceral-hotspot" cx="100" cy="160" r="14" fill="transparent" filter="url(#visceral-glow)" pointer-events="none"/>
 </svg>
 `;
 
@@ -308,24 +295,17 @@ function partRefKey(part) {
   return part.replace(/-(l|r)$/, '');
 }
 
-// ==================== VISCERAL + WHTR ====================
+// ==================== VISCERAL HOTSPOT ====================
+// WHtR is shown in the side panel bar — no need to repeat it on the silhouette.
 function applyVisceralAndWhtr(svg, settings) {
   const vfTint = getVisceralTint(settings.visceralFat);
   const hotspot = svg.querySelector('#visceral-hotspot');
-  if (hotspot) {
-    if (vfTint) {
-      hotspot.setAttribute('fill', vfTint.color);
-      hotspot.setAttribute('opacity', String(vfTint.opacity));
-    } else {
-      hotspot.setAttribute('fill', 'transparent');
-    }
-  }
-  const whtr = (settings.circWaist && settings.height) ? settings.circWaist / settings.height : null;
-  const whtrTint = getWhtrTint(whtr);
-  const ring = svg.querySelector('#whtr-ring');
-  if (ring) {
-    if (whtrTint) ring.setAttribute('stroke', whtrTint.color);
-    else ring.setAttribute('stroke', 'transparent');
+  if (!hotspot) return;
+  if (vfTint) {
+    hotspot.setAttribute('fill', vfTint.color);
+    hotspot.setAttribute('opacity', String(vfTint.opacity));
+  } else {
+    hotspot.setAttribute('fill', 'transparent');
   }
 }
 
