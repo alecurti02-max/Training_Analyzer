@@ -87,27 +87,30 @@ function getWhtrTint(whtr) {
 }
 
 // ==================== SVG SILHOUETTE ====================
-// Single continuous body outline (head + arms + torso + legs) with
-// vertical gradient fill and outer glow filter — visual style of a
-// medical/anatomy reference figure. Click hotspots are added separately
-// (invisible rects) so each body region is still independently clickable.
-// ViewBox is 0 0 240 500 to give room for hands and feet.
+// Single continuous body outline rendered as STROKE + subtle inner fill,
+// like a medical/fitness anatomy figure. Outer glow filter for the aura.
+// Path traces head → right arm/hand → right side of torso → right leg →
+// up between the legs → down the left leg → up left side → left arm →
+// back to top of head. Anatomy: visible legs separation, knee/calf
+// definition, suggested hands at hip level.
 const BODY_SVG = `
 <svg class="body-avatar-svg" viewBox="0 0 240 500" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="body-tint" x1="0" y1="0" x2="0" y2="1">
-      <stop id="body-tint-stop-top"    offset="0%"   stop-color="var(--text2)"/>
-      <stop id="body-tint-stop-mid"    offset="50%"  stop-color="var(--text2)" stop-opacity="0.85"/>
-      <stop id="body-tint-stop-bottom" offset="100%" stop-color="var(--text2)" stop-opacity="0.95"/>
+      <stop id="body-tint-stop-top"    offset="0%"   stop-color="var(--text2)" stop-opacity="0.18"/>
+      <stop id="body-tint-stop-mid"    offset="55%"  stop-color="var(--text2)" stop-opacity="0.10"/>
+      <stop id="body-tint-stop-bottom" offset="100%" stop-color="var(--text2)" stop-opacity="0.18"/>
     </linearGradient>
-    <radialGradient id="body-shine" cx="35%" cy="22%" r="65%">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.28)"/>
-      <stop offset="55%" stop-color="rgba(255,255,255,0)"/>
+    <radialGradient id="body-shine" cx="65%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+      <stop offset="60%" stop-color="rgba(255,255,255,0)"/>
     </radialGradient>
     <filter id="body-glow" x="-20%" y="-10%" width="140%" height="120%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b1"/>
-      <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="b2"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b2"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="b3"/>
       <feMerge>
+        <feMergeNode in="b3"/>
         <feMergeNode in="b2"/>
         <feMergeNode in="b1"/>
         <feMergeNode in="SourceGraphic"/>
@@ -118,163 +121,127 @@ const BODY_SVG = `
     </filter>
   </defs>
 
-  <!-- BODY — single continuous outline. Gradient fill + glow filter. -->
-  <g id="body-shape" filter="url(#body-glow)">
-    <path id="body-outline" d="
-      M 120,18
-      C 140,18 154,32 154,52
-      C 154,66 148,76 138,80
-      L 134,90
-      C 144,93 158,97 170,103
-      C 182,109 192,118 196,128
-      C 198,142 196,158 192,176
-      C 188,196 184,216 182,236
-      C 180,254 180,270 184,284
-      C 188,296 192,306 192,316
-      C 192,326 184,332 174,330
-      C 168,328 164,322 162,314
-      C 160,300 158,284 158,266
-      C 158,244 158,222 156,200
-      C 154,180 150,166 144,156
-      C 142,166 142,180 142,196
-      C 142,216 144,238 144,256
-      C 144,274 148,292 152,310
-      C 158,332 158,356 154,378
-      C 150,400 144,422 140,442
-      C 138,456 138,468 140,472
-      L 156,472
-      C 162,472 162,478 158,480
-      L 116,480
-      L 116,468
-      C 116,448 118,422 118,398
-      C 118,372 116,348 116,322
-      L 116,288
-      L 120,286
-      L 124,288
-      L 124,322
-      C 124,348 122,372 122,398
-      C 122,422 124,448 124,468
-      L 124,480
-      L 82,480
-      C 78,478 78,472 84,472
-      L 100,472
-      C 102,468 102,456 100,442
-      C 96,422 90,400 86,378
-      C 82,356 82,332 88,310
-      C 92,292 96,274 96,256
-      C 96,238 98,216 98,196
-      C 98,180 98,166 96,156
-      C 90,166 86,180 84,200
-      C 82,222 82,244 82,266
-      C 82,284 82,300 80,314
-      C 78,322 74,328 68,330
-      C 58,332 50,326 50,316
-      C 50,306 54,296 58,284
-      C 62,270 62,254 60,236
-      C 58,216 54,196 50,176
-      C 46,158 44,142 46,128
-      C 50,118 60,109 72,103
-      C 84,97 98,93 108,90
-      L 104,80
-      C 94,76 88,66 88,52
-      C 88,32 102,18 120,18
-      Z
-    " fill="url(#body-tint)"/>
-    <path d="
-      M 120,18
-      C 140,18 154,32 154,52
-      C 154,66 148,76 138,80
-      L 134,90
-      C 144,93 158,97 170,103
-      C 182,109 192,118 196,128
-      C 198,142 196,158 192,176
-      C 188,196 184,216 182,236
-      C 180,254 180,270 184,284
-      C 188,296 192,306 192,316
-      C 192,326 184,332 174,330
-      C 168,328 164,322 162,314
-      C 160,300 158,284 158,266
-      C 158,244 158,222 156,200
-      C 154,180 150,166 144,156
-      C 142,166 142,180 142,196
-      C 142,216 144,238 144,256
-      C 144,274 148,292 152,310
-      C 158,332 158,356 154,378
-      C 150,400 144,422 140,442
-      C 138,456 138,468 140,472
-      L 156,472
-      C 162,472 162,478 158,480
-      L 116,480
-      L 116,468
-      C 116,448 118,422 118,398
-      C 118,372 116,348 116,322
-      L 116,288
-      L 120,286
-      L 124,288
-      L 124,322
-      C 124,348 122,372 122,398
-      C 122,422 124,448 124,468
-      L 124,480
-      L 82,480
-      C 78,478 78,472 84,472
-      L 100,472
-      C 102,468 102,456 100,442
-      C 96,422 90,400 86,378
-      C 82,356 82,332 88,310
-      C 92,292 96,274 96,256
-      C 96,238 98,216 98,196
-      C 98,180 98,166 96,156
-      C 90,166 86,180 84,200
-      C 82,222 82,244 82,266
-      C 82,284 82,300 80,314
-      C 78,322 74,328 68,330
-      C 58,332 50,326 50,316
-      C 50,306 54,296 58,284
-      C 62,270 62,254 60,236
-      C 58,216 54,196 50,176
-      C 46,158 44,142 46,128
-      C 50,118 60,109 72,103
-      C 84,97 98,93 108,90
-      L 104,80
-      C 94,76 88,66 88,52
-      C 88,32 102,18 120,18
-      Z
-    " fill="url(#body-shine)" pointer-events="none"/>
+  <!-- BODY — outline + subtle gradient fill, with outer glow -->
+  <g id="body-shape">
+    <!-- Soft inner gradient fill (low alpha) -->
+    <path id="body-fill" d="__BODY_PATH__" fill="url(#body-tint)" stroke="none" pointer-events="none"/>
+    <!-- Highlight on the right side for depth -->
+    <path d="__BODY_PATH__" fill="url(#body-shine)" stroke="none" pointer-events="none"/>
+    <!-- The actual outline + glow -->
+    <path id="body-outline" d="__BODY_PATH__" fill="none" stroke="var(--text2)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" filter="url(#body-glow)"/>
   </g>
 
-  <!-- Visceral hotspot (only visible when visceralFat is set) -->
-  <circle id="visceral-hotspot" cx="120" cy="200" r="22" fill="transparent" filter="url(#visceral-glow)" pointer-events="none"/>
+  <!-- Visceral hotspot (only visible when visceralFat is meaningful) -->
+  <circle id="visceral-hotspot" cx="120" cy="200" r="20" fill="transparent" filter="url(#visceral-glow)" pointer-events="none"/>
 
-  <!-- INVISIBLE CLICK HOTSPOTS — capture clicks for body-part details modal.
-       Stacked over the silhouette without affecting the visual. -->
+  <!-- INVISIBLE CLICK HOTSPOTS -->
   <g class="body-avatar-hotspots" fill="rgba(0,0,0,0)">
     <rect data-body-part="head"      x="92"  y="14"  width="56" height="68"/>
-    <rect data-body-part="neck"      x="100" y="78"  width="40" height="20"/>
-    <rect data-body-part="shoulders" x="60"  y="92"  width="120" height="32"/>
-    <rect data-body-part="chest"     x="68"  y="118" width="104" height="56"/>
-    <rect data-body-part="waist"     x="80"  y="170" width="80"  height="48"/>
-    <rect data-body-part="hips"      x="74"  y="216" width="92"  height="56"/>
-    <rect data-body-part="bicep-l"   x="40"  y="118" width="34"  height="74"/>
-    <rect data-body-part="bicep-r"   x="166" y="118" width="34"  height="74"/>
-    <rect data-body-part="forearm-l" x="46"  y="190" width="32"  height="120"/>
-    <rect data-body-part="forearm-r" x="162" y="190" width="32"  height="120"/>
-    <rect data-body-part="thigh-l"   x="76"  y="270" width="46"  height="84"/>
-    <rect data-body-part="thigh-r"   x="118" y="270" width="46"  height="84"/>
-    <rect data-body-part="calf-l"   x="80"  y="354" width="42"  height="120"/>
-    <rect data-body-part="calf-r"   x="118" y="354" width="42"  height="120"/>
+    <rect data-body-part="neck"      x="106" y="80"  width="28" height="20"/>
+    <rect data-body-part="shoulders" x="60"  y="98"  width="120" height="20"/>
+    <rect data-body-part="chest"     x="78"  y="118" width="84"  height="56"/>
+    <rect data-body-part="waist"     x="84"  y="178" width="72"  height="44"/>
+    <rect data-body-part="hips"      x="78"  y="222" width="84"  height="50"/>
+    <rect data-body-part="bicep-l"   x="40"  y="118" width="38"  height="80"/>
+    <rect data-body-part="bicep-r"   x="162" y="118" width="38"  height="80"/>
+    <rect data-body-part="forearm-l" x="44"  y="198" width="36"  height="130"/>
+    <rect data-body-part="forearm-r" x="160" y="198" width="36"  height="130"/>
+    <rect data-body-part="thigh-l"   x="78"  y="272" width="42"  height="100"/>
+    <rect data-body-part="thigh-r"   x="120" y="272" width="42"  height="100"/>
+    <rect data-body-part="calf-l"    x="80"  y="372" width="40"  height="108"/>
+    <rect data-body-part="calf-r"    x="120" y="372" width="40"  height="108"/>
   </g>
 </svg>
-`;
+`.replace(/__BODY_PATH__/g, BODY_PATH());
+
+// Single continuous path traced as one closed loop. Returns the d= string.
+function BODY_PATH() {
+  return `
+    M 120,16
+    C 140,16 156,32 156,52
+    C 156,68 150,76 142,80
+    Q 130,84 120,84
+    Q 110,84 98,80
+    C 90,76 84,68 84,52
+    C 84,32 100,16 120,16 Z
+
+    M 108,82
+    L 110,98
+    C 96,102 80,108 72,116
+    Q 62,124 60,138
+    Q 58,156 60,178
+    Q 62,200 64,222
+    Q 64,242 66,260
+    Q 64,278 64,294
+    Q 62,308 56,318
+    Q 50,328 52,336
+    Q 56,344 64,342
+    Q 70,338 74,330
+    Q 78,316 80,302
+    Q 82,284 84,266
+    Q 86,244 88,222
+    Q 90,200 92,184
+    L 92,200
+    Q 92,218 92,234
+    Q 92,254 96,272
+    Q 98,288 96,304
+    Q 92,324 90,344
+    Q 88,366 86,388
+    Q 84,410 82,432
+    Q 80,452 84,468
+    Q 88,478 100,478
+    L 110,478
+    Q 116,478 116,470
+    L 117,452
+    Q 118,422 118,392
+    Q 119,360 120,328
+    L 120,300
+    L 120,278
+    L 120,300
+    L 120,328
+    Q 121,360 122,392
+    Q 122,422 123,452
+    L 124,470
+    Q 124,478 130,478
+    L 140,478
+    Q 152,478 156,468
+    Q 160,452 158,432
+    Q 156,410 154,388
+    Q 152,366 150,344
+    Q 148,324 144,304
+    Q 142,288 144,272
+    Q 148,254 148,234
+    Q 148,218 148,200
+    L 148,184
+    Q 150,200 152,222
+    Q 154,244 156,266
+    Q 158,284 160,302
+    Q 162,316 166,330
+    Q 170,338 176,342
+    Q 184,344 188,336
+    Q 190,328 184,318
+    Q 178,308 176,294
+    Q 176,278 176,260
+    Q 178,242 178,222
+    Q 180,200 182,178
+    Q 184,156 182,138
+    Q 180,124 170,116
+    C 162,108 146,102 132,98
+    L 130,82
+    Z
+  `;
+}
 
 // ==================== TINT APPLICATION ====================
-// Single-path body uses a gradient fill — update the gradient stops to
-// tint the whole figure. The radial highlight (body-shine) stays unchanged
-// so we keep the depth/lighting effect across all tints.
+// Apply the body fat tint color to both the inner gradient fill (low alpha)
+// and the outline stroke. The radial highlight stays unchanged for depth.
 function applyTint(svg, color) {
   ['body-tint-stop-top','body-tint-stop-mid','body-tint-stop-bottom'].forEach(id => {
     const stop = svg.querySelector('#'+id);
     if (stop) stop.setAttribute('stop-color', color);
   });
+  const outline = svg.querySelector('#body-outline');
+  if (outline) outline.setAttribute('stroke', color);
 }
 
 // ==================== MORPHING ====================
