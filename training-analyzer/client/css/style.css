@@ -539,9 +539,9 @@ canvas{max-width:100%}
 
 /* ==================== BODY AVATAR ==================== */
 .body-avatar-wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;justify-content:center}
-.body-avatar-svg{width:200px;height:400px;flex-shrink:0;display:block}
-.body-avatar-svg g[data-body-part]{transition:transform .4s ease;cursor:pointer;transform-box:fill-box}
-.body-avatar-svg g[data-body-part]:hover{filter:brightness(1.2) drop-shadow(0 0 4px var(--accent))}
+.body-avatar-svg{width:220px;height:auto;aspect-ratio:200/440;flex-shrink:0;display:block;filter:drop-shadow(0 6px 20px rgba(0,0,0,.25))}
+.body-avatar-svg g[data-body-part]{transition:transform .5s cubic-bezier(.2,.7,.2,1);cursor:pointer;transform-box:view-box}
+.body-avatar-svg g[data-body-part]:hover{filter:brightness(1.18) drop-shadow(0 0 6px var(--accent))}
 .body-avatar-side{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px}
 .body-avatar-stat{padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:4px;position:relative}
 .body-avatar-stat-label{font-size:.72rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
@@ -557,7 +557,7 @@ canvas{max-width:100%}
 .body-detail-row:last-child{border-bottom:none}
 .body-detail-explanation{margin-top:12px;padding:12px;background:var(--bg2);border-radius:var(--radius-sm);font-size:.85rem;line-height:1.5;color:var(--text2)}
 @media(max-width:600px){
-  .body-avatar-svg{width:160px;height:320px}
+  .body-avatar-svg{width:170px}
   .body-avatar-side{min-width:unset;width:100%}
 }
 
