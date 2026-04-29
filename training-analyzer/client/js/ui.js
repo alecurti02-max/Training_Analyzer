@@ -2357,8 +2357,7 @@ function readLibWeightOptions() {
   } else if (barbellSel !== '') {
     barbellWeight = parseFloat(barbellSel) || null;
   }
-  const isUnilateral = !!document.getElementById('lib-unilateral')?.checked;
-  return { weightMode, barbellWeight, isUnilateral };
+  return { weightMode, barbellWeight };
 }
 
 async function addExerciseToLibrary(){
@@ -2367,8 +2366,9 @@ async function addExerciseToLibrary(){
   if(!name){toast('Inserisci un nome!','error');return;}
   const lib=exercisesCache||[];
   if(lib.some(e=>e.name.toLowerCase()===name.toLowerCase())){toast('Esercizio gia presente!','error');return;}
-  const opts = param === 'reps' ? readLibWeightOptions() : { weightMode: 'total', barbellWeight: null, isUnilateral: false };
-  lib.push({name,muscle,param,...opts});
+  const opts = param === 'reps' ? readLibWeightOptions() : { weightMode: 'total', barbellWeight: null };
+  const isUnilateral = !!document.getElementById('lib-unilateral')?.checked;
+  lib.push({name,muscle,param,...opts,isUnilateral});
   lib.sort((a,b)=>a.name.localeCompare(b.name));
   await saveExercisesToServer(lib);
   document.getElementById('lib-name').value='';
@@ -2418,7 +2418,7 @@ function editExercise(idx){
     <div class="form-group"><label>Parametro principale</label><select id="edit-ex-param">
       ${Object.entries(paramLabels).map(([k,v])=>`<option value="${k}" ${k===curParam?'selected':''}>${v}</option>`).join('')}
     </select></div>
-    <div id="edit-ex-weight-options" style="${curParam==='reps'?'':'display:none'};display:flex;flex-direction:column;gap:12px">
+    <div id="edit-ex-weight-options" style="${curParam==='reps'?'display:flex':'display:none'};flex-direction:column;gap:12px">
       <div class="form-group"><label>Modalita peso</label><select id="edit-ex-weightmode">
         <option value="total" ${curWM==='total'?'selected':''}>Peso totale</option>
         <option value="per_side" ${curWM==='per_side'?'selected':''}>Peso per lato</option>
@@ -2431,12 +2431,12 @@ function editExercise(idx){
         <label>Peso bilanciere (kg)</label>
         <input type="number" step="0.5" id="edit-ex-barbell-custom" value="${bSel==='custom'?curBW:''}">
       </div>
-      <div class="form-group">
-        <label style="display:flex;align-items:center;gap:6px;margin-bottom:0">
-          <input type="checkbox" id="edit-ex-unilateral" ${curUni?'checked':''} style="width:auto">
-          <span>Esercizio unilaterale (un lato alla volta)</span>
-        </label>
-      </div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:6px;margin-bottom:0">
+        <input type="checkbox" id="edit-ex-unilateral" ${curUni?'checked':''} style="width:auto">
+        <span>Esercizio unilaterale (un lato alla volta)</span>
+      </label>
     </div>
     <button class="btn btn-primary" id="edit-ex-save">Salva Modifiche</button>
   </div>`;
@@ -2453,7 +2453,7 @@ function editExercise(idx){
     const newName=document.getElementById('edit-ex-name').value.trim();
     if(!newName){toast('Inserisci un nome!','error');return;}
     const newParam = document.getElementById('edit-ex-param').value;
-    let weightMode = 'total', barbellWeight = null, isUnilateral = false;
+    let weightMode = 'total', barbellWeight = null;
     if (newParam === 'reps') {
       weightMode = document.getElementById('edit-ex-weightmode').value || 'total';
       const bSelVal = document.getElementById('edit-ex-barbell').value;
@@ -2463,8 +2463,8 @@ function editExercise(idx){
       } else if (bSelVal !== '') {
         barbellWeight = parseFloat(bSelVal) || null;
       }
-      isUnilateral = !!document.getElementById('edit-ex-unilateral').checked;
     }
+    const isUnilateral = !!document.getElementById('edit-ex-unilateral').checked;
     lib[idx]={name:newName, muscle:document.getElementById('edit-ex-muscle').value, param:newParam, weightMode, barbellWeight, isUnilateral};
     await saveExercisesToServer(lib);
     toast('Esercizio modificato!','success');
