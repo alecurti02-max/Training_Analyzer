@@ -418,6 +418,10 @@ function filterExerciseSheet() {
   renderExerciseSheetList(document.getElementById('exercise-search').value);
 }
 
+function wizGetParam(name) {
+  return ((exercisesCache || []).find(e => e.name === name)?.param) || 'reps';
+}
+
 function addWizExercise(name, muscle) {
   closeExerciseSheet();
   const lastPerf = getLastPerformance(name);
@@ -425,14 +429,19 @@ function addWizExercise(name, muscle) {
   const weightMode = libEntry.weightMode || 'total';
   const barbellWeight = libEntry.barbellWeight || null;
   const isUnilateral = !!libEntry.isUnilateral;
+  const param = libEntry.param || 'reps';
+  const isReps = param === 'reps';
   const emptySet = isUnilateral
-    ? { reps: '', weightLeft: '', weightRight: '', rpe: null }
+    ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null }
+              : { repsLeft: '', repsRight: '', rpe: null })
     : { reps: '', weight: '', rpe: null };
   const copyFromLast = (s) => isUnilateral
-    ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null }
-    : { reps: s.reps, weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null };
+    ? (isReps
+        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null }
+        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null })
+    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null };
   wizExercises.push({
-    name, muscle, weightMode, barbellWeight, isUnilateral,
+    name, muscle, weightMode, barbellWeight, isUnilateral, param,
     sets: lastPerf ? lastPerf.sets.map(copyFromLast) : [emptySet],
     lastPerf
   });
@@ -522,6 +531,12 @@ function renderWizSets() {
     const weightSuffix = perSide ? '/lato' : '';
     const barbellTag = bw ? `<div class="barbell-tag">+ ${bw}kg bilanciere</div>` : '';
     let setsHTML = ex.sets.map((s, sIdx) => {
+      const repsInput = (uni && !isReps)
+        ? `<div class="weight-uni">
+             <input type="number" placeholder="${paramPh} SX" value="${s.repsLeft||''}" data-set-update="${exIdx}-${sIdx}-repsLeft" class="w-uni">
+             <input type="number" placeholder="${paramPh} DX" value="${s.repsRight||''}" data-set-update="${exIdx}-${sIdx}-repsRight" class="w-uni">
+           </div>`
+        : `<input type="number" placeholder="${paramPh}" value="${s.reps||''}" data-set-update="${exIdx}-${sIdx}-reps">`;
       const weightInputs = uni
         ? `<div class="weight-uni">
              <input type="number" step="0.5" placeholder="SX" value="${s.weightLeft||''}" data-set-update="${exIdx}-${sIdx}-weightLeft" class="w-uni">
@@ -530,7 +545,7 @@ function renderWizSets() {
         : `<input type="number" step="0.5" placeholder="Kg${weightSuffix}" value="${s.weight||''}" data-set-update="${exIdx}-${sIdx}-weight">`;
       return `<div class="set-inline">
         <div class="set-num">${sIdx+1}</div>
-        <input type="number" placeholder="${paramPh}" value="${s.reps||''}" data-set-update="${exIdx}-${sIdx}-reps">
+        ${repsInput}
         ${isReps ? weightInputs : ''}
         <select data-set-update="${exIdx}-${sIdx}-rpe"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
         <button class="btn-icon" data-remove-set="${exIdx}-${sIdx}">&#128465;</button>
@@ -596,6 +611,8 @@ function renderWizSets() {
 
 function wizUpdateSet(exIdx, sIdx, field, value) {
   if (field === 'reps') wizExercises[exIdx].sets[sIdx].reps = parseInt(value) || '';
+  else if (field === 'repsLeft') wizExercises[exIdx].sets[sIdx].repsLeft = parseFloat(value) || '';
+  else if (field === 'repsRight') wizExercises[exIdx].sets[sIdx].repsRight = parseFloat(value) || '';
   else if (field === 'weight') wizExercises[exIdx].sets[sIdx].weight = parseFloat(value) || '';
   else if (field === 'weightLeft') wizExercises[exIdx].sets[sIdx].weightLeft = parseFloat(value) || '';
   else if (field === 'weightRight') wizExercises[exIdx].sets[sIdx].weightRight = parseFloat(value) || '';
@@ -625,8 +642,11 @@ function wizUpdateWeightOption(exIdx, field, value) {
 function wizAddSet(exIdx) {
   const ex = wizExercises[exIdx];
   const lastSet = ex.sets[ex.sets.length - 1] || {};
+  const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
   const newSet = ex.isUnilateral
-    ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null }
+    ? (isReps
+        ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null }
+        : { repsLeft: lastSet.repsLeft || '', repsRight: lastSet.repsRight || '', rpe: lastSet.rpe || null })
     : { reps: lastSet.reps || '', weight: lastSet.weight || '', rpe: lastSet.rpe || null };
   ex.sets.push(newSet);
   renderWizSets();
@@ -635,8 +655,10 @@ function wizRemoveSet(exIdx, sIdx) {
   const ex = wizExercises[exIdx];
   ex.sets.splice(sIdx, 1);
   if (!ex.sets.length) {
+    const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
     ex.sets.push(ex.isUnilateral
-      ? { reps: '', weightLeft: '', weightRight: '', rpe: null }
+      ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null }
+                : { repsLeft: '', repsRight: '', rpe: null })
       : { reps: '', weight: '', rpe: null });
   }
   renderWizSets();
@@ -645,9 +667,12 @@ function wizCopyLastSets(exIdx) {
   const ex = wizExercises[exIdx];
   const last = ex.lastPerf;
   if (!last) return;
+  const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
   ex.sets = last.sets.map(s => ex.isUnilateral
-    ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null }
-    : { reps: s.reps, weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null });
+    ? (isReps
+        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null }
+        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null })
+    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null });
   renderWizSets();
   toast('Serie copiate!');
 }
@@ -659,16 +684,24 @@ async function wizSaveWorkout() {
   if (wizType === 'gym') {
     const exercises = [];
     wizExercises.forEach(ex => {
-      const sets = ex.sets.filter(s => s.reps > 0).map(s => {
-        if (ex.isUnilateral) return { reps: s.reps, weightLeft: s.weightLeft || 0, weightRight: s.weightRight || 0, rpe: s.rpe || null };
-        return { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
-      });
+      const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
+      const sets = ex.sets
+        .filter(s => (s.reps > 0) || (s.repsLeft > 0) || (s.repsRight > 0))
+        .map(s => {
+          if (ex.isUnilateral) {
+            return isReps
+              ? { reps: s.reps, weightLeft: s.weightLeft || 0, weightRight: s.weightRight || 0, rpe: s.rpe || null }
+              : { repsLeft: s.repsLeft || 0, repsRight: s.repsRight || 0, rpe: s.rpe || null };
+          }
+          return { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
+        });
       if (sets.length) exercises.push({
         name: ex.name,
         muscle: ex.muscle,
         weightMode: ex.weightMode || 'total',
         barbellWeight: ex.barbellWeight || null,
         isUnilateral: !!ex.isUnilateral,
+        param: ex.param || wizGetParam(ex.name),
         sets
       });
     });
@@ -960,14 +993,19 @@ function liveAddExercise(name, muscle) {
   const weightMode = libEntry.weightMode || 'total';
   const barbellWeight = libEntry.barbellWeight || null;
   const isUnilateral = !!libEntry.isUnilateral;
+  const param = libEntry.param || 'reps';
+  const isReps = param === 'reps';
   const emptySet = isUnilateral
-    ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false }
+    ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false }
+              : { repsLeft: '', repsRight: '', rpe: null, done: false })
     : { reps: '', weight: '', rpe: null, done: false };
   const copyFromLast = (s) => isUnilateral
-    ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, done: false }
-    : { reps: s.reps, weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, done: false };
+    ? (isReps
+        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, done: false }
+        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null, done: false })
+    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, done: false };
   const sets = lastPerf ? lastPerf.sets.map(copyFromLast) : [emptySet];
-  liveSession.exercises.push({ name, muscle, weightMode, barbellWeight, isUnilateral, sets, lastPerf });
+  liveSession.exercises.push({ name, muscle, weightMode, barbellWeight, isUnilateral, param, sets, lastPerf });
   liveRenderExercises();
   liveSaveDraft();
 }
@@ -987,6 +1025,8 @@ function liveUpdateSet(exIdx, sIdx, field, value) {
   const set = liveSession.exercises[exIdx]?.sets[sIdx];
   if (!set) return;
   if (field === 'reps') set.reps = parseInt(value) || '';
+  else if (field === 'repsLeft') set.repsLeft = parseFloat(value) || '';
+  else if (field === 'repsRight') set.repsRight = parseFloat(value) || '';
   else if (field === 'weight') set.weight = parseFloat(value) || '';
   else if (field === 'weightLeft') set.weightLeft = parseFloat(value) || '';
   else if (field === 'weightRight') set.weightRight = parseFloat(value) || '';
@@ -997,8 +1037,11 @@ function liveAddSet(exIdx) {
   if (!liveSession) return;
   const ex = liveSession.exercises[exIdx];
   const lastSet = ex.sets[ex.sets.length - 1] || {};
+  const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
   const newSet = ex.isUnilateral
-    ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null, done: false }
+    ? (isReps
+        ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null, done: false }
+        : { repsLeft: lastSet.repsLeft || '', repsRight: lastSet.repsRight || '', rpe: lastSet.rpe || null, done: false })
     : { reps: lastSet.reps || '', weight: lastSet.weight || '', rpe: lastSet.rpe || null, done: false };
   ex.sets.push(newSet);
   liveRenderExercises();
@@ -1009,8 +1052,10 @@ function liveRemoveSet(exIdx, sIdx) {
   const ex = liveSession.exercises[exIdx];
   ex.sets.splice(sIdx, 1);
   if (!ex.sets.length) {
+    const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
     ex.sets.push(ex.isUnilateral
-      ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false }
+      ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false }
+                : { repsLeft: '', repsRight: '', rpe: null, done: false })
       : { reps: '', weight: '', rpe: null, done: false });
   }
   liveRenderExercises();
@@ -1046,8 +1091,11 @@ function liveCompleteSet(exIdx, sIdx) {
   // Auto-add new empty set if this was the last undone set
   const hasUndone = ex.sets.some(s => !s.done);
   if (!hasUndone) {
+    const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
     const newSet = ex.isUnilateral
-      ? { reps: set.reps || '', weightLeft: set.weightLeft || '', weightRight: set.weightRight || '', rpe: null, done: false }
+      ? (isReps
+          ? { reps: set.reps || '', weightLeft: set.weightLeft || '', weightRight: set.weightRight || '', rpe: null, done: false }
+          : { repsLeft: set.repsLeft || '', repsRight: set.repsRight || '', rpe: null, done: false })
       : { reps: set.reps || '', weight: set.weight || '', rpe: null, done: false };
     ex.sets.push(newSet);
   }
@@ -1155,7 +1203,9 @@ function liveRenderExercises() {
     const lastSet0 = ex.lastPerf?.sets[0];
     let lastStr = '';
     if (ex.lastPerf && lastSet0) {
-      if (lastSet0.weightLeft != null || lastSet0.weightRight != null) {
+      if (lastSet0.repsLeft != null || lastSet0.repsRight != null) {
+        lastStr = `Ultima volta: ${ex.lastPerf.sets.length}x SX ${lastSet0.repsLeft||'?'} / DX ${lastSet0.repsRight||'?'} ${paramLabel}`;
+      } else if (lastSet0.weightLeft != null || lastSet0.weightRight != null) {
         lastStr = `Ultima volta: ${ex.lastPerf.sets.length}x${lastSet0.reps||'?'} @ SX ${lastSet0.weightLeft||'?'} / DX ${lastSet0.weightRight||'?'} kg`;
       } else {
         lastStr = `Ultima volta: ${ex.lastPerf.sets.length}x${lastSet0.reps||'?'} @ ${lastSet0.weight||'?'}kg`;
@@ -1167,6 +1217,12 @@ function liveRenderExercises() {
       const actionBtn = s.done
         ? `<span class="set-done-check">&#10003;</span>`
         : `<button class="btn-fatto" data-live-done="${exIdx}-${sIdx}">Fatto</button>`;
+      const repsInput = (uni && !isReps)
+        ? `<div class="weight-uni">
+             <input type="number" placeholder="${paramPh} SX" value="${s.repsLeft||''}" data-live-set="${exIdx}-${sIdx}-repsLeft" class="w-uni">
+             <input type="number" placeholder="${paramPh} DX" value="${s.repsRight||''}" data-live-set="${exIdx}-${sIdx}-repsRight" class="w-uni">
+           </div>`
+        : `<input type="number" placeholder="${paramPh}" value="${s.reps||''}" data-live-set="${exIdx}-${sIdx}-reps">`;
       const weightInputs = uni
         ? `<div class="weight-uni">
              <input type="number" step="0.5" placeholder="SX" value="${s.weightLeft||''}" data-live-set="${exIdx}-${sIdx}-weightLeft" class="w-uni">
@@ -1175,7 +1231,7 @@ function liveRenderExercises() {
         : `<input type="number" step="0.5" placeholder="Kg${weightSuffix}" value="${s.weight||''}" data-live-set="${exIdx}-${sIdx}-weight">`;
       return `<div class="set-inline${doneClass}">
         <div class="set-num">${sIdx+1}</div>
-        <input type="number" placeholder="${paramPh}" value="${s.reps||''}" data-live-set="${exIdx}-${sIdx}-reps">
+        ${repsInput}
         ${isReps ? weightInputs : ''}
         <select data-live-set="${exIdx}-${sIdx}-rpe"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
         ${actionBtn}
@@ -1327,16 +1383,24 @@ async function liveSaveWorkout() {
   if (liveSession.type === 'gym') {
     const exercises = [];
     liveSession.exercises.forEach(ex => {
-      const sets = ex.sets.filter(s => s.done && s.reps > 0).map(s => {
-        if (ex.isUnilateral) return { reps: s.reps, weightLeft: s.weightLeft || 0, weightRight: s.weightRight || 0, rpe: s.rpe || null };
-        return { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
-      });
+      const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
+      const sets = ex.sets
+        .filter(s => s.done && ((s.reps > 0) || (s.repsLeft > 0) || (s.repsRight > 0)))
+        .map(s => {
+          if (ex.isUnilateral) {
+            return isReps
+              ? { reps: s.reps, weightLeft: s.weightLeft || 0, weightRight: s.weightRight || 0, rpe: s.rpe || null }
+              : { repsLeft: s.repsLeft || 0, repsRight: s.repsRight || 0, rpe: s.rpe || null };
+          }
+          return { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
+        });
       if (sets.length) exercises.push({
         name: ex.name,
         muscle: ex.muscle,
         weightMode: ex.weightMode || 'total',
         barbellWeight: ex.barbellWeight || null,
         isUnilateral: !!ex.isUnilateral,
+        param: ex.param || wizGetParam(ex.name),
         sets
       });
     });
@@ -1563,32 +1627,46 @@ function showWorkoutDetail(id) {
     if(w.calories) gymInfo.push('Calorie: '+Math.round(w.calories)+' kcal');
     if(w.mets) gymInfo.push('METs: '+w.mets);
     if(gymInfo.length) html+=`<p style="font-size:.85rem;color:var(--text2)">${gymInfo.join(' | ')}</p>`;
+    const _libCache = exercisesCache || [];
+    const _paramLabels = {reps:'Reps', duration:'Sec', distance:'m', calories:'Kcal'};
     (w.exercises||[]).forEach(ex=>{
       const wm = ex.weightMode || 'total';
       const bw = ex.barbellWeight || 0;
       const uni = !!ex.isUnilateral;
+      const param = ex.param || _libCache.find(e=>e.name===ex.name)?.param || 'reps';
+      const isReps = param === 'reps';
+      const paramLabel = _paramLabels[param] || 'Reps';
+      const dualParam = uni && !isReps;
       const tags = [];
       if (wm === 'per_side') tags.push('<span class="opt-tag">per lato</span>');
       if (bw) tags.push(`<span class="opt-tag">+${bw}kg bil.</span>`);
       if (uni) tags.push('<span class="opt-tag opt-tag-uni">unilaterale</span>');
       html+=`<div style="margin-top:10px"><strong style="font-size:.9rem">${ex.name}</strong> <span style="font-size:.75rem;color:var(--accent)">${ex.muscle||''}</span> ${tags.join(' ')}`;
-      const weightHeader = uni ? '<td>SX</td><td>DX</td><td>Totale</td>' : '<td>Peso</td><td>Effettivo</td>';
-      html+=`<table style="width:100%;font-size:.82rem;margin-top:4px;border-collapse:collapse"><tr style="color:var(--text2)"><td>Serie</td><td>Reps</td>${weightHeader}<td>RPE</td></tr>`;
+      let header;
+      if (dualParam) header = `<td>SX (${paramLabel})</td><td>DX (${paramLabel})</td>`;
+      else if (uni)  header = `<td>${paramLabel}</td><td>SX</td><td>DX</td><td>Totale</td>`;
+      else if (isReps) header = `<td>${paramLabel}</td><td>Peso</td><td>Effettivo</td>`;
+      else           header = `<td>${paramLabel}</td>`;
+      html+=`<table style="width:100%;font-size:.82rem;margin-top:4px;border-collapse:collapse"><tr style="color:var(--text2)"><td>Serie</td>${header}<td>RPE</td></tr>`;
       ex.sets.forEach((s,i)=>{
-        let weightCells;
-        if (uni) {
+        let cells;
+        if (dualParam) {
+          cells = `<td>${s.repsLeft||0}</td><td>${s.repsRight||0}</td>`;
+        } else if (uni) {
           const wL = (s.weightLeft || 0);
           const wR = (s.weightRight || 0);
           const effL = (wm === 'per_side' ? wL * 2 : wL) + bw;
           const effR = (wm === 'per_side' ? wR * 2 : wR) + bw;
-          weightCells = `<td>${wL} kg</td><td>${wR} kg</td><td>${Math.round((effL + effR) * 10) / 10} kg</td>`;
-        } else {
+          cells = `<td>${s.reps||0}</td><td>${wL} kg</td><td>${wR} kg</td><td>${Math.round((effL + effR) * 10) / 10} kg</td>`;
+        } else if (isReps) {
           const base = s.weight || 0;
           const eff = (wm === 'per_side' ? base * 2 : base) + bw;
           const effStr = eff !== base ? `${Math.round(eff * 10) / 10} kg` : '--';
-          weightCells = `<td>${base}${wm === 'per_side' ? ' /lato' : ''} kg</td><td>${effStr}</td>`;
+          cells = `<td>${s.reps||0}</td><td>${base}${wm === 'per_side' ? ' /lato' : ''} kg</td><td>${effStr}</td>`;
+        } else {
+          cells = `<td>${s.reps||0}</td>`;
         }
-        html+=`<tr><td>${i+1}</td><td>${s.reps}</td>${weightCells}<td>${s.rpe||'--'}</td></tr>`;
+        html+=`<tr><td>${i+1}</td>${cells}<td>${s.rpe||'--'}</td></tr>`;
       });
       html+='</table></div>';
     });
