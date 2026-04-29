@@ -78,6 +78,33 @@ export const FIELD_DEFS = {
 
 export const DEFAULT_MUSCLES = ['Petto','Schiena','Spalle','Bicipiti','Tricipiti','Quadricipiti','Femorali','Glutei','Polpacci','Addominali','Avambracci','Trapezio','Full Body'];
 
+export const SPORT_DEFAULT_MUSCLES = {
+  running:      ['Quadricipiti','Femorali','Polpacci','Glutei'],
+  walking:      ['Quadricipiti','Polpacci','Glutei'],
+  cycling:      ['Quadricipiti','Glutei','Polpacci'],
+  swimming:     ['Schiena','Spalle','Tricipiti','Petto','Addominali'],
+  hiking:       ['Quadricipiti','Polpacci','Glutei','Femorali'],
+  boxing:       ['Spalle','Tricipiti','Addominali','Schiena'],
+  tennis:       ['Spalle','Avambracci','Quadricipiti','Addominali'],
+  padel:        ['Spalle','Avambracci','Quadricipiti','Addominali'],
+  football:     ['Quadricipiti','Femorali','Polpacci','Glutei'],
+  basketball:   ['Quadricipiti','Polpacci','Glutei','Spalle'],
+  crossfit:     ['Full Body'],
+  yoga:         ['Addominali','Schiena','Glutei'],
+  climbing:     ['Schiena','Bicipiti','Avambracci','Spalle'],
+  skiing:       ['Quadricipiti','Glutei','Addominali'],
+  martial_arts: ['Addominali','Spalle','Quadricipiti','Schiena'],
+  volleyball:   ['Spalle','Quadricipiti','Polpacci','Addominali'],
+  skateboard:   ['Quadricipiti','Polpacci','Addominali'],
+  surf:         ['Spalle','Schiena','Addominali'],
+  dance:        ['Quadricipiti','Polpacci','Addominali','Glutei'],
+  karting:      ['Avambracci','Trapezio','Addominali']
+};
+
+export function getDefaultMusclesForSport(type) {
+  return SPORT_DEFAULT_MUSCLES[type] ? SPORT_DEFAULT_MUSCLES[type].slice() : [];
+}
+
 export function getUserActiveSports(settingsCache) {
   const sports = ['gym','running'];
   (settingsCache.activeSports || []).forEach(s => { if (!sports.includes(s)) sports.push(s); });

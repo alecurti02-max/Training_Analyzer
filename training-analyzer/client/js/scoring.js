@@ -151,8 +151,10 @@ export function getRecoveryStatus(workoutsCache, muscleGroups) {
   muscleGroups.filter(m=>m!=='Full Body').forEach(m => {
     let lastWorked=null, intensity=5;
     for(const w of workouts) {
-      if(w.type!=='gym') continue;
-      if((w.exercises||[]).some(e=>e.muscle===m)) { lastWorked=w.date; intensity=w.rpe||w.scores?.intensity||5; break; }
+      let hits = false;
+      if (w.type === 'gym') hits = (w.exercises||[]).some(e=>e.muscle===m);
+      else if (Array.isArray(w.muscles)) hits = w.muscles.includes(m) || w.muscles.includes('Full Body');
+      if (hits) { lastWorked=w.date; intensity=w.rpe||w.scores?.intensity||5; break; }
     }
     if(lastWorked) {
       const daysAgo=daysBetween(now,lastWorked);

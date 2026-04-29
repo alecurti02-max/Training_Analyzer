@@ -4,7 +4,7 @@
 
 import { api, clearTokens } from './api.js';
 import { initAuth, setupLoginUI, logout } from './auth.js';
-import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports } from './sports.js';
+import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports, getDefaultMusclesForSport } from './sports.js';
 import { scoreWorkout, getAdvice, getRecoveryStatus, calculateStreak, getFitnessAssessment, calcTonnage } from './scoring.js';
 import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
 import { loadMeasurements, renderMeasurementsPage } from './bodyMeasurements.js';
@@ -241,6 +241,12 @@ function onDataChanged() {
 
 // ==================== SAVE HELPERS (API calls) ====================
 async function saveWorkout(workout) {
+  // Auto-fill default muscles for non-gym workouts that didn't go through a form
+  // (imports, live recording). Form-based flows pass an explicit muscles array.
+  if (workout.type !== 'gym' && workout.muscles === undefined) {
+    const defaults = getDefaultMusclesForSport(workout.type);
+    if (defaults.length) workout.muscles = defaults;
+  }
   const { type, date, ...rest } = workout;
   const saved = await api.post('/api/workouts', { type, date, data: rest });
   return saved;
@@ -336,6 +342,26 @@ function updateWizStep() {
   }
 }
 
+// Multi-chip selector for muscle groups (used by add wizard + edit form for non-gym sports)
+function renderMuscleChipsHTML(idPrefix, selected) {
+  const set = new Set(selected || []);
+  return `<div class="form-group" style="margin-top:12px">
+    <label>Muscoli coinvolti <span style="font-size:.72rem;color:var(--text2);font-weight:400">(usati per il recupero in dashboard)</span></label>
+    <div id="${idPrefix}-muscles-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+      ${DEFAULT_MUSCLES.map(m => `<button type="button" class="filter-btn ${set.has(m)?'active':''}" data-muscle-chip="${m}">${m}</button>`).join('')}
+    </div>
+  </div>`;
+}
+function attachMuscleChipHandlers(idPrefix) {
+  document.querySelectorAll(`#${idPrefix}-muscles-chips [data-muscle-chip]`).forEach(b => {
+    b.addEventListener('click', () => b.classList.toggle('active'));
+  });
+}
+function readMuscleChips(idPrefix) {
+  return Array.from(document.querySelectorAll(`#${idPrefix}-muscles-chips [data-muscle-chip].active`))
+    .map(b => b.dataset.muscleChip);
+}
+
 function renderSportFields() {
   const tmpl = SPORT_TEMPLATES[wizType];
   if (!tmpl) return;
@@ -355,7 +381,12 @@ function renderSportFields() {
     count++;
   });
   html += '</div>';
+  // Muscle chips (non-gym only; gym derives muscles from exercises)
+  if (wizType !== 'gym') {
+    html += renderMuscleChipsHTML('wiz', getDefaultMusclesForSport(wizType));
+  }
   document.getElementById('wiz-sport-fields').innerHTML = html;
+  if (wizType !== 'gym') attachMuscleChipHandlers('wiz');
 }
 
 // Exercise bottom sheet
@@ -668,6 +699,8 @@ async function wizSaveWorkout() {
       workout._pace = paceToSeconds(paceStr) || (workout.duration && workout.distance ? (workout.duration*60)/workout.distance : 0);
       delete workout.pace;
     }
+    const pickedMuscles = readMuscleChips('wiz');
+    if (pickedMuscles.length) workout.muscles = pickedMuscles;
     workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
     workout.advice = getAdvice(workout);
     const saved = await saveWorkout(workout);
@@ -1799,6 +1832,7 @@ function editWorkout(id) {
       </div>
       <div class="form-group"><label>RPE (1-10)</label><input type="number" id="edit-w-rpe" min="1" max="10" value="${w.rpe||''}"></div>
     </div>`;
+    html += renderMuscleChipsHTML('edit', Array.isArray(w.muscles) && w.muscles.length ? w.muscles : getDefaultMusclesForSport('running'));
   } else {
     // Generic sport fields from template
     if (tmpl && tmpl.fields) {
@@ -1817,6 +1851,7 @@ function editWorkout(id) {
       });
       html += '</div>';
     }
+    html += renderMuscleChipsHTML('edit', Array.isArray(w.muscles) && w.muscles.length ? w.muscles : getDefaultMusclesForSport(w.type));
   }
 
   // Notes
@@ -1829,6 +1864,8 @@ function editWorkout(id) {
   </div></div>`;
 
   document.getElementById('modal-body').innerHTML = html;
+
+  if (w.type !== 'gym') attachMuscleChipHandlers('edit');
 
   // Deep clone exercises for editing
   let editExercises = (w.exercises || []).map(ex => ({
@@ -1943,6 +1980,12 @@ function editWorkout(id) {
           updated[key] = fd?.type === 'number' || fd?.type === undefined ? (parseFloat(el.value) || null) : el.value;
         }
       });
+    }
+
+    if (w.type !== 'gym') {
+      const picked = readMuscleChips('edit');
+      if (picked.length) updated.muscles = picked;
+      else delete updated.muscles;
     }
 
     // Recalculate scores
