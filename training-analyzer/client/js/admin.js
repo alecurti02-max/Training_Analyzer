@@ -201,16 +201,16 @@ async function renderUsers(page) {
       : '';
     const provIcon = u.provider === 'google' ? 'Google' : 'Email';
     return `<tr>
-      <td style="padding:8px 6px">${escapeHtml(name)} ${badge}</td>
-      <td style="padding:8px 6px;color:var(--text2);font-size:.85rem">${escapeHtml(u.email)}</td>
-      <td style="padding:8px 6px;font-size:.85rem">${provIcon}</td>
-      <td style="padding:8px 6px;font-size:.85rem;text-align:right">${u.workoutCount}</td>
-      <td style="padding:8px 6px;font-size:.85rem;color:var(--text2);text-align:right">${formatDate(u.createdAt)}</td>
+      <td data-label="Nome" style="padding:8px 6px">${escapeHtml(name)} ${badge}</td>
+      <td data-label="Email" style="padding:8px 6px;color:var(--text2);font-size:.85rem;word-break:break-all">${escapeHtml(u.email)}</td>
+      <td data-label="Provider" style="padding:8px 6px;font-size:.85rem">${provIcon}</td>
+      <td data-label="Workout" style="padding:8px 6px;font-size:.85rem;text-align:right">${u.workoutCount}</td>
+      <td data-label="Registrato" style="padding:8px 6px;font-size:.85rem;color:var(--text2);text-align:right">${formatDate(u.createdAt)}</td>
     </tr>`;
   }).join('');
 
   tableEl.innerHTML = `
-    <div style="overflow-x:auto">
+    <div class="responsive-table" style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse">
         <thead>
           <tr style="border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text2);text-transform:uppercase">

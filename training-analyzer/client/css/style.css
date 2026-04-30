@@ -600,3 +600,34 @@ canvas{max-width:100%}
 .bm-section[open] > summary::before{content:'▾ '}
 .btn-icon{background:none;border:none;color:var(--text2);cursor:pointer;padding:4px 8px;border-radius:4px;font-size:.9rem}
 .btn-icon:hover{background:var(--bg2);color:var(--red)}
+
+/* ============ MOBILE FIXES (≤600px) ============ */
+@media(max-width:600px){
+  /* Modal: tighter padding + wrap header actions */
+  .modal-overlay{padding:8px}
+  .modal{padding:14px;border-radius:12px;max-height:92vh}
+  .modal-header{flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .modal-header h3{font-size:1rem;flex:1 1 100%;margin:0}
+  .modal-header > div{display:flex;flex-wrap:wrap;gap:6px;width:100%;justify-content:flex-end}
+  .modal-header .btn-sm{padding:6px 10px;font-size:.75rem}
+
+  /* Charts: shorter height to fit phone screen */
+  .chart-container{height:220px}
+
+  /* Generic responsive table → stacked card per row on phone.
+     Add class="responsive-table" to a wrapper around the table.
+     Add data-label="Nome colonna" to each <td> for the label. */
+  .responsive-table table{display:block}
+  .responsive-table thead{display:none}
+  .responsive-table tbody{display:block}
+  .responsive-table tbody tr{display:block;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .responsive-table tbody td{display:flex;justify-content:space-between;align-items:center;padding:4px 0!important;border:none!important;text-align:left!important;gap:10px;font-size:.82rem}
+  .responsive-table tbody td::before{content:attr(data-label);font-size:.68rem;text-transform:uppercase;font-weight:700;color:var(--text2);letter-spacing:.04em;flex-shrink:0}
+  .responsive-table tbody td:empty{display:none}
+
+  /* Exercise set tables inside workout detail/edit: slimmer cells, hide
+     the "Effettivo" / "Totale" derivation columns (info redundant on phone). */
+  .exercise-set-table{font-size:.78rem}
+  .exercise-set-table th,.exercise-set-table td{padding:4px 3px!important}
+  .exercise-set-table .col-derived{display:none}
+}

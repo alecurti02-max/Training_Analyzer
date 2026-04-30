@@ -1644,10 +1644,10 @@ function showWorkoutDetail(id) {
       html+=`<div style="margin-top:10px"><strong style="font-size:.9rem">${ex.name}</strong> <span style="font-size:.75rem;color:var(--accent)">${ex.muscle||''}</span> ${tags.join(' ')}`;
       let header;
       if (dualParam) header = `<td>SX (${paramLabel})</td><td>DX (${paramLabel})</td>`;
-      else if (uni)  header = `<td>${paramLabel}</td><td>SX</td><td>DX</td><td>Totale</td>`;
-      else if (isReps) header = `<td>${paramLabel}</td><td>Peso</td><td>Effettivo</td>`;
+      else if (uni)  header = `<td>${paramLabel}</td><td>SX</td><td>DX</td><td class="col-derived">Totale</td>`;
+      else if (isReps) header = `<td>${paramLabel}</td><td>Peso</td><td class="col-derived">Effettivo</td>`;
       else           header = `<td>${paramLabel}</td>`;
-      html+=`<table style="width:100%;font-size:.82rem;margin-top:4px;border-collapse:collapse"><tr style="color:var(--text2)"><td>Serie</td>${header}<td>RPE</td></tr>`;
+      html+=`<table class="exercise-set-table" style="width:100%;font-size:.82rem;margin-top:4px;border-collapse:collapse"><tr style="color:var(--text2)"><td>Serie</td>${header}<td>RPE</td></tr>`;
       ex.sets.forEach((s,i)=>{
         let cells;
         if (dualParam) {
@@ -1657,12 +1657,12 @@ function showWorkoutDetail(id) {
           const wR = (s.weightRight || 0);
           const effL = (wm === 'per_side' ? wL * 2 : wL) + bw;
           const effR = (wm === 'per_side' ? wR * 2 : wR) + bw;
-          cells = `<td>${s.reps||0}</td><td>${wL} kg</td><td>${wR} kg</td><td>${Math.round((effL + effR) * 10) / 10} kg</td>`;
+          cells = `<td>${s.reps||0}</td><td>${wL} kg</td><td>${wR} kg</td><td class="col-derived">${Math.round((effL + effR) * 10) / 10} kg</td>`;
         } else if (isReps) {
           const base = s.weight || 0;
           const eff = (wm === 'per_side' ? base * 2 : base) + bw;
           const effStr = eff !== base ? `${Math.round(eff * 10) / 10} kg` : '--';
-          cells = `<td>${s.reps||0}</td><td>${base}${wm === 'per_side' ? ' /lato' : ''} kg</td><td>${effStr}</td>`;
+          cells = `<td>${s.reps||0}</td><td>${base}${wm === 'per_side' ? ' /lato' : ''} kg</td><td class="col-derived">${effStr}</td>`;
         } else {
           cells = `<td>${s.reps||0}</td>`;
         }
