@@ -3,7 +3,8 @@ const { getClient } = require('./anthropicClient');
 const { buildAnalysisContext } = require('./contextBuilder');
 const { SYSTEM_PROMPT, PROMPT_VERSION } = require('./prompts/workoutAnalyzerSystem');
 
-const MAX_TOKENS = 1024;
+const MAX_TOKENS = 2048;
+const MAX_TOKENS_RETRY = 3072;
 const TEMPERATURE = 0.4;
 
 function buildUserMessage(profile, current, history) {
@@ -83,41 +84,65 @@ function validateAnalysis(parsed) {
   return out;
 }
 
-async function callClaude({ profile, current, history }) {
+async function callClaudeOnce({ profile, userText, maxTokens }) {
   const client = getClient();
-  const userText = buildUserMessage(profile, current, history);
-
+  // Prefill con "{" forza Claude a iniziare con JSON valido (riduce drasticamente
+  // i casi in cui la response contiene preamboli o markdown fences).
   const response = await client.messages.create({
     model: config.aiAnalysisModel,
-    max_tokens: MAX_TOKENS,
+    max_tokens: maxTokens,
     temperature: TEMPERATURE,
     system: [
-      {
-        type: 'text',
-        text: SYSTEM_PROMPT,
-        cache_control: { type: 'ephemeral' },
-      },
-      {
-        type: 'text',
-        text: `Profilo atleta cached:\n${JSON.stringify(profile)}`,
-        cache_control: { type: 'ephemeral' },
-      },
+      { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: `Profilo atleta cached:\n${JSON.stringify(profile)}`, cache_control: { type: 'ephemeral' } },
     ],
     messages: [
       { role: 'user', content: userText },
+      { role: 'assistant', content: '{' },
     ],
   });
-
   const textBlock = (response.content || []).find((c) => c.type === 'text');
-  const text = textBlock?.text || '';
-  const parsed = tryParseJson(text);
-  const validated = validateAnalysis(parsed);
+  const rawText = textBlock?.text || '';
+  // Il prefill non è incluso nel content della response: lo prependiamo per il parser.
+  const text = '{' + rawText;
+  return {
+    text,
+    rawText,
+    stopReason: response.stop_reason,
+    usage: response.usage || null,
+    model: response.model || config.aiAnalysisModel,
+  };
+}
+
+async function callClaude({ profile, current, history }) {
+  const userText = buildUserMessage(profile, current, history);
+  let attempt = await callClaudeOnce({ profile, userText, maxTokens: MAX_TOKENS });
+  let parsed = tryParseJson(attempt.text);
+  let validated = validateAnalysis(parsed);
+
+  // Retry una volta se il parse fallisce e l'output è stato troncato dal limite
+  // di tokens (stop_reason: 'max_tokens'). Aumenta il budget e riprova.
+  if (!validated && attempt.stopReason === 'max_tokens') {
+    console.warn('[ai-analyzer] parse failed with stop_reason=max_tokens, retrying with', MAX_TOKENS_RETRY, 'tokens');
+    attempt = await callClaudeOnce({ profile, userText, maxTokens: MAX_TOKENS_RETRY });
+    parsed = tryParseJson(attempt.text);
+    validated = validateAnalysis(parsed);
+  }
+
+  if (!validated) {
+    // Log diagnostico per capire i format failures (visibile nei log Render).
+    console.error('[ai-analyzer] parse_failed', {
+      stopReason: attempt.stopReason,
+      textPreview: (attempt.rawText || '').slice(0, 500),
+      textLength: (attempt.rawText || '').length,
+    });
+  }
 
   return {
     analysis: validated,
-    raw: validated ? null : text,
-    usage: response.usage || null,
-    model: response.model || config.aiAnalysisModel,
+    raw: validated ? null : attempt.rawText,
+    usage: attempt.usage,
+    model: attempt.model,
   };
 }
 
