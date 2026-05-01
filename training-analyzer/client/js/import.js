@@ -161,7 +161,7 @@ export async function importGPXWorkout(data, workoutsCache, settingsCache) {
   if(data.hrSeries) workout.hrSeries=data.hrSeries;
   if(data.eleSeries) workout.eleSeries=data.eleSeries;
   workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
-  workout.advice=getAdvice(workout);
+  workout.advice=getAdvice(workout, workoutsCache, settingsCache);
   await api.post('/api/workouts', _wrapForAPI(workout));
   toast('Importato!','success');
 }
@@ -207,7 +207,7 @@ export async function confirmCSVImport(pendingRows, workoutsCache, settingsCache
     let tonnage=0;exercises.forEach(ex=>ex.sets.forEach(s=>tonnage+=s.reps*s.weight));
     const workout={id:uid(),type:'gym',date,exercises,_tonnage:tonnage,notes:'Importato da CSV',imported:true};
     workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
-    workout.advice=getAdvice(workout);
+    workout.advice=getAdvice(workout, workoutsCache, settingsCache);
     await api.post('/api/workouts', _wrapForAPI(workout));
     count++;
   }
@@ -481,7 +481,7 @@ export async function importHealthWorkouts(selected, workoutsCache, settingsCach
       workout.notes='Importato da Apple Health ('+w.actType.replace('HKWorkoutActivityType','')+')';}
 
     try { workout.scores=scoreWorkout(workout, workoutsCache, settingsCache); } catch(e) { workout.scores={}; }
-    try { workout.advice=getAdvice(workout); } catch(e) { workout.advice=''; }
+    try { workout.advice=getAdvice(workout, workoutsCache, settingsCache); } catch(e) { workout.advice=null; }
     return _wrapForAPI(workout);
   });
 
@@ -564,7 +564,7 @@ export function parseFITMinimal(bytes) {
 export async function importFITWorkout(data, workoutsCache, settingsCache){
   const workout={id:uid(),type:'gym',date:data.date,duration:data.duration,exercises:[],_tonnage:0,notes:'Importato da FIT',imported:true};
   workout.scores=scoreWorkout(workout, workoutsCache, settingsCache);
-  workout.advice=getAdvice(workout);
+  workout.advice=getAdvice(workout, workoutsCache, settingsCache);
   await api.post('/api/workouts', _wrapForAPI(workout));
   toast('Importato da FIT!','success');
 }

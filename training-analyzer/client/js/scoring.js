@@ -6,7 +6,7 @@
 function todayStr() { return new Date().toISOString().slice(0,10); }
 function daysBetween(d1,d2) { return Math.abs(Math.floor((new Date(d1)-new Date(d2))/86400000)); }
 function paceToSeconds(p) { if(!p)return 0; const parts=String(p).split(':'); return parts.length===2?parseInt(parts[0])*60+parseInt(parts[1]):parseFloat(p)*60; }
-function secondsToPace(s) { if(!s||s<=0)return'--'; const m=Math.floor(s/60),sec=Math.round(s%60); return m+':'+String(sec).padStart(2,'0'); }
+function secondsToPace(s) { if(!s||s<=0)return'--'; let m=Math.floor(s/60),sec=Math.round(s%60); if(sec===60){m+=1;sec=0;} return m+':'+String(sec).padStart(2,'0'); }
 
 // ==================== TONNAGE ====================
 // Computes effective tonnage accounting for weightMode (total | per_side),
@@ -120,27 +120,474 @@ export function scoreWorkout(workout, workoutsCache, settingsCache) {
   return scoreGenericWorkout(workout);
 }
 
-export function getAdvice(workout) {
-  const advice = [], s = workout.scores||{};
-  if (workout.type==='gym') {
-    if(s.volume<5)advice.push("Volume basso. Prova ad aggiungere serie o peso.");
-    if(s.volume>9)advice.push("Volume molto alto! Recupera adeguatamente.");
-    if(s.intensity>=9)advice.push("Intensita molto alta. Non spingere cosi forte ogni sessione.");
-    if(s.variety<=4)advice.push("Pochi gruppi muscolari. Bilancia meglio l'allenamento.");
-    if(s.progression>=8)advice.push("Ottima progressione nei carichi!");
+// ==================== ADVICE: regole espanse, output strutturato ====================
+// Output uniforme con quello dell'analisi AI lato server:
+// { summary, type_classification, highlights[{kind,text}], suggestions[{priority,text}],
+//   comparison_to_history{trend,notes}, confidence, source: 'rules' }
+// Mantiene firma estesa: workoutsCache e settingsCache opzionali per fallback retrocompat.
+
+function _hrZone(pct) {
+  if (pct == null) return null;
+  if (pct < 0.6) return 1;
+  if (pct < 0.7) return 2;
+  if (pct < 0.8) return 3;
+  if (pct < 0.9) return 4;
+  return 5;
+}
+
+function _stdDev(arr) {
+  if (!arr || arr.length < 2) return 0;
+  const m = arr.reduce((a,b)=>a+b,0) / arr.length;
+  const v = arr.reduce((a,b)=>a+(b-m)**2,0) / arr.length;
+  return Math.sqrt(v);
+}
+
+function _classifyRun(workout, settings) {
+  const maxHR = (settings && settings.maxhr) || 190;
+  const dist = workout.distance || 0;
+  const dur = workout.duration || 0;
+  const pace = workout._pace || (dur > 0 && dist > 0 ? (dur * 60) / dist : 0);
+  const hrPct = workout.avghr ? workout.avghr / maxHR : null;
+  const splits = (workout.splits || []).map(s => s.pace).filter(v => v > 0);
+  const cv = splits.length >= 3 ? _stdDev(splits) / (splits.reduce((a,b)=>a+b,0)/splits.length) : 0;
+
+  if (dur > 0 && dur < 15 && (hrPct == null || hrPct >= 0.85)) return 'sprint / breve intenso';
+  if (cv >= 0.12) return 'ritmi / intervalli';
+  if (hrPct != null && hrPct < 0.7 && dist < 6) return 'recupero attivo';
+  if (hrPct != null && hrPct < 0.78 && dist >= 8) return 'lungo lento';
+  if (dist >= 12) return 'lungo';
+  if (dist <= 4 && dur <= 25) return 'corsa breve';
+  return 'ritmo medio';
+}
+
+function _hrDriftPct(hrSeries) {
+  if (!Array.isArray(hrSeries) || hrSeries.length < 6) return null;
+  const hrs = hrSeries.map(p => p.hr || 0).filter(v => v > 0);
+  if (hrs.length < 6) return null;
+  const half = Math.floor(hrs.length / 2);
+  const a1 = hrs.slice(0, half).reduce((a,b)=>a+b,0) / half;
+  const a2 = hrs.slice(half).reduce((a,b)=>a+b,0) / (hrs.length - half);
+  return a1 > 0 ? Math.round(((a2 - a1) / a1) * 1000) / 10 : null;
+}
+
+function _formatPace(secs) { return secondsToPace(secs); }
+
+function _runningHistoryStats(workout, cache) {
+  const now = todayStr();
+  const others = (cache || []).filter(w => w.type === 'running' && w.id !== workout.id);
+  const last30 = others.filter(w => daysBetween(now, w.date) <= 30);
+  const last7 = others.filter(w => daysBetween(now, w.date) <= 7);
+  const km30 = last30.reduce((s,w) => s + (w.distance || 0), 0);
+  const km7 = last7.reduce((s,w) => s + (w.distance || 0), 0);
+  const paces30 = last30.map(w => w._pace || 0).filter(v => v > 0);
+  const avgPace30 = paces30.length ? paces30.reduce((a,b)=>a+b,0) / paces30.length : null;
+  const sameDist = others.filter(w => Math.abs((w.distance||0) - (workout.distance||0)) < 1.5);
+  const bestPaceSameDist = sameDist.length ? Math.min(...sameDist.map(w => w._pace||9999)) : null;
+  return { count30: last30.length, km30, km7, avgPace30, bestPaceSameDist };
+}
+
+function adviceRunning(workout, workoutsCache, settingsCache) {
+  const highlights = [], suggestions = [];
+  const dist = workout.distance || 0;
+  const dur = workout.duration || 0;
+  const pace = workout._pace || (dur > 0 && dist > 0 ? (dur * 60) / dist : 0);
+  const maxHR = (settingsCache && settingsCache.maxhr) || 190;
+  const hrPct = workout.avghr ? workout.avghr / maxHR : null;
+  const zone = _hrZone(hrPct);
+  const classification = _classifyRun(workout, settingsCache);
+  const drift = _hrDriftPct(workout.hrSeries);
+  const stats = _runningHistoryStats(workout, workoutsCache);
+
+  let summary = `${classification.charAt(0).toUpperCase() + classification.slice(1)}`;
+  if (dist) summary += ` · ${dist.toFixed(2)} km`;
+  if (pace > 0) summary += ` · pace ${_formatPace(pace)}/km`;
+  if (hrPct != null) summary += ` · FC ${workout.avghr} (${Math.round(hrPct*100)}% max, Z${zone})`;
+
+  if (zone === 2 && (classification === 'lungo lento' || classification === 'recupero attivo')) {
+    highlights.push({ kind: 'positive', text: `Sessione tenuta in zona ${zone}: stimolo aerobico pulito.` });
+  } else if (zone === 5) {
+    highlights.push({ kind: 'concern', text: `FC media in zona 5 (${Math.round(hrPct*100)}% max): sessione molto stressante.` });
+  } else if (zone) {
+    highlights.push({ kind: 'neutral', text: `Intensità in zona ${zone} (${Math.round(hrPct*100)}% FC max).` });
   }
-  if (workout.type==='running') {
-    if(s.hrEfficiency<5)advice.push("FC alta per il ritmo. Corri piu piano per efficienza aerobica.");
-    if(s.pace>=8)advice.push("Ritmo eccellente!");
-    if(s.distance>8&&s.effort>=8)advice.push("Corsa lunga e intensa. Prevedi recupero.");
+
+  if (workout.splits && workout.splits.length >= 3) {
+    const ps = workout.splits.map(s => s.pace).filter(v => v > 0);
+    const cv = _stdDev(ps) / (ps.reduce((a,b)=>a+b,0)/ps.length);
+    const third = Math.ceil(ps.length / 3);
+    const firstAvg = ps.slice(0, third).reduce((a,b)=>a+b,0) / third;
+    const lastAvg = ps.slice(-third).reduce((a,b)=>a+b,0) / third;
+    if (lastAvg < firstAvg - 5) {
+      highlights.push({ kind: 'positive', text: `Negative split: finale a ${_formatPace(lastAvg)}/km vs avvio ${_formatPace(firstAvg)}/km.` });
+    } else if (lastAvg > firstAvg + 10) {
+      highlights.push({ kind: 'concern', text: `Positive split: ultimo terzo ${_formatPace(lastAvg)}/km, prima parte ${_formatPace(firstAvg)}/km. Hai pagato il finale.` });
+      suggestions.push({ priority: 'high', text: 'Parti più conservativo nei prossimi lavori sulla stessa distanza: i primi 2 km a 5-10 sec/km più lenti del target.' });
+    }
+    if (cv >= 0.12 && classification.includes('intervalli')) {
+      highlights.push({ kind: 'neutral', text: `Variabilità split alta (CV ${Math.round(cv*100)}%), coerente con un lavoro a intervalli.` });
+    }
   }
-  if (workout.type==='karting') {
-    if(s.consistency>=8)advice.push("Ottima costanza tra i giri!");
-    if(s.consistency<5)advice.push("Grande differenza tra giri. Lavora sulla costanza.");
-    if(s.improvement>=8)advice.push("Nuovo record sulla pista!");
+
+  if (drift != null) {
+    if (drift >= 7) {
+      highlights.push({ kind: 'concern', text: `Cardiac drift +${drift}% (FC seconda metà più alta a parità di sforzo): segno di affaticamento o disidratazione.` });
+      suggestions.push({ priority: 'med', text: 'Idratati prima e durante; se il drift è ricorrente, riduci di 5-10s/km il pace dei lunghi per 1-2 settimane.' });
+    } else if (drift <= 1) {
+      highlights.push({ kind: 'positive', text: `FC stabile per tutta la sessione (drift ${drift}%): buon adattamento aerobico.` });
+    }
   }
-  if(!advice.length) advice.push("Buon allenamento! Continua con costanza.");
-  return advice;
+
+  let trend = 'n/a', notes = '';
+  if (stats.avgPace30 && pace > 0) {
+    const diff = stats.avgPace30 - pace;
+    if (Math.abs(diff) < 5) { trend = 'flat'; notes = `Pace in linea con la media 30gg (${_formatPace(stats.avgPace30)}/km).`; }
+    else if (diff > 0) { trend = 'up'; notes = `Pace ${Math.round(diff)}s/km più veloce della media 30gg (${_formatPace(stats.avgPace30)}/km).`; highlights.push({ kind: 'positive', text: notes }); }
+    else { trend = 'down'; notes = `Pace ${Math.round(-diff)}s/km più lento della media 30gg (${_formatPace(stats.avgPace30)}/km).`; }
+  } else if (!stats.count30) {
+    notes = 'Storico running insufficiente per un confronto attendibile.';
+  }
+  if (stats.bestPaceSameDist && pace > 0 && pace <= stats.bestPaceSameDist) {
+    highlights.unshift({ kind: 'positive', text: `Nuovo personal best su ~${dist.toFixed(0)}km a ${_formatPace(pace)}/km.` });
+  }
+
+  if (stats.km7 + dist >= 60) {
+    highlights.push({ kind: 'concern', text: `Volume settimanale alto: ${(stats.km7 + dist).toFixed(0)} km in 7gg (incluso oggi).` });
+    suggestions.push({ priority: 'high', text: 'Inserisci almeno un giorno di scarico nella settimana prossima per evitare overreaching.' });
+  } else if (stats.km7 + dist > 0) {
+    highlights.push({ kind: 'neutral', text: `Volume 7gg: ${(stats.km7 + dist).toFixed(1)} km.` });
+  }
+
+  if (classification === 'lungo lento' && dist >= 12 && (workout.rpe || 0) >= 8) {
+    suggestions.push({ priority: 'high', text: 'Domani recupero o riposo: lungo intenso richiede 24-48h prima di un altro lavoro qualitativo.' });
+  }
+  if (classification === 'ritmi / intervalli') {
+    suggestions.push({ priority: 'med', text: 'Prossima sessione qualità a 48h di distanza: nel mezzo solo fondo lento o riposo.' });
+  }
+  if (zone && zone <= 2 && classification !== 'lungo lento' && classification !== 'recupero attivo' && dist < 8) {
+    suggestions.push({ priority: 'low', text: 'Hai corso piano: la prossima alterna 4-6 allunghi finali da 80m per stimolare le gambe.' });
+  }
+  if (!suggestions.length) suggestions.push({ priority: 'low', text: 'Mantieni la consistenza settimanale: 3-4 sessioni con un solo lavoro intenso.' });
+
+  return {
+    source: 'rules',
+    summary,
+    type_classification: classification,
+    highlights: highlights.slice(0, 6),
+    suggestions: suggestions.slice(0, 4),
+    comparison_to_history: { trend, notes },
+    confidence: stats.count30 >= 3 ? 0.7 : (stats.count30 ? 0.5 : 0.3),
+  };
+}
+
+const PUSH_MUSCLES = new Set(['Petto','Spalle','Tricipiti']);
+const PULL_MUSCLES = new Set(['Schiena','Bicipiti','Trapezio']);
+const LEGS_MUSCLES = new Set(['Quadricipiti','Femorali','Glutei','Polpacci']);
+const CORE_MUSCLES = new Set(['Addominali']);
+
+function _categoryOf(muscle) {
+  if (PUSH_MUSCLES.has(muscle)) return 'push';
+  if (PULL_MUSCLES.has(muscle)) return 'pull';
+  if (LEGS_MUSCLES.has(muscle)) return 'legs';
+  if (CORE_MUSCLES.has(muscle)) return 'core';
+  return 'other';
+}
+
+function _epley1RM(reps, weight) {
+  if (!reps || !weight) return 0;
+  return weight * (1 + reps / 30);
+}
+
+function _gymHistoryStats(workout, cache) {
+  const now = todayStr();
+  const others = (cache || []).filter(w => w.type === 'gym' && w.id !== workout.id);
+  const last7 = others.filter(w => daysBetween(now, w.date) <= 7);
+  const last28 = others.filter(w => daysBetween(now, w.date) <= 28);
+  const tonnages28 = last28.map(w => w._tonnage || calcTonnage(w.exercises || []));
+  const avgTonnage = tonnages28.length ? tonnages28.reduce((a,b)=>a+b,0) / tonnages28.length : null;
+  const cats = { push: 0, pull: 0, legs: 0, core: 0, other: 0 };
+  last7.forEach(w => (w.exercises || []).forEach(ex => { cats[_categoryOf(ex.muscle)] += 1; }));
+  return { count28: last28.length, avgTonnage, cats, last7Count: last7.length, allOthers: others };
+}
+
+function _detectPRs(workout, cache) {
+  const prs = [];
+  const others = (cache || []).filter(w => w.type === 'gym' && w.id !== workout.id);
+  (workout.exercises || []).forEach(ex => {
+    if (!ex.name) return;
+    const sets = ex.sets || [];
+    const cur1RM = Math.max(0, ...sets.map(s => {
+      const w = ex.isUnilateral ? Math.max(s.weightLeft || 0, s.weightRight || 0) : (s.weight || 0);
+      const eff = (ex.weightMode === 'per_side' ? w * 2 : w) + (ex.barbellWeight || 0);
+      return _epley1RM(s.reps || 0, eff);
+    }));
+    if (!cur1RM) return;
+    let prev1RM = 0;
+    others.forEach(w => (w.exercises || []).forEach(e => {
+      if (e.name !== ex.name) return;
+      (e.sets || []).forEach(s => {
+        const wt = e.isUnilateral ? Math.max(s.weightLeft || 0, s.weightRight || 0) : (s.weight || 0);
+        const eff = (e.weightMode === 'per_side' ? wt * 2 : wt) + (e.barbellWeight || 0);
+        const o = _epley1RM(s.reps || 0, eff);
+        if (o > prev1RM) prev1RM = o;
+      });
+    }));
+    if (prev1RM > 0 && cur1RM > prev1RM * 1.02) {
+      prs.push({ name: ex.name, prev: Math.round(prev1RM), now: Math.round(cur1RM) });
+    } else if (prev1RM === 0 && cur1RM > 0) {
+      prs.push({ name: ex.name, prev: null, now: Math.round(cur1RM), first: true });
+    }
+  });
+  return prs;
+}
+
+function adviceGym(workout, workoutsCache) {
+  const highlights = [], suggestions = [];
+  const tonnage = workout._tonnage || calcTonnage(workout.exercises || []);
+  const stats = _gymHistoryStats(workout, workoutsCache);
+  const exs = workout.exercises || [];
+  const muscles = [...new Set(exs.map(e => e.muscle).filter(Boolean))];
+  const cats = exs.reduce((acc, ex) => { acc[_categoryOf(ex.muscle)] = (acc[_categoryOf(ex.muscle)] || 0) + 1; return acc; }, {});
+  const dominant = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+  const sessionType = dominant ? dominant[0] : 'misto';
+  const sessionTypeIt = { push: 'push (petto/spalle/tricipiti)', pull: 'pull (schiena/bicipiti)', legs: 'gambe', core: 'core', other: 'misto', misto: 'misto' }[sessionType] || 'misto';
+
+  let summary = `Seduta ${sessionTypeIt}: ${exs.length} esercizi, ${Math.round(tonnage)} kg di tonnage`;
+  if (workout.duration) summary += ` in ${workout.duration} min`;
+  if (workout.rpe) summary += ` · RPE ${workout.rpe}/10`;
+
+  let trend = 'n/a', notes = '';
+  if (stats.avgTonnage) {
+    const ratio = stats.avgTonnage > 0 ? tonnage / stats.avgTonnage : 1;
+    if (ratio >= 1.15) {
+      trend = 'up';
+      notes = `Tonnage +${Math.round((ratio-1)*100)}% rispetto alla media 4 settimane (${Math.round(stats.avgTonnage)} kg).`;
+      highlights.push({ kind: 'positive', text: notes });
+    } else if (ratio <= 0.7) {
+      trend = 'down';
+      notes = `Tonnage -${Math.round((1-ratio)*100)}% rispetto alla media (${Math.round(stats.avgTonnage)} kg).`;
+      highlights.push({ kind: 'neutral', text: notes });
+    } else {
+      trend = 'flat';
+      notes = `Tonnage in linea con la media 4 settimane (${Math.round(stats.avgTonnage)} kg).`;
+    }
+  } else {
+    notes = 'Storico palestra ridotto: il confronto sarà più utile dopo qualche sessione.';
+  }
+
+  const prs = _detectPRs(workout, workoutsCache);
+  prs.slice(0, 3).forEach(pr => {
+    if (pr.first) {
+      highlights.push({ kind: 'neutral', text: `${pr.name}: prima sessione tracciata, 1RM stimato ${pr.now} kg.` });
+    } else {
+      highlights.push({ kind: 'positive', text: `${pr.name}: 1RM stimato ${pr.now} kg (era ${pr.prev}). Ottima progressione.` });
+    }
+  });
+
+  if (workout.rpe && workout.rpe >= 9) {
+    highlights.push({ kind: 'concern', text: `RPE ${workout.rpe}/10: sessione molto stressante.` });
+    suggestions.push({ priority: 'high', text: 'Programma 1-2 giorni di scarico prima di un altro RPE 9+.' });
+  }
+  if (muscles.length <= 2) {
+    highlights.push({ kind: 'neutral', text: `Solo ${muscles.length} gruppo${muscles.length===1?'':'i'} muscolare${muscles.length===1?'':'i'} (${muscles.join(', ') || '—'}): focus mirato.` });
+  }
+  if (stats.cats.push >= 3 && stats.cats.pull <= 1) {
+    highlights.push({ kind: 'concern', text: `Negli ultimi 7gg molto push (${stats.cats.push}) e poco pull (${stats.cats.pull}): squilibrio.` });
+    suggestions.push({ priority: 'high', text: 'Nella prossima sessione inserisci trazioni o rematori per riequilibrare push/pull.' });
+  }
+  if (stats.cats.legs === 0 && stats.last7Count >= 2) {
+    suggestions.push({ priority: 'med', text: 'Nessun allenamento gambe negli ultimi 7gg: pianificane uno entro 3 giorni.' });
+  }
+
+  if (workout.duration && workout.duration < 25) {
+    highlights.push({ kind: 'neutral', text: `Sessione corta (${workout.duration} min): allenamento mirato o limitato dal tempo.` });
+  } else if (workout.duration && workout.duration > 110) {
+    suggestions.push({ priority: 'low', text: 'Sessioni >110min: la qualità degli ultimi set può calare. Prova a comprimere i tempi di recupero.' });
+  }
+
+  if (!suggestions.length) suggestions.push({ priority: 'low', text: 'Mantieni 3-4 sedute settimanali con focus su progressione (set, reps o peso).' });
+
+  return {
+    source: 'rules',
+    summary,
+    type_classification: `${sessionTypeIt} day`,
+    highlights: highlights.slice(0, 6),
+    suggestions: suggestions.slice(0, 4),
+    comparison_to_history: { trend, notes },
+    confidence: stats.count28 >= 3 ? 0.7 : (stats.count28 ? 0.5 : 0.3),
+  };
+}
+
+function adviceKarting(workout, workoutsCache) {
+  const highlights = [], suggestions = [];
+  const others = (workoutsCache || []).filter(w => w.type === 'karting' && w.id !== workout.id);
+  const sameTrack = others.filter(w => w.track === workout.track);
+  const cv = workout.bestLap && workout.avgLap ? (workout.avgLap - workout.bestLap) / workout.bestLap : null;
+
+  let summary = 'Sessione karting';
+  if (workout.track) summary += ` a ${workout.track}`;
+  if (workout.bestLap) summary += ` · best ${workout.bestLap.toFixed(3)}s`;
+  if (workout.avgLap) summary += ` · avg ${workout.avgLap.toFixed(3)}s`;
+
+  if (cv != null) {
+    if (cv <= 0.015) highlights.push({ kind: 'positive', text: `Costanza eccellente: avg solo ${(cv*100).toFixed(1)}% sopra il best.` });
+    else if (cv <= 0.03) highlights.push({ kind: 'neutral', text: `Costanza buona: avg ${(cv*100).toFixed(1)}% sopra il best.` });
+    else { highlights.push({ kind: 'concern', text: `Differenza alta tra avg e best (${(cv*100).toFixed(1)}%): margine di costanza.` }); suggestions.push({ priority: 'high', text: 'Prossima sessione: 5 giri continui senza spingere il best, focus solo sulla costanza.' }); }
+  }
+
+  let trend = 'n/a', notes = '';
+  if (sameTrack.length && workout.bestLap) {
+    const prevBest = Math.min(...sameTrack.map(w => w.bestLap || 999));
+    if (workout.bestLap < prevBest) {
+      trend = 'up';
+      notes = `Nuovo record sulla pista: ${workout.bestLap.toFixed(3)}s (precedente ${prevBest.toFixed(3)}s).`;
+      highlights.push({ kind: 'positive', text: notes });
+    } else if (workout.bestLap < prevBest * 1.005) {
+      trend = 'flat';
+      notes = `Best vicinissimo al record (${prevBest.toFixed(3)}s): conferma del livello.`;
+    } else {
+      trend = 'down';
+      notes = `Best ${(((workout.bestLap-prevBest)/prevBest)*100).toFixed(1)}% sopra il record (${prevBest.toFixed(3)}s).`;
+    }
+  } else {
+    notes = sameTrack.length ? 'Mancano i tempi sul giro per confrontare.' : 'Prima sessione tracciata su questa pista.';
+  }
+
+  if (!suggestions.length) suggestions.push({ priority: 'low', text: 'Annota condizioni meteo e gomma: ti aiuteranno a contestualizzare i tempi nei prossimi confronti.' });
+
+  return {
+    source: 'rules',
+    summary,
+    type_classification: sameTrack.length ? 'sessione su pista nota' : 'nuova pista',
+    highlights: highlights.slice(0, 5),
+    suggestions: suggestions.slice(0, 3),
+    comparison_to_history: { trend, notes },
+    confidence: sameTrack.length >= 2 ? 0.7 : 0.4,
+  };
+}
+
+function adviceGeneric(workout, workoutsCache) {
+  const highlights = [], suggestions = [];
+  const now = todayStr();
+  const others = (workoutsCache || []).filter(w => w.id !== workout.id);
+  const last7 = others.filter(w => daysBetween(now, w.date) <= 7);
+  const sameType7 = last7.filter(w => w.type === workout.type);
+
+  let summary = `Sessione ${workout.type}`;
+  if (workout.duration) summary += ` · ${workout.duration} min`;
+  if (workout.rpe) summary += ` · RPE ${workout.rpe}/10`;
+  if (workout.distance) summary += ` · ${workout.distance.toFixed(2)} km`;
+
+  highlights.push({ kind: 'neutral', text: `Frequenza ultimi 7gg: ${last7.length} sessioni totali, ${sameType7.length} dello stesso tipo.` });
+  if (workout.rpe && workout.rpe >= 8) highlights.push({ kind: 'concern', text: `RPE alto (${workout.rpe}/10): considera il recupero.` });
+  if (workout.duration && workout.duration < 15) highlights.push({ kind: 'neutral', text: `Durata corta (${workout.duration} min): mini-sessione o blocco di recupero.` });
+  if (workout.muscles && workout.muscles.length) highlights.push({ kind: 'neutral', text: `Gruppi coinvolti: ${workout.muscles.join(', ')}.` });
+
+  if (last7.length >= 6) suggestions.push({ priority: 'high', text: 'Hai accumulato 6+ sessioni in 7gg: pianifica almeno un giorno di riposo nei prossimi 2.' });
+  else if (last7.length === 0) suggestions.push({ priority: 'med', text: 'Costruisci una routine: 3-4 sessioni a settimana danno i risultati migliori.' });
+  else suggestions.push({ priority: 'low', text: 'Continua con la cadenza attuale e tieni traccia di RPE/durata per individuare il livello sostenibile.' });
+
+  return {
+    source: 'rules',
+    summary,
+    type_classification: `${workout.type}`,
+    highlights: highlights.slice(0, 5),
+    suggestions: suggestions.slice(0, 3),
+    comparison_to_history: { trend: 'n/a', notes: last7.length ? `${last7.length} sessioni nei 7gg precedenti.` : 'Storico recente vuoto.' },
+    confidence: 0.5,
+  };
+}
+
+export function getAdvice(workout, workoutsCache, settingsCache) {
+  if (workout.type === 'running') return adviceRunning(workout, workoutsCache, settingsCache);
+  if (workout.type === 'gym') return adviceGym(workout, workoutsCache);
+  if (workout.type === 'karting') return adviceKarting(workout, workoutsCache);
+  return adviceGeneric(workout, workoutsCache);
+}
+
+// ==================== RENDERING ANALISI (regole + AI) ====================
+function _escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+const KIND_META = {
+  positive: { cls: 'ana-hl-positive', icon: '✓', label: 'Punto di forza' },
+  neutral:  { cls: 'ana-hl-neutral',  icon: '•', label: 'Da notare' },
+  concern:  { cls: 'ana-hl-concern',  icon: '!', label: 'Attenzione' },
+};
+const PRIORITY_META = {
+  high: { cls: 'ana-sug-high', label: 'Priorità alta' },
+  med:  { cls: 'ana-sug-med',  label: 'Da considerare' },
+  low:  { cls: 'ana-sug-low',  label: 'Spunto' },
+};
+const TREND_META = {
+  up:   { cls: 'ana-trend-up',   arrow: '↗', label: 'In miglioramento' },
+  flat: { cls: 'ana-trend-flat', arrow: '→', label: 'In linea' },
+  down: { cls: 'ana-trend-down', arrow: '↘', label: 'In calo' },
+  'n/a':{ cls: 'ana-trend-na',   arrow: '–', label: 'Senza confronto' },
+};
+
+export function renderAiAnalysis(analysis, opts) {
+  if (!analysis) return '';
+  const { title = 'Analisi', badge = null, variant = 'rules', actions = '' } = opts || {};
+  const summary = analysis.summary || '';
+  const cls = analysis.type_classification || '';
+  const highlights = Array.isArray(analysis.highlights) ? analysis.highlights : [];
+  const suggestions = Array.isArray(analysis.suggestions) ? analysis.suggestions : [];
+  const cmp = analysis.comparison_to_history || { trend: 'n/a', notes: '' };
+  const trend = TREND_META[cmp.trend] || TREND_META['n/a'];
+
+  const priOrder = { high: 0, med: 1, low: 2 };
+  const sugSorted = [...suggestions].sort((a,b) => (priOrder[a.priority]||9) - (priOrder[b.priority]||9));
+
+  const variantCls = variant === 'ai' ? 'ana-card-ai' : 'ana-card-rules';
+  let html = `<div class="ana-card ${variantCls}">`;
+
+  // Header
+  html += '<div class="ana-head">';
+  html += '<div class="ana-head-left">';
+  html += `<span class="ana-title">${_escapeHtml(title)}</span>`;
+  if (badge) html += `<span class="ana-badge">${_escapeHtml(badge)}</span>`;
+  if (cls) html += `<span class="ana-chip">${_escapeHtml(cls)}</span>`;
+  html += '</div>';
+  if (actions) html += `<div class="ana-head-right">${actions}</div>`;
+  html += '</div>';
+
+  if (summary) html += `<p class="ana-summary">${_escapeHtml(summary)}</p>`;
+
+  if (highlights.length) {
+    html += '<div class="ana-highlights">';
+    highlights.forEach(h => {
+      const meta = KIND_META[h.kind] || KIND_META.neutral;
+      html += `<div class="ana-hl ${meta.cls}">
+        <span class="ana-hl-icon" aria-hidden="true">${meta.icon}</span>
+        <span class="ana-hl-text">${_escapeHtml(h.text)}</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  if (sugSorted.length) {
+    html += '<div class="ana-section"><div class="ana-section-title">Cosa fare adesso</div><div class="ana-suggestions">';
+    sugSorted.forEach(s => {
+      const meta = PRIORITY_META[s.priority] || PRIORITY_META.low;
+      html += `<div class="ana-sug ${meta.cls}">
+        <span class="ana-sug-pri">${meta.label}</span>
+        <span class="ana-sug-text">${_escapeHtml(s.text)}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  if (cmp.notes || cmp.trend !== 'n/a') {
+    html += `<div class="ana-trend ${trend.cls}">
+      <span class="ana-trend-arrow" aria-hidden="true">${trend.arrow}</span>
+      <div class="ana-trend-body">
+        <div class="ana-trend-label">${_escapeHtml(trend.label)}</div>
+        ${cmp.notes ? `<div class="ana-trend-notes">${_escapeHtml(cmp.notes)}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  html += '</div>';
+  return html;
 }
 
 // ==================== RECOVERY ====================

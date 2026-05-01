@@ -5,7 +5,7 @@
 import { api, clearTokens } from './api.js';
 import { initAuth, setupLoginUI, logout } from './auth.js';
 import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports, getDefaultMusclesForSport } from './sports.js';
-import { scoreWorkout, getAdvice, getRecoveryStatus, calculateStreak, getFitnessAssessment, calcTonnage } from './scoring.js';
+import { scoreWorkout, getAdvice, renderAiAnalysis, getRecoveryStatus, calculateStreak, getFitnessAssessment, calcTonnage } from './scoring.js';
 import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
 import { loadMeasurements, renderMeasurementsPage } from './bodyMeasurements.js';
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
@@ -61,7 +61,7 @@ function scoreColor(s) {
   return 'var(--red)';
 }
 function paceToSeconds(p) { if(!p)return 0; const parts=String(p).split(':'); return parts.length===2?parseInt(parts[0])*60+parseInt(parts[1]):parseFloat(p)*60; }
-function secondsToPace(s) { if(!s||s<=0)return'--'; const m=Math.floor(s/60),sec=Math.round(s%60); return m+':'+String(sec).padStart(2,'0'); }
+function secondsToPace(s) { if(!s||s<=0)return'--'; let m=Math.floor(s/60),sec=Math.round(s%60); if(sec===60){m+=1;sec=0;} return m+':'+String(sec).padStart(2,'0'); }
 function formatDate(d) { return new Date(d).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}); }
 function getWeekStart(d) { const dt=new Date(d),day=dt.getDay(),diff=dt.getDate()-day+(day===0?-6:1); return new Date(dt.setDate(diff)).toISOString().slice(0,10); }
 function daysBetween(d1,d2) { return Math.abs(Math.floor((new Date(d1)-new Date(d2))/86400000)); }
@@ -710,7 +710,7 @@ async function wizSaveWorkout() {
       rpe: parseInt(document.getElementById('wiz-gym-rpe')?.value) || null, notes, exercises };
     workout._tonnage = calcTonnage(exercises);
     workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
-    workout.advice = getAdvice(workout);
+    workout.advice = getAdvice(workout, workoutsCache, settingsCache);
     const saved = await saveWorkout(workout);
     if (saved && saved.id) workout.id = saved.id;
     workoutsCache.push(workout);
@@ -735,7 +735,7 @@ async function wizSaveWorkout() {
     const pickedMuscles = readMuscleChips('wiz');
     if (pickedMuscles.length) workout.muscles = pickedMuscles;
     workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
-    workout.advice = getAdvice(workout);
+    workout.advice = getAdvice(workout, workoutsCache, settingsCache);
     const saved = await saveWorkout(workout);
     if (saved && saved.id) workout.id = saved.id;
     workoutsCache.push(workout);
@@ -1408,7 +1408,7 @@ async function liveSaveWorkout() {
     const workout = { id: uid(), type: 'gym', date: liveSession.date, duration: durationMin, rpe, notes, exercises };
     workout._tonnage = calcTonnage(exercises);
     workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
-    workout.advice = getAdvice(workout);
+    workout.advice = getAdvice(workout, workoutsCache, settingsCache);
     const saved = await saveWorkout(workout);
     if (saved && saved.id) workout.id = saved.id;
     workoutsCache.push(workout);
@@ -1431,7 +1431,7 @@ async function liveSaveWorkout() {
       delete workout.pace;
     }
     workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
-    workout.advice = getAdvice(workout);
+    workout.advice = getAdvice(workout, workoutsCache, settingsCache);
     const saved = await saveWorkout(workout);
     if (saved && saved.id) workout.id = saved.id;
     workoutsCache.push(workout);
@@ -1600,6 +1600,74 @@ function renderHistory() {
 }
 
 // ==================== WORKOUT DETAIL ====================
+function renderAiAnalysisSection(w) {
+  const cached = w.aiAnalysis;
+  const wid = String(w.id || '').replace(/"/g, '');
+  let inner;
+  if (cached) {
+    const actions = `<button class="ana-regen" data-ai-regen="${wid}" title="Rigenera analisi" aria-label="Rigenera">↻</button>`;
+    inner = renderAiAnalysis(cached, { title: 'Analisi AI', badge: 'AI', variant: 'ai', actions });
+  } else {
+    inner = `<div class="ana-empty">
+      <div class="ana-empty-head">
+        <span class="ana-title">Analisi AI</span>
+        <span class="ana-badge">AI</span>
+      </div>
+      <p class="ana-empty-msg">Genera un'analisi personalizzata di questo allenamento confrontandolo con il tuo storico recente.</p>
+      <button class="ana-cta" data-ai-analyze="${wid}"><span aria-hidden="true">✦</span> Analizza con AI</button>
+    </div>`;
+  }
+  return `<div id="ai-analysis-section">${inner}</div>`;
+}
+
+async function handleAiAnalyzeClick(workoutId, force) {
+  const w = workoutsCache.find(x => x.id === workoutId);
+  if (!w) return;
+  const section = document.getElementById('ai-analysis-section');
+  if (section) {
+    section.innerHTML = `<div class="ana-loading">
+      <span class="ana-loading-spinner"></span>
+      <span>Analisi in corso${force ? ' (rigenerazione)' : ''}…</span>
+    </div>`;
+  }
+  try {
+    const res = await api.analyzeWorkout(workoutId, { force: !!force });
+    w.aiAnalysis = res.aiAnalysis;
+    w.aiAnalysisGeneratedAt = res.aiAnalysisGeneratedAt;
+    w.aiAnalysisModel = res.aiAnalysisModel;
+    w.aiAnalysisVersion = res.aiAnalysisVersion;
+    if (section) {
+      section.outerHTML = renderAiAnalysisSection(w);
+      bindAiAnalyzeButtons(w);
+    }
+    if (!res.cached) toast('Analisi AI generata', 'success');
+  } catch (err) {
+    const code = err?.code || err?.data?.error?.code || err?.data?.code;
+    let msg = err?.message || 'Errore generando l\'analisi';
+    if (code === 'ai_not_configured') msg = 'AI non configurata sul server';
+    else if (code === 'ai_requires_premium') msg = 'L\'analisi AI richiede un piano premium';
+    else if (code === 'ai_rate_limited') msg = 'Troppe analisi AI in poco tempo, riprova più tardi';
+    else if (code === 'ai_parse_failed') msg = 'L\'AI ha risposto in formato non valido, riprova';
+    if (section) {
+      section.innerHTML = `<div class="ana-error">
+        <p class="ana-error-msg">${msg.replace(/[<>]/g, '')}</p>
+        <button class="ana-cta" data-ai-analyze="${String(workoutId).replace(/"/g, '')}">Riprova</button>
+      </div>`;
+      bindAiAnalyzeButtons(w);
+    }
+    toast(msg, 'error');
+  }
+}
+
+function bindAiAnalyzeButtons(w) {
+  document.querySelectorAll('[data-ai-analyze]').forEach(btn => {
+    btn.onclick = () => handleAiAnalyzeClick(btn.dataset.aiAnalyze, false);
+  });
+  document.querySelectorAll('[data-ai-regen]').forEach(a => {
+    a.onclick = (e) => { e.preventDefault(); handleAiAnalyzeClick(a.dataset.aiRegen, true); };
+  });
+}
+
 function showWorkoutDetail(id) {
   const w=workoutsCache.find(x=>x.id===id);
   if(!w) return;
@@ -1615,7 +1683,15 @@ function showWorkoutDetail(id) {
     html+=`<div class="score-item"><div class="score-sm" style="background:${scoreColor(val)};color:#fff">${val}</div><div class="score-label">${labels[key]||key}</div></div>`;
   });
   html+='</div></div>';
-  if(w.advice?.length) html+='<div class="advice-box">'+w.advice.map(a=>'- '+a).join('<br>')+'</div>';
+  // ===== ANALISI AUTOMATICA (regole espanse) =====
+  // Se workout.advice è già un oggetto strutturato lo usiamo, altrimenti lo (ri)calcoliamo.
+  let _advice = w.advice;
+  if (!_advice || typeof _advice !== 'object' || Array.isArray(_advice)) {
+    try { _advice = getAdvice(w, workoutsCache, settingsCache); w.advice = _advice; } catch (e) { _advice = null; }
+  }
+  if (_advice) html += renderAiAnalysis(_advice, { title: 'Analisi automatica' });
+  // ===== ANALISI AI (on-demand, cached nel DB) =====
+  html += renderAiAnalysisSection(w);
   html+='<div style="margin-top:16px">';
   if(w.type==='gym') {
     let gymInfo=[];
@@ -1795,6 +1871,7 @@ function showWorkoutDetail(id) {
   document.getElementById('modal-edit-btn').onclick=(e)=>{ e.stopPropagation(); e.preventDefault(); editWorkout(id); };
   document.getElementById('modal-delete-btn').style.display='';
   document.getElementById('modal-edit-btn').style.display='';
+  bindAiAnalyzeButtons(w);
   document.getElementById('workout-modal').classList.add('show');
   fetchPubMedForWorkout(w).then(articles=>{
     const el=document.getElementById('modal-pubmed');
@@ -2068,7 +2145,7 @@ function editWorkout(id) {
 
     // Recalculate scores
     updated.scores = scoreWorkout(updated, workoutsCache, settingsCache);
-    updated.advice = getAdvice(updated);
+    updated.advice = getAdvice(updated, workoutsCache, settingsCache);
 
     try {
       const { type, date, id: wId, data: _d, createdAt, updatedAt, userId, ...rest } = updated;

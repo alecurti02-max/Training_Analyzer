@@ -92,8 +92,11 @@ async function apiFetch(url, options = {}) {
   if (!res.ok) {
     let errorData;
     try { errorData = await res.json(); } catch (e) { errorData = { message: res.statusText }; }
-    const error = new Error(errorData.message || errorData.error || 'API Error');
+    const nestedMsg = errorData.error && typeof errorData.error === 'object' ? errorData.error.message : null;
+    const nestedCode = errorData.error && typeof errorData.error === 'object' ? errorData.error.code : null;
+    const error = new Error(errorData.message || nestedMsg || (typeof errorData.error === 'string' ? errorData.error : null) || res.statusText || 'API Error');
     error.status = res.status;
+    error.code = errorData.code || nestedCode || null;
     error.data = errorData;
     throw error;
   }
@@ -132,5 +135,16 @@ export const api = {
       body: formData
       // No Content-Type header — browser sets it with boundary for multipart
     });
+  },
+
+  analyzeWorkout(id, { force = false } = {}) {
+    return apiFetch('/api/workouts/' + encodeURIComponent(id) + '/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ force }),
+    });
+  },
+
+  clearWorkoutAnalysis(id) {
+    return apiFetch('/api/workouts/' + encodeURIComponent(id) + '/analyze', { method: 'DELETE' });
   }
 };

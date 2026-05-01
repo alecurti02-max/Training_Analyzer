@@ -1,3 +1,6 @@
+// Carica subito il .env dalla root del progetto (override per evitare collisioni con
+// var d'ambiente shell, es. ANTHROPIC_API_KEY iniettata dall'IDE).
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'), override: true });
 require('dotenv').config();
 
 const app = require('./app');

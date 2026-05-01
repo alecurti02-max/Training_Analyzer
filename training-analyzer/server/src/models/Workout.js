@@ -31,6 +31,26 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: {},
       },
+      aiAnalysis: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null,
+      },
+      aiAnalysisGeneratedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      aiAnalysisModel: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        defaultValue: null,
+      },
+      aiAnalysisVersion: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+      },
     },
     {
       tableName: 'workouts',

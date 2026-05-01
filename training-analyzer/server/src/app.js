@@ -10,8 +10,10 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 // --- Security ---
+const isDev = (process.env.NODE_ENV || 'development') !== 'production';
 app.use(
   helmet({
+    strictTransportSecurity: isDev ? false : undefined,
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -20,6 +22,7 @@ app.use(
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'https://*.googleusercontent.com'],
         connectSrc: ["'self'", 'https://eutils.ncbi.nlm.nih.gov'],
+        upgradeInsecureRequests: isDev ? null : [],
       },
     },
   })

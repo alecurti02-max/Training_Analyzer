@@ -1,3 +1,8 @@
+const path = require('path');
+// Carica .env dalla root del progetto con override:true: in dev sovrascrive eventuali
+// var d'ambiente shell che possano collidere (es. ANTHROPIC_API_KEY iniettata dall'IDE).
+// In produzione il file non esiste, quindi non ha effetto e vincono le env del provider.
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env'), override: true });
 require('dotenv').config();
 
 const required = [
@@ -34,6 +39,10 @@ const config = Object.freeze({
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL,
   clientOrigin: process.env.CLIENT_ORIGIN,
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || null,
+  aiAnalysisModel: process.env.AI_ANALYSIS_MODEL || 'claude-haiku-4-5-20251001',
+  aiRequiresPremium: String(process.env.AI_REQUIRES_PREMIUM || 'false').toLowerCase() === 'true',
+  aiRateLimitPerHour: parseInt(process.env.AI_RATE_LIMIT_PER_HOUR, 10) || 20,
 });
 
 module.exports = config;

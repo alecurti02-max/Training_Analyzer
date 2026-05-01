@@ -85,8 +85,8 @@ export function setupLoginUI() {
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = (document.getElementById('login-email') || document.getElementById('login-email-input'))?.value;
-      const password = (document.getElementById('login-password') || document.getElementById('login-password-input'))?.value;
+      const email = (document.getElementById('login-email-input') || document.getElementById('login-email'))?.value;
+      const password = (document.getElementById('login-password-input') || document.getElementById('login-password'))?.value;
       if (statusEl) statusEl.textContent = 'Accesso in corso...';
       try {
         await login(email, password);
