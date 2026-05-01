@@ -4,88 +4,18 @@ Web app per tracciare allenamenti multi-sport, analizzare progressi e confrontar
 
 ---
 
-## Stato attuale del repository (aprile 2026)
+## Architettura
 
-In questo repo convivono **due versioni** dell'app. NON modificare i file della versione legacy nella root: sono ancora in produzione su GitHub Pages.
+App full-stack contenuta interamente in [`training-analyzer/`](training-analyzer/):
 
-### Versione legacy (v3.1) — root del repo
-
-I file nella root (`index.html`, `js/app.js`, `css/style.css`, `fonts/`, `manifest.json`, `logo_ta.png`) sono la **vecchia versione client-only con Firebase** come backend. Questa versione:
-
-- E **ancora in produzione** su GitHub Pages e viene usata dagli utenti attuali
-- **Non va toccata** finche gli utenti non avranno fatto l'export dei propri dati
-- Verra ritirata dopo la migrazione completa a v3.2
-
-### Versione attiva (v3.2) — `training-analyzer/`
-
-Tutto lo sviluppo avviene dentro **[`training-analyzer/`](training-analyzer/)**. Questa e l'architettura full-stack che sostituira la versione legacy:
-
-- **Client:** `training-analyzer/client/` — Vanilla JS (ES modules), Chart.js, PWA
-- **Server:** `training-analyzer/server/` — Node.js 20, Express 4, PostgreSQL 16, Sequelize 6
-- **Deploy:** Render (auto-deploy da `main`, root dir impostata su `training-analyzer`)
+- **Client:** `training-analyzer/client/` — Vanilla JS (ES modules), Chart.js, PWA. Servito direttamente da Express, niente build step.
+- **Server:** `training-analyzer/server/` — Node.js 20, Express 4, Sequelize 6, PostgreSQL.
+- **Deploy:** Render (auto-deploy da `main`, root dir `training-analyzer`) + Neon Postgres.
 - **Live:** https://training-analyzer-oiu2.onrender.com
 
-> Quando si lavora su bugfix o nuove feature, si modifica SOLO il codice dentro `training-analyzer/`. I file nella root sono congelati.
-
 ---
 
-## Struttura del progetto
-
-```
-.
-├── training-analyzer/               <-- VERSIONE ATTIVA (v3.2, full-stack)
-│   ├── client/                      Frontend
-│   │   ├── index.html               HTML (login, nav, pagine, modali)
-│   │   ├── css/style.css            Stili (tema rosso, dark/light, responsive)
-│   │   ├── manifest.json            PWA manifest
-│   │   ├── logo_ta.png              Logo/icona app
-│   │   ├── fonts/                   BasementGrotesque + Poppins
-│   │   └── js/
-│   │       ├── ui.js                Orchestratore: stato, render, wizard, PubMed
-│   │       ├── api.js               Layer HTTP centralizzato + JWT auto-refresh
-│   │       ├── auth.js              Login Google OAuth + email/password
-│   │       ├── sports.js            SPORT_TEMPLATES, FIELD_DEFS, costanti
-│   │       ├── scoring.js           Score workout, recovery, streak, fitness assessment (incl. body composition)
-│   │       ├── charts.js            Chart.js, heatmap canvas, tutti i grafici (incl. trend misure corporee)
-│   │       ├── import.js            GPX, CSV, Apple Health, FIT, JSON backup
-│   │       ├── friends.js           Ricerca utenti, follow, confronto stats
-│   │       └── bodyMeasurements.js  CRUD misure corporee + grafici trend
-│   ├── server/                      Backend (Node.js + Express)
-│   │   ├── src/
-│   │   │   ├── index.js             Entry point (listen + DB sync + connect)
-│   │   │   ├── app.js               Express: helmet, cors, rate-limit, routes
-│   │   │   ├── config/
-│   │   │   │   ├── database.js      Sequelize + PostgreSQL (SSL in prod)
-│   │   │   │   ├── passport.js      Google OAuth2 + Local (OAuth opzionale)
-│   │   │   │   └── env.js           Validazione env vars (Google OAuth opzionale)
-│   │   │   ├── models/              User, Workout, Exercise, Settings, Weight, Follow, BodyMeasurement
-│   │   │   ├── routes/              auth, workouts, exercises, settings, weights, users, bodyMeasurements
-│   │   │   ├── controllers/         Logica business (un file per route)
-│   │   │   ├── middleware/          authenticate (JWT), authorize, errorHandler
-│   │   │   └── utils/jwt.js         Generazione/verifica JWT
-│   │   ├── migrations/              10 migration Sequelize
-│   │   ├── seeders/                 Demo user + workout campione
-│   │   ├── scripts/
-│   │   │   └── migrateFromFirebase.js  Migrazione dati da Firebase
-│   │   ├── Dockerfile               Node 20 alpine multi-stage
-│   │   └── package.json
-│   ├── docker-compose.yml           PostgreSQL 16 + server
-│   ├── .env.example                 Template variabili d'ambiente
-│   └── .gitignore
-│
-├── index.html                       LEGACY v3.1 — NON TOCCARE (GitHub Pages)
-├── css/style.css                    LEGACY
-├── js/app.js                        LEGACY (tutto in un file singolo, ~115KB)
-├── fonts/                           LEGACY
-├── manifest.json                    LEGACY
-├── logo_ta.png                      LEGACY
-├── graphic_adj/                     LEGACY (screenshot di riferimento)
-└── logica_valutazione_forma_fisica.md  LEGACY (doc sulla logica di scoring)
-```
-
----
-
-## Stack tecnologico (v3.2)
+## Stack tecnologico
 
 | Layer | Tecnologia |
 |---|---|
@@ -102,23 +32,15 @@ Tutto lo sviluppo avviene dentro **[`training-analyzer/`](training-analyzer/)**.
 
 ## Deploy
 
-### Versione attiva (Render + Neon)
-
 - **Web Service:** Render, root dir `training-analyzer`, Node runtime
 - **Database:** Neon PostgreSQL (serverless, region AWS `eu-central-1` Frankfurt, stessa area di Render)
 - **Build command:** `cd server && npm install`
 - **Start command:** `cd server && node src/index.js`
-- **Auto-deploy:** su ogni push a `main` (solo `training-analyzer/` viene usato da Render)
+- **Auto-deploy:** su ogni push a `main`
 - Le tabelle vengono create automaticamente (`sequelize.sync()`)
 - Google OAuth e opzionale: il server parte anche senza le credenziali Google
 
 > Il `DATABASE_URL` di produzione punta a Neon e deve contenere `?sslmode=require`. Connessione, pool e timeout sono tarati per Neon in [`server/src/config/database.js`](training-analyzer/server/src/config/database.js) (cold-start tollerante, idle sotto la soglia di auto-suspend). La migrazione Render PostgreSQL → Neon è stata completata il 2026-04-21; la procedura usata è documentata in [`MIGRATION_RENDER_TO_NEON.md`](training-analyzer/MIGRATION_RENDER_TO_NEON.md) come riferimento storico.
-
-### Versione legacy (GitHub Pages)
-
-- Servita direttamente dalla root del repo (branch `main`)
-- Backend: Firebase Realtime Database (configurato in `js/app.js`)
-- Verra spenta dopo la migrazione degli utenti alla v3.2
 
 ---
 
