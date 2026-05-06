@@ -91,27 +91,42 @@ function slimRunningWorkout(d) {
 
 function slimGymWorkout(d) {
   const exercises = Array.isArray(d.exercises) ? d.exercises : [];
-  const slimExercises = exercises.map((ex) => ({
-    name: ex.name,
-    muscle: ex.muscle || null,
-    isUnilateral: !!ex.isUnilateral,
-    weightMode: ex.weightMode || 'total',
-    barbellWeight: ex.barbellWeight || 0,
-    sets: (ex.sets || []).map((s) => ({
-      reps: s.reps || 0,
-      weight: s.weight || 0,
-      weightLeft: s.weightLeft || null,
-      weightRight: s.weightRight || null,
-      rpe: s.rpe || null,
-    })),
-  }));
-  const muscles = [...new Set(exercises.map((e) => e.muscle).filter(Boolean))];
+  const slimExercises = exercises.map((ex) => {
+    const sec = Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles : [];
+    return {
+      name: ex.name,
+      muscle: ex.muscle || null,
+      secondaryMuscles: sec,
+      isUnilateral: !!ex.isUnilateral,
+      weightMode: ex.weightMode || 'total',
+      barbellWeight: ex.barbellWeight || 0,
+      sets: (ex.sets || []).map((s) => {
+        const out = {
+          reps: s.reps || 0,
+          weight: s.weight || 0,
+          weightLeft: s.weightLeft || null,
+          weightRight: s.weightRight || null,
+          rpe: s.rpe || null,
+        };
+        if (s.bodyweight) out.bodyweight = true;
+        if (Array.isArray(s.drops) && s.drops.length) {
+          out.drops = s.drops.map((dr) => ({ reps: dr.reps || 0, weight: dr.weight || 0 }));
+        }
+        return out;
+      }),
+    };
+  });
+  const muscleSet = new Set();
+  exercises.forEach((e) => {
+    if (e.muscle) muscleSet.add(e.muscle);
+    (e.secondaryMuscles || []).forEach((m) => { if (m) muscleSet.add(m); });
+  });
   return {
     type: 'gym',
     durationMin: safeNum(d.duration, 0),
     rpe: d.rpe || null,
     notes: d.notes ? String(d.notes).slice(0, 200) : null,
-    musclesHit: muscles,
+    musclesHit: [...muscleSet],
     exercises: slimExercises,
     scores: d.scores || null,
   };
@@ -152,7 +167,7 @@ function slimWorkout(workout) {
   return slimGenericWorkout(d, workout.type);
 }
 
-function slimHistoryEntry(workout) {
+function slimHistoryEntry(workout, userBodyweight = 0) {
   const d = workout.data || {};
   const base = { date: workout.date, type: workout.type, score: workout.score };
   if (workout.type === 'running') {
@@ -172,23 +187,36 @@ function slimHistoryEntry(workout) {
       const bw = ex.barbellWeight || 0;
       const wm = ex.weightMode || 'total';
       (ex.sets || []).forEach((s) => {
+        const bodyAdd = s.bodyweight ? (userBodyweight || 0) : 0;
         if (ex.isUnilateral) {
-          const wL = (s.weightLeft || 0) + bw;
-          const wR = (s.weightRight || 0) + bw;
+          const wL = (s.weightLeft || 0) + bw + bodyAdd;
+          const wR = (s.weightRight || 0) + bw + bodyAdd;
           tonnage += (s.reps || 0) * (wm === 'per_side' ? (wL + wR) * 2 : wL + wR);
         } else {
-          let w = (s.weight || 0) + bw;
+          let w = (s.weight || 0) + bodyAdd;
           if (wm === 'per_side') w *= 2;
+          w += bw;
           tonnage += (s.reps || 0) * w;
+          (s.drops || []).forEach((dr) => {
+            let dw = (dr.weight || 0) + bodyAdd;
+            if (wm === 'per_side') dw *= 2;
+            dw += bw;
+            tonnage += (dr.reps || 0) * dw;
+          });
         }
       });
+    });
+    const muscleSet = new Set();
+    exs.forEach((e) => {
+      if (e.muscle) muscleSet.add(e.muscle);
+      (e.secondaryMuscles || []).forEach((m) => { if (m) muscleSet.add(m); });
     });
     return {
       ...base,
       durationMin: safeNum(d.duration, 0),
       rpe: d.rpe || null,
       tonnageKg: Math.round(tonnage),
-      muscles: [...new Set(exs.map((e) => e.muscle).filter(Boolean))],
+      muscles: [...muscleSet],
       exerciseCount: exs.length,
     };
   }
@@ -250,11 +278,12 @@ async function buildAnalysisContext({ userId, workoutId }) {
     }),
   ]);
 
+  const userBW = settings?.bodyweight || 0;
   return {
     workout,
     profile: buildUserProfile(user, settings),
     current: slimWorkout(workout),
-    history: history.map(slimHistoryEntry),
+    history: history.map((w) => slimHistoryEntry(w, userBW)),
   };
 }
 

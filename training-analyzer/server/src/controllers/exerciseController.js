@@ -12,9 +12,23 @@ async function list(req, res, next) {
   }
 }
 
+function normalizeSecondaryMuscles(value, primary) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const m of value) {
+    if (typeof m !== 'string') continue;
+    const t = m.trim();
+    if (!t || t === primary || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
 async function create(req, res, next) {
   try {
-    const { name, muscle, param, weightMode, barbellWeight, isUnilateral } = req.body;
+    const { name, muscle, param, weightMode, barbellWeight, isUnilateral, secondaryMuscles } = req.body;
     if (!name || !muscle) {
       return res.status(400).json({ error: { message: 'name and muscle are required' } });
     }
@@ -27,6 +41,7 @@ async function create(req, res, next) {
       weightMode: weightMode || 'total',
       barbellWeight: barbellWeight ?? null,
       isUnilateral: !!isUnilateral,
+      secondaryMuscles: normalizeSecondaryMuscles(secondaryMuscles, muscle),
     });
 
     res.status(201).json(exercise);
@@ -45,13 +60,16 @@ async function update(req, res, next) {
     });
     if (!exercise) return res.status(404).json({ error: { message: 'Exercise not found' } });
 
-    const { name, muscle, param, weightMode, barbellWeight, isUnilateral } = req.body;
+    const { name, muscle, param, weightMode, barbellWeight, isUnilateral, secondaryMuscles } = req.body;
     if (name) exercise.name = name.trim();
     if (muscle) exercise.muscle = muscle;
     if (param) exercise.param = param;
     if (weightMode !== undefined) exercise.weightMode = weightMode;
     if (barbellWeight !== undefined) exercise.barbellWeight = barbellWeight;
     if (isUnilateral !== undefined) exercise.isUnilateral = !!isUnilateral;
+    if (secondaryMuscles !== undefined) {
+      exercise.secondaryMuscles = normalizeSecondaryMuscles(secondaryMuscles, exercise.muscle);
+    }
     await exercise.save();
 
     res.json(exercise);
@@ -100,6 +118,7 @@ async function bulkReplace(req, res, next) {
         weightMode: e.weightMode || 'total',
         barbellWeight: e.barbellWeight ?? null,
         isUnilateral: !!e.isUnilateral,
+        secondaryMuscles: normalizeSecondaryMuscles(e.secondaryMuscles, e.muscle),
       });
     }
     await sequelize.transaction(async (t) => {

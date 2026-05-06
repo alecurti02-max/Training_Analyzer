@@ -39,6 +39,11 @@ module.exports = (sequelize) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      secondaryMuscles: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: [],
+      },
     },
     {
       tableName: 'exercises',

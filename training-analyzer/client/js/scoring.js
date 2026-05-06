@@ -10,27 +10,35 @@ function secondsToPace(s) { if(!s||s<=0)return'--'; let m=Math.floor(s/60),sec=M
 
 // ==================== TONNAGE ====================
 // Computes effective tonnage accounting for weightMode (total | per_side),
-// barbellWeight, and unilateral exercises (weightLeft + weightRight).
-export function calcTonnage(exercises) {
+// barbellWeight, unilateral exercises (weightLeft + weightRight),
+// bodyweight sets (weight = added load on top of userBodyweight) and drop sets.
+export function calcTonnage(exercises, userBodyweight = 0) {
   let tonnage = 0;
   (exercises || []).forEach(ex => {
     const wm = ex.weightMode || 'total';
     const bw = ex.barbellWeight || 0;
     const uni = ex.isUnilateral || false;
     (ex.sets || []).forEach(s => {
+      const bodyAdd = s.bodyweight ? (userBodyweight || 0) : 0;
       if (uni) {
-        const wL = (s.weightLeft || 0) + bw;
-        const wR = (s.weightRight || 0) + bw;
+        const wL = (s.weightLeft || 0) + bw + bodyAdd;
+        const wR = (s.weightRight || 0) + bw + bodyAdd;
         if (wm === 'per_side') {
           tonnage += (s.reps || 0) * (wL + wR) * 2;
         } else {
           tonnage += (s.reps || 0) * (wL + wR);
         }
       } else {
-        let ew = s.weight || 0;
+        let ew = (s.weight || 0) + bodyAdd;
         if (wm === 'per_side') ew *= 2;
         ew += bw;
         tonnage += (s.reps || 0) * ew;
+        (s.drops || []).forEach(d => {
+          let dw = (d.weight || 0) + bodyAdd;
+          if (wm === 'per_side') dw *= 2;
+          dw += bw;
+          tonnage += (d.reps || 0) * dw;
+        });
       }
     });
   });
@@ -40,7 +48,7 @@ export function calcTonnage(exercises) {
 // ==================== SCORING ====================
 export function scoreGymWorkout(workout, workoutsCache, settingsCache) {
   const scores = {};
-  const tonnage = calcTonnage(workout.exercises);
+  const tonnage = calcTonnage(workout.exercises, settingsCache?.bodyweight || 0);
   workout._tonnage = tonnage;
   const recentGym = workoutsCache.filter(w => w.type==='gym' && w.id!==workout.id).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
   const avgTonnage = recentGym.length ? recentGym.reduce((s,w)=>s+(w._tonnage||0),0)/recentGym.length : tonnage;
@@ -297,12 +305,12 @@ function _epley1RM(reps, weight) {
   return weight * (1 + reps / 30);
 }
 
-function _gymHistoryStats(workout, cache) {
+function _gymHistoryStats(workout, cache, userBodyweight = 0) {
   const now = todayStr();
   const others = (cache || []).filter(w => w.type === 'gym' && w.id !== workout.id);
   const last7 = others.filter(w => daysBetween(now, w.date) <= 7);
   const last28 = others.filter(w => daysBetween(now, w.date) <= 28);
-  const tonnages28 = last28.map(w => w._tonnage || calcTonnage(w.exercises || []));
+  const tonnages28 = last28.map(w => w._tonnage || calcTonnage(w.exercises || [], userBodyweight));
   const avgTonnage = tonnages28.length ? tonnages28.reduce((a,b)=>a+b,0) / tonnages28.length : null;
   const cats = { push: 0, pull: 0, legs: 0, core: 0, other: 0 };
   last7.forEach(w => (w.exercises || []).forEach(ex => { cats[_categoryOf(ex.muscle)] += 1; }));
@@ -340,10 +348,10 @@ function _detectPRs(workout, cache) {
   return prs;
 }
 
-function adviceGym(workout, workoutsCache) {
+function adviceGym(workout, workoutsCache, userBodyweight = 0) {
   const highlights = [], suggestions = [];
-  const tonnage = workout._tonnage || calcTonnage(workout.exercises || []);
-  const stats = _gymHistoryStats(workout, workoutsCache);
+  const tonnage = workout._tonnage || calcTonnage(workout.exercises || [], userBodyweight);
+  const stats = _gymHistoryStats(workout, workoutsCache, userBodyweight);
   const exs = workout.exercises || [];
   const muscles = [...new Set(exs.map(e => e.muscle).filter(Boolean))];
   const cats = exs.reduce((acc, ex) => { acc[_categoryOf(ex.muscle)] = (acc[_categoryOf(ex.muscle)] || 0) + 1; return acc; }, {});
@@ -499,7 +507,7 @@ function adviceGeneric(workout, workoutsCache) {
 
 export function getAdvice(workout, workoutsCache, settingsCache) {
   if (workout.type === 'running') return adviceRunning(workout, workoutsCache, settingsCache);
-  if (workout.type === 'gym') return adviceGym(workout, workoutsCache);
+  if (workout.type === 'gym') return adviceGym(workout, workoutsCache, settingsCache?.bodyweight || 0);
   if (workout.type === 'karting') return adviceKarting(workout, workoutsCache);
   return adviceGeneric(workout, workoutsCache);
 }

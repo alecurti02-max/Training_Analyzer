@@ -380,7 +380,7 @@
       <div class="card-title">Aggiungi Esercizio</div>
       <div class="form-row">
         <div class="form-group"><label>Nome Esercizio</label><input type="text" id="lib-name" placeholder="Squat"></div>
-        <div class="form-group"><label>Gruppo Muscolare</label><select id="lib-muscle"></select></div>
+        <div class="form-group"><label>Gruppo Muscolare (primario)</label><select id="lib-muscle"></select></div>
         <div class="form-group"><label>Parametro principale</label>
           <select id="lib-param">
             <option value="reps">Ripetizioni (reps)</option>
@@ -388,6 +388,12 @@
             <option value="distance">Distanza (metri)</option>
             <option value="calories">Calorie (kcal)</option>
           </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
+          <label>Muscoli secondari (opzionale)</label>
+          <div id="lib-secondary-muscles" class="muscle-chips"></div>
         </div>
       </div>
       <div class="form-row" id="lib-weight-options">
@@ -686,6 +692,19 @@
     <div style="display:flex;gap:8px;justify-content:center">
       <button class="btn btn-primary" data-action="liveResumeDraft">Riprendi</button>
       <button class="btn btn-secondary" data-action="liveDiscardDraft">Scarta</button>
+    </div>
+  </div>
+</div>
+
+<!-- WIZARD RECOVERY MODAL -->
+<div class="modal-overlay" id="wiz-recovery-modal">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <h3 style="margin-bottom:8px">Bozza salvata</h3>
+    <p style="color:var(--text2);margin-bottom:8px">Hai un allenamento manuale non salvato. Vuoi riprenderlo?</p>
+    <p id="wiz-recovery-meta" style="color:var(--text2);font-size:.78rem;margin-bottom:20px"></p>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button class="btn btn-primary" data-action="wizResumeDraft">Riprendi</button>
+      <button class="btn btn-secondary" data-action="wizDiscardDraft">Scarta</button>
     </div>
   </div>
 </div>

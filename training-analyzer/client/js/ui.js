@@ -121,16 +121,17 @@ async function loadAllData() {
       flat.date = w.date;
       return flat;
     });
-    // Compute tonnage for gym workouts
-    workoutsCache.forEach(w => {
-      if (w.type === 'gym' && !w._tonnage) {
-        w._tonnage = calcTonnage(w.exercises);
-      }
-    });
-
     settingsCache = settingsRes || {};
     if (settingsCache.activeSports) activeSports = settingsCache.activeSports;
     if (settingsCache.muscleGroups) muscleGroups = settingsCache.muscleGroups;
+
+    // Compute tonnage for gym workouts (after settings load so we know user bodyweight)
+    const userBW = settingsCache.bodyweight || 0;
+    workoutsCache.forEach(w => {
+      if (w.type === 'gym' && !w._tonnage) {
+        w._tonnage = calcTonnage(w.exercises, userBW);
+      }
+    });
 
     exercisesCache = exercisesRes;
     if (!exercisesCache || (Array.isArray(exercisesCache) && !exercisesCache.length)) {
@@ -267,7 +268,100 @@ async function saveExercisesToServer(lib) {
 }
 
 // ==================== LOG WIZARD ====================
-function initLogWizard() {
+function wizDraftKey() { return 'wizDraft_' + (currentUser?.uid || 'anon'); }
+function wizSerializeFormFields() {
+  const fields = {
+    date: document.getElementById('wiz-date')?.value || '',
+    notes: document.getElementById('wiz-notes')?.value || '',
+    gymDuration: document.getElementById('wiz-gym-duration')?.value || '',
+    gymRpe: document.getElementById('wiz-gym-rpe')?.value || '',
+    sportFields: {},
+    pickedMuscles: readMuscleChips('wiz'),
+  };
+  const tmplFields = (SPORT_TEMPLATES[wizType]?.fields) || [];
+  tmplFields.forEach((k) => {
+    const el = document.getElementById('wiz-field-' + k);
+    if (el) fields.sportFields[k] = el.value;
+  });
+  return fields;
+}
+function wizSaveDraft() {
+  if (!wizType && !wizExercises.length) return;
+  const draft = {
+    wizStep,
+    wizType,
+    wizExercises,
+    formFields: wizSerializeFormFields(),
+    _lastSavedAt: Date.now(),
+  };
+  try { localStorage.setItem(wizDraftKey(), JSON.stringify(draft)); } catch(e) {}
+}
+function wizLoadDraft() {
+  try { const d = localStorage.getItem(wizDraftKey()); return d ? JSON.parse(d) : null; } catch(e) { return null; }
+}
+function wizClearDraft() {
+  try { localStorage.removeItem(wizDraftKey()); } catch(e) {}
+}
+function wizCheckDraft() {
+  const draft = wizLoadDraft();
+  if (!draft) return false;
+  const modal = document.getElementById('wiz-recovery-modal');
+  if (!modal) return false;
+  const meta = document.getElementById('wiz-recovery-meta');
+  if (meta) {
+    const exCount = (draft.wizExercises || []).length;
+    const sportLabel = draft.wizType ? (SPORT_TEMPLATES[draft.wizType]?.name || draft.wizType) : 'sport non scelto';
+    const when = draft._lastSavedAt ? new Date(draft._lastSavedAt).toLocaleString() : '';
+    meta.textContent = `${sportLabel} · ${exCount} esercizi · ${when}`;
+  }
+  modal.classList.add('show');
+  return true;
+}
+function wizApplyDraft(d) {
+  wizType = d.wizType || '';
+  wizExercises = Array.isArray(d.wizExercises) ? d.wizExercises : [];
+  wizStep = d.wizStep || 1;
+  // Re-render base UI then restore form values
+  renderSportTypeGrid();
+  // Mark selected sport card if any
+  if (wizType) {
+    const card = document.querySelector(`.type-card[data-sport="${wizType}"]`);
+    if (card) { document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected')); card.classList.add('selected'); }
+  }
+  updateWizStep();
+  const ff = d.formFields || {};
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+  setVal('wiz-date', ff.date);
+  setVal('wiz-notes', ff.notes);
+  setVal('wiz-gym-duration', ff.gymDuration);
+  setVal('wiz-gym-rpe', ff.gymRpe);
+  Object.entries(ff.sportFields || {}).forEach(([k, v]) => setVal('wiz-field-' + k, v));
+  if (Array.isArray(ff.pickedMuscles)) {
+    ff.pickedMuscles.forEach(m => {
+      const btn = document.querySelector(`#wiz-muscles-chips [data-muscle-chip="${m}"]`);
+      if (btn) btn.classList.add('active');
+    });
+  }
+  if (wizStep === 3 && wizType === 'gym') renderWizSets();
+}
+function wizResumeDraft() {
+  const d = wizLoadDraft();
+  document.getElementById('wiz-recovery-modal')?.classList.remove('show');
+  if (!d) return;
+  wizApplyDraft(d);
+  toast('Bozza ripristinata');
+}
+function wizDiscardDraft() {
+  document.getElementById('wiz-recovery-modal')?.classList.remove('show');
+  wizClearDraft();
+  initLogWizard(true);
+}
+
+function initLogWizard(skipDraftCheck = false) {
+  if (!skipDraftCheck && wizCheckDraft()) {
+    // Wait for user choice; modal will trigger resume/discard
+    return;
+  }
   wizStep = 1; wizType = ''; wizExercises = [];
   document.getElementById('wiz-date').value = todayStr();
   document.getElementById('wiz-exercises').innerHTML = '';
@@ -295,6 +389,7 @@ function selectWorkoutType(type, el) {
   wizType = type;
   document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
+  wizSaveDraft();
   setTimeout(() => wizGoStep(2), 200);
 }
 
@@ -302,6 +397,7 @@ function wizGoStep(step) {
   if (step === 2 && !wizType) { toast('Seleziona un tipo!', 'error'); return; }
   wizStep = step;
   updateWizStep();
+  wizSaveDraft();
 }
 
 function wizGoBack() {
@@ -432,20 +528,22 @@ function addWizExercise(name, muscle) {
   const param = libEntry.param || 'reps';
   const isReps = param === 'reps';
   const emptySet = isUnilateral
-    ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null }
-              : { repsLeft: '', repsRight: '', rpe: null })
-    : { reps: '', weight: '', rpe: null };
+    ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, bodyweight: false }
+              : { repsLeft: '', repsRight: '', rpe: null, bodyweight: false })
+    : { reps: '', weight: '', rpe: null, bodyweight: false };
   const copyFromLast = (s) => isUnilateral
     ? (isReps
-        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null }
-        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null })
-    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null };
+        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight }
+        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight })
+    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight, drops: Array.isArray(s.drops) && s.drops.length ? s.drops.map(d => ({ reps: d.reps, weight: d.weight })) : undefined };
+  const secondaryMuscles = Array.isArray(libEntry.secondaryMuscles) ? libEntry.secondaryMuscles.slice() : [];
   wizExercises.push({
-    name, muscle, weightMode, barbellWeight, isUnilateral, param,
+    name, muscle, secondaryMuscles, weightMode, barbellWeight, isUnilateral, param,
     sets: lastPerf ? lastPerf.sets.map(copyFromLast) : [emptySet],
     lastPerf
   });
   renderWizExerciseList();
+  wizSaveDraft();
 }
 
 function getLastPerformance(exerciseName) {
@@ -472,7 +570,7 @@ function renderWizExerciseList() {
   });
 }
 
-function removeWizExercise(idx) { wizExercises.splice(idx, 1); renderWizExerciseList(); }
+function removeWizExercise(idx) { wizExercises.splice(idx, 1); renderWizExerciseList(); wizSaveDraft(); }
 
 // Builds an HTML summary of the current weight mode/barbell/unilateral for an exercise
 function weightOptionsSummary(ex) {
@@ -537,27 +635,46 @@ function renderWizSets() {
              <input type="number" placeholder="${paramPh} DX" value="${s.repsRight||''}" data-set-update="${exIdx}-${sIdx}-repsRight" class="w-uni">
            </div>`
         : `<input type="number" placeholder="${paramPh}" value="${s.reps||''}" data-set-update="${exIdx}-${sIdx}-reps">`;
+      const kgPlaceholder = isReps ? `Kg${weightSuffix}` : 'Kg (opz.)';
+      const bwChecked = s.bodyweight ? 'checked' : '';
+      const bwToggle = uni ? '' : `<label class="bw-toggle" title="Corpo libero (peso = zavorra aggiunta)"><input type="checkbox" data-set-update="${exIdx}-${sIdx}-bodyweight" ${bwChecked}><span>BW</span></label>`;
       const weightInputs = uni
         ? `<div class="weight-uni">
              <input type="number" step="0.5" placeholder="SX" value="${s.weightLeft||''}" data-set-update="${exIdx}-${sIdx}-weightLeft" class="w-uni">
              <input type="number" step="0.5" placeholder="DX" value="${s.weightRight||''}" data-set-update="${exIdx}-${sIdx}-weightRight" class="w-uni">
            </div>`
-        : `<input type="number" step="0.5" placeholder="Kg${weightSuffix}" value="${s.weight||''}" data-set-update="${exIdx}-${sIdx}-weight">`;
-      return `<div class="set-inline">
-        <div class="set-num">${sIdx+1}</div>
-        ${repsInput}
-        ${isReps ? weightInputs : ''}
-        <select data-set-update="${exIdx}-${sIdx}-rpe"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
-        <button class="btn-icon" data-remove-set="${exIdx}-${sIdx}">&#128465;</button>
+        : `<input type="number" step="0.5" placeholder="${kgPlaceholder}" value="${s.weight||''}" data-set-update="${exIdx}-${sIdx}-weight">`;
+      const dropsHTML = (!uni && Array.isArray(s.drops) && s.drops.length)
+        ? s.drops.map((d, dIdx) => `<div class="drop-inline">
+            <span class="drop-arrow">&#8627;</span>
+            <input type="number" placeholder="Reps" value="${d.reps||''}" data-drop-update="${exIdx}-${sIdx}-${dIdx}-reps">
+            <input type="number" step="0.5" placeholder="Kg" value="${d.weight||''}" data-drop-update="${exIdx}-${sIdx}-${dIdx}-weight">
+            <button class="btn-icon" data-remove-drop="${exIdx}-${sIdx}-${dIdx}" title="Rimuovi drop">&times;</button>
+          </div>`).join('')
+        : '';
+      const dropAddBtn = uni
+        ? ''
+        : `<button class="btn-link-sm" data-add-drop="${exIdx}-${sIdx}" title="Aggiungi un drop set">+ drop</button>`;
+      return `<div class="set-block">
+        <div class="set-inline">
+          <div class="set-num">${sIdx+1}</div>
+          ${repsInput}
+          ${bwToggle}
+          ${weightInputs}
+          <select data-set-update="${exIdx}-${sIdx}-rpe"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
+          <button class="btn-icon" data-remove-set="${exIdx}-${sIdx}">&#128465;</button>
+        </div>
+        ${dropsHTML}
+        ${dropAddBtn}
       </div>`;
     }).join('');
-    const optsHTML = isReps ? `
+    const optsHTML = `
       <div class="weight-opts-summary">
         <span>${weightOptionsSummary(ex)}</span>
         <button type="button" class="btn-link-sm" data-wopts-toggle="wiz-wopts-${exIdx}">Modifica</button>
       </div>
       ${weightOptionsOverrideHTML(ex, exIdx, 'wiz')}
-    ` : '';
+    `;
     return `<div class="exercise-card">
       <div class="exercise-card-header"><span class="exercise-card-name">${ex.name}</span><span class="exercise-card-muscle">${ex.muscle} <span style="font-size:.72rem;color:var(--blue)">${paramLabel}</span></span></div>
       ${optsHTML}
@@ -577,7 +694,26 @@ function renderWizSets() {
       const exIdx = parseInt(parts[0]);
       const sIdx = parseInt(parts[1]);
       const field = parts.slice(2).join('-');
-      wizUpdateSet(exIdx, sIdx, field, this.value);
+      const val = this.type === 'checkbox' ? this.checked : this.value;
+      wizUpdateSet(exIdx, sIdx, field, val);
+    });
+  });
+  container.querySelectorAll('[data-drop-update]').forEach(el => {
+    el.addEventListener('change', function() {
+      const parts = this.dataset.dropUpdate.split('-');
+      wizUpdateDrop(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]), parts[3], this.value);
+    });
+  });
+  container.querySelectorAll('[data-add-drop]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const [ei, si] = this.dataset.addDrop.split('-').map(Number);
+      wizAddDrop(ei, si);
+    });
+  });
+  container.querySelectorAll('[data-remove-drop]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const [ei, si, di] = this.dataset.removeDrop.split('-').map(Number);
+      wizRemoveDrop(ei, si, di);
     });
   });
   container.querySelectorAll('[data-remove-set]').forEach(btn => {
@@ -610,13 +746,44 @@ function renderWizSets() {
 }
 
 function wizUpdateSet(exIdx, sIdx, field, value) {
-  if (field === 'reps') wizExercises[exIdx].sets[sIdx].reps = parseInt(value) || '';
-  else if (field === 'repsLeft') wizExercises[exIdx].sets[sIdx].repsLeft = parseFloat(value) || '';
-  else if (field === 'repsRight') wizExercises[exIdx].sets[sIdx].repsRight = parseFloat(value) || '';
-  else if (field === 'weight') wizExercises[exIdx].sets[sIdx].weight = parseFloat(value) || '';
-  else if (field === 'weightLeft') wizExercises[exIdx].sets[sIdx].weightLeft = parseFloat(value) || '';
-  else if (field === 'weightRight') wizExercises[exIdx].sets[sIdx].weightRight = parseFloat(value) || '';
-  else if (field === 'rpe') wizExercises[exIdx].sets[sIdx].rpe = parseInt(value) || null;
+  const set = wizExercises[exIdx].sets[sIdx];
+  if (field === 'reps') set.reps = parseInt(value) || '';
+  else if (field === 'repsLeft') set.repsLeft = parseFloat(value) || '';
+  else if (field === 'repsRight') set.repsRight = parseFloat(value) || '';
+  else if (field === 'weight') set.weight = parseFloat(value) || '';
+  else if (field === 'weightLeft') set.weightLeft = parseFloat(value) || '';
+  else if (field === 'weightRight') set.weightRight = parseFloat(value) || '';
+  else if (field === 'rpe') set.rpe = parseInt(value) || null;
+  else if (field === 'bodyweight') set.bodyweight = !!value;
+  wizSaveDraft();
+}
+
+function wizAddDrop(exIdx, sIdx) {
+  const ex = wizExercises[exIdx];
+  if (!ex || ex.isUnilateral) return;
+  const set = ex.sets[sIdx];
+  if (!Array.isArray(set.drops)) set.drops = [];
+  const last = set.drops[set.drops.length - 1] || { reps: set.reps, weight: set.weight };
+  set.drops.push({ reps: last.reps || '', weight: last.weight || '' });
+  renderWizSets();
+  wizSaveDraft();
+}
+
+function wizRemoveDrop(exIdx, sIdx, dIdx) {
+  const set = wizExercises[exIdx]?.sets?.[sIdx];
+  if (!set || !Array.isArray(set.drops)) return;
+  set.drops.splice(dIdx, 1);
+  if (!set.drops.length) delete set.drops;
+  renderWizSets();
+  wizSaveDraft();
+}
+
+function wizUpdateDrop(exIdx, sIdx, dIdx, field, value) {
+  const set = wizExercises[exIdx]?.sets?.[sIdx];
+  if (!set || !Array.isArray(set.drops) || !set.drops[dIdx]) return;
+  if (field === 'reps') set.drops[dIdx].reps = parseInt(value) || '';
+  else if (field === 'weight') set.drops[dIdx].weight = parseFloat(value) || '';
+  wizSaveDraft();
 }
 
 function wizUpdateWeightOption(exIdx, field, value) {
@@ -633,10 +800,11 @@ function wizUpdateWeightOption(exIdx, field, value) {
   } else if (field === 'isUnilateral') {
     ex.isUnilateral = !!value;
     ex.sets = ex.sets.map(s => ex.isUnilateral
-      ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null }
-      : { reps: s.reps, weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null });
+      ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight }
+      : { reps: s.reps, weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight });
   }
   renderWizSets();
+  wizSaveDraft();
 }
 
 function wizAddSet(exIdx) {
@@ -645,11 +813,12 @@ function wizAddSet(exIdx) {
   const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
   const newSet = ex.isUnilateral
     ? (isReps
-        ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null }
-        : { repsLeft: lastSet.repsLeft || '', repsRight: lastSet.repsRight || '', rpe: lastSet.rpe || null })
-    : { reps: lastSet.reps || '', weight: lastSet.weight || '', rpe: lastSet.rpe || null };
+        ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null, bodyweight: !!lastSet.bodyweight }
+        : { repsLeft: lastSet.repsLeft || '', repsRight: lastSet.repsRight || '', rpe: lastSet.rpe || null, bodyweight: !!lastSet.bodyweight })
+    : { reps: lastSet.reps || '', weight: lastSet.weight || '', rpe: lastSet.rpe || null, bodyweight: !!lastSet.bodyweight };
   ex.sets.push(newSet);
   renderWizSets();
+  wizSaveDraft();
 }
 function wizRemoveSet(exIdx, sIdx) {
   const ex = wizExercises[exIdx];
@@ -657,11 +826,12 @@ function wizRemoveSet(exIdx, sIdx) {
   if (!ex.sets.length) {
     const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
     ex.sets.push(ex.isUnilateral
-      ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null }
-                : { repsLeft: '', repsRight: '', rpe: null })
-      : { reps: '', weight: '', rpe: null });
+      ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, bodyweight: false }
+                : { repsLeft: '', repsRight: '', rpe: null, bodyweight: false })
+      : { reps: '', weight: '', rpe: null, bodyweight: false });
   }
   renderWizSets();
+  wizSaveDraft();
 }
 function wizCopyLastSets(exIdx) {
   const ex = wizExercises[exIdx];
@@ -670,10 +840,11 @@ function wizCopyLastSets(exIdx) {
   const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
   ex.sets = last.sets.map(s => ex.isUnilateral
     ? (isReps
-        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null }
-        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null })
-    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null });
+        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight }
+        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight })
+    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, bodyweight: !!s.bodyweight, drops: Array.isArray(s.drops) ? s.drops.map(d => ({ reps: d.reps, weight: d.weight })) : undefined });
   renderWizSets();
+  wizSaveDraft();
   toast('Serie copiate!');
 }
 
@@ -688,16 +859,25 @@ async function wizSaveWorkout() {
       const sets = ex.sets
         .filter(s => (s.reps > 0) || (s.repsLeft > 0) || (s.repsRight > 0))
         .map(s => {
+          let out;
           if (ex.isUnilateral) {
-            return isReps
+            out = isReps
               ? { reps: s.reps, weightLeft: s.weightLeft || 0, weightRight: s.weightRight || 0, rpe: s.rpe || null }
               : { repsLeft: s.repsLeft || 0, repsRight: s.repsRight || 0, rpe: s.rpe || null };
+          } else {
+            out = { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
+            const drops = Array.isArray(s.drops)
+              ? s.drops.filter(d => d.reps > 0).map(d => ({ reps: d.reps, weight: d.weight || 0 }))
+              : [];
+            if (drops.length) out.drops = drops;
           }
-          return { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
+          if (s.bodyweight) out.bodyweight = true;
+          return out;
         });
       if (sets.length) exercises.push({
         name: ex.name,
         muscle: ex.muscle,
+        secondaryMuscles: Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles : [],
         weightMode: ex.weightMode || 'total',
         barbellWeight: ex.barbellWeight || null,
         isUnilateral: !!ex.isUnilateral,
@@ -708,7 +888,7 @@ async function wizSaveWorkout() {
     if (!exercises.length) { toast('Aggiungi almeno un esercizio!', 'error'); return; }
     const workout = { id: uid(), type: 'gym', date, duration: parseInt(document.getElementById('wiz-gym-duration')?.value) || null,
       rpe: parseInt(document.getElementById('wiz-gym-rpe')?.value) || null, notes, exercises };
-    workout._tonnage = calcTonnage(exercises);
+    workout._tonnage = calcTonnage(exercises, settingsCache?.bodyweight || 0);
     workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
     workout.advice = getAdvice(workout, workoutsCache, settingsCache);
     const saved = await saveWorkout(workout);
@@ -743,6 +923,7 @@ async function wizSaveWorkout() {
     toast(sportName + ' salvato! Score: ' + workout.scores.overall, 'success');
     if (wizType === 'running') fetchPubMedForWorkout(workout);
   }
+  wizClearDraft();
   showPage('dashboard');
 }
 
@@ -996,16 +1177,17 @@ function liveAddExercise(name, muscle) {
   const param = libEntry.param || 'reps';
   const isReps = param === 'reps';
   const emptySet = isUnilateral
-    ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false }
-              : { repsLeft: '', repsRight: '', rpe: null, done: false })
-    : { reps: '', weight: '', rpe: null, done: false };
+    ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false, bodyweight: false }
+              : { repsLeft: '', repsRight: '', rpe: null, done: false, bodyweight: false })
+    : { reps: '', weight: '', rpe: null, done: false, bodyweight: false };
   const copyFromLast = (s) => isUnilateral
     ? (isReps
-        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, done: false }
-        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null, done: false })
-    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, done: false };
+        ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, done: false, bodyweight: !!s.bodyweight }
+        : { repsLeft: s.repsLeft != null ? s.repsLeft : (s.reps || ''), repsRight: s.repsRight != null ? s.repsRight : (s.reps || ''), rpe: s.rpe || null, done: false, bodyweight: !!s.bodyweight })
+    : { reps: s.reps != null ? s.reps : (s.repsLeft || ''), weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, done: false, bodyweight: !!s.bodyweight };
   const sets = lastPerf ? lastPerf.sets.map(copyFromLast) : [emptySet];
-  liveSession.exercises.push({ name, muscle, weightMode, barbellWeight, isUnilateral, param, sets, lastPerf });
+  const secondaryMuscles = Array.isArray(libEntry.secondaryMuscles) ? libEntry.secondaryMuscles.slice() : [];
+  liveSession.exercises.push({ name, muscle, secondaryMuscles, weightMode, barbellWeight, isUnilateral, param, sets, lastPerf });
   liveRenderExercises();
   liveSaveDraft();
 }
@@ -1031,6 +1213,35 @@ function liveUpdateSet(exIdx, sIdx, field, value) {
   else if (field === 'weightLeft') set.weightLeft = parseFloat(value) || '';
   else if (field === 'weightRight') set.weightRight = parseFloat(value) || '';
   else if (field === 'rpe') set.rpe = parseInt(value) || null;
+  else if (field === 'bodyweight') set.bodyweight = !!value;
+  liveSaveDraft();
+}
+function liveAddDrop(exIdx, sIdx) {
+  if (!liveSession) return;
+  const ex = liveSession.exercises[exIdx];
+  if (!ex || ex.isUnilateral) return;
+  const set = ex.sets[sIdx];
+  if (!Array.isArray(set.drops)) set.drops = [];
+  const last = set.drops[set.drops.length - 1] || { reps: set.reps, weight: set.weight };
+  set.drops.push({ reps: last.reps || '', weight: last.weight || '' });
+  liveRenderExercises();
+  liveSaveDraft();
+}
+function liveRemoveDrop(exIdx, sIdx, dIdx) {
+  if (!liveSession) return;
+  const set = liveSession.exercises[exIdx]?.sets?.[sIdx];
+  if (!set || !Array.isArray(set.drops)) return;
+  set.drops.splice(dIdx, 1);
+  if (!set.drops.length) delete set.drops;
+  liveRenderExercises();
+  liveSaveDraft();
+}
+function liveUpdateDrop(exIdx, sIdx, dIdx, field, value) {
+  if (!liveSession) return;
+  const set = liveSession.exercises[exIdx]?.sets?.[sIdx];
+  if (!set || !Array.isArray(set.drops) || !set.drops[dIdx]) return;
+  if (field === 'reps') set.drops[dIdx].reps = parseInt(value) || '';
+  else if (field === 'weight') set.drops[dIdx].weight = parseFloat(value) || '';
   liveSaveDraft();
 }
 function liveAddSet(exIdx) {
@@ -1040,9 +1251,9 @@ function liveAddSet(exIdx) {
   const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
   const newSet = ex.isUnilateral
     ? (isReps
-        ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null, done: false }
-        : { repsLeft: lastSet.repsLeft || '', repsRight: lastSet.repsRight || '', rpe: lastSet.rpe || null, done: false })
-    : { reps: lastSet.reps || '', weight: lastSet.weight || '', rpe: lastSet.rpe || null, done: false };
+        ? { reps: lastSet.reps || '', weightLeft: lastSet.weightLeft || '', weightRight: lastSet.weightRight || '', rpe: lastSet.rpe || null, done: false, bodyweight: !!lastSet.bodyweight }
+        : { repsLeft: lastSet.repsLeft || '', repsRight: lastSet.repsRight || '', rpe: lastSet.rpe || null, done: false, bodyweight: !!lastSet.bodyweight })
+    : { reps: lastSet.reps || '', weight: lastSet.weight || '', rpe: lastSet.rpe || null, done: false, bodyweight: !!lastSet.bodyweight };
   ex.sets.push(newSet);
   liveRenderExercises();
   liveSaveDraft();
@@ -1054,9 +1265,9 @@ function liveRemoveSet(exIdx, sIdx) {
   if (!ex.sets.length) {
     const isReps = (ex.param || wizGetParam(ex.name)) === 'reps';
     ex.sets.push(ex.isUnilateral
-      ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false }
-                : { repsLeft: '', repsRight: '', rpe: null, done: false })
-      : { reps: '', weight: '', rpe: null, done: false });
+      ? (isReps ? { reps: '', weightLeft: '', weightRight: '', rpe: null, done: false, bodyweight: false }
+                : { repsLeft: '', repsRight: '', rpe: null, done: false, bodyweight: false })
+      : { reps: '', weight: '', rpe: null, done: false, bodyweight: false });
   }
   liveRenderExercises();
   liveSaveDraft();
@@ -1076,8 +1287,8 @@ function liveUpdateWeightOption(exIdx, field, value) {
   } else if (field === 'isUnilateral') {
     ex.isUnilateral = !!value;
     ex.sets = ex.sets.map(s => ex.isUnilateral
-      ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, done: !!s.done }
-      : { reps: s.reps, weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, done: !!s.done });
+      ? { reps: s.reps, weightLeft: s.weightLeft != null ? s.weightLeft : (s.weight || ''), weightRight: s.weightRight != null ? s.weightRight : (s.weight || ''), rpe: s.rpe || null, done: !!s.done, bodyweight: !!s.bodyweight }
+      : { reps: s.reps, weight: s.weight != null ? s.weight : (s.weightLeft || ''), rpe: s.rpe || null, done: !!s.done, bodyweight: !!s.bodyweight });
   }
   liveRenderExercises();
   liveSaveDraft();
@@ -1223,29 +1434,46 @@ function liveRenderExercises() {
              <input type="number" placeholder="${paramPh} DX" value="${s.repsRight||''}" data-live-set="${exIdx}-${sIdx}-repsRight" class="w-uni">
            </div>`
         : `<input type="number" placeholder="${paramPh}" value="${s.reps||''}" data-live-set="${exIdx}-${sIdx}-reps">`;
+      const kgPlaceholder = isReps ? `Kg${weightSuffix}` : 'Kg (opz.)';
+      const bwChecked = s.bodyweight ? 'checked' : '';
+      const bwToggle = uni ? '' : `<label class="bw-toggle" title="Corpo libero (peso = zavorra aggiunta)"><input type="checkbox" data-live-set="${exIdx}-${sIdx}-bodyweight" ${bwChecked}><span>BW</span></label>`;
       const weightInputs = uni
         ? `<div class="weight-uni">
              <input type="number" step="0.5" placeholder="SX" value="${s.weightLeft||''}" data-live-set="${exIdx}-${sIdx}-weightLeft" class="w-uni">
              <input type="number" step="0.5" placeholder="DX" value="${s.weightRight||''}" data-live-set="${exIdx}-${sIdx}-weightRight" class="w-uni">
            </div>`
-        : `<input type="number" step="0.5" placeholder="Kg${weightSuffix}" value="${s.weight||''}" data-live-set="${exIdx}-${sIdx}-weight">`;
-      return `<div class="set-inline${doneClass}">
-        <div class="set-num">${sIdx+1}</div>
-        ${repsInput}
-        ${isReps ? weightInputs : ''}
-        <select data-live-set="${exIdx}-${sIdx}-rpe"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
-        ${actionBtn}
-        <button class="btn-icon" data-live-remove-set="${exIdx}-${sIdx}">&#128465;</button>
+        : `<input type="number" step="0.5" placeholder="${kgPlaceholder}" value="${s.weight||''}" data-live-set="${exIdx}-${sIdx}-weight">`;
+      const dropsHTML = (!uni && Array.isArray(s.drops) && s.drops.length)
+        ? s.drops.map((d, dIdx) => `<div class="drop-inline">
+            <span class="drop-arrow">&#8627;</span>
+            <input type="number" placeholder="Reps" value="${d.reps||''}" data-live-drop="${exIdx}-${sIdx}-${dIdx}-reps">
+            <input type="number" step="0.5" placeholder="Kg" value="${d.weight||''}" data-live-drop="${exIdx}-${sIdx}-${dIdx}-weight">
+            <button class="btn-icon" data-live-remove-drop="${exIdx}-${sIdx}-${dIdx}" title="Rimuovi drop">&times;</button>
+          </div>`).join('')
+        : '';
+      const dropAddBtn = uni ? '' : `<button class="btn-link-sm" data-live-add-drop="${exIdx}-${sIdx}" title="Aggiungi un drop set">+ drop</button>`;
+      return `<div class="set-block">
+        <div class="set-inline${doneClass}">
+          <div class="set-num">${sIdx+1}</div>
+          ${repsInput}
+          ${bwToggle}
+          ${weightInputs}
+          <select data-live-set="${exIdx}-${sIdx}-rpe"><option value="">RPE</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}" ${s.rpe==n?'selected':''}>${n}</option>`).join('')}</select>
+          ${actionBtn}
+          <button class="btn-icon" data-live-remove-set="${exIdx}-${sIdx}">&#128465;</button>
+        </div>
+        ${dropsHTML}
+        ${dropAddBtn}
       </div>`;
     }).join('');
 
-    const optsHTML = isReps ? `
+    const optsHTML = `
       <div class="weight-opts-summary">
         <span>${weightOptionsSummary(ex)}</span>
         <button type="button" class="btn-link-sm" data-wopts-toggle="live-wopts-${exIdx}">Modifica</button>
       </div>
       ${weightOptionsOverrideHTML(ex, exIdx, 'live')}
-    ` : '';
+    `;
 
     return `<div class="exercise-card">
       <div class="exercise-card-header"><span class="exercise-card-name">${ex.name}</span><span class="exercise-card-muscle">${ex.muscle}</span><button class="btn-icon" data-live-remove-ex="${exIdx}" style="margin-left:auto">&times;</button></div>
@@ -1264,7 +1492,26 @@ function liveRenderExercises() {
       const exIdx = parseInt(parts[0]);
       const sIdx = parseInt(parts[1]);
       const field = parts.slice(2).join('-');
-      liveUpdateSet(exIdx, sIdx, field, this.value);
+      const val = this.type === 'checkbox' ? this.checked : this.value;
+      liveUpdateSet(exIdx, sIdx, field, val);
+    });
+  });
+  container.querySelectorAll('[data-live-drop]').forEach(el => {
+    el.addEventListener('change', function() {
+      const parts = this.dataset.liveDrop.split('-');
+      liveUpdateDrop(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]), parts[3], this.value);
+    });
+  });
+  container.querySelectorAll('[data-live-add-drop]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const [ei, si] = this.dataset.liveAddDrop.split('-').map(Number);
+      liveAddDrop(ei, si);
+    });
+  });
+  container.querySelectorAll('[data-live-remove-drop]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const [ei, si, di] = this.dataset.liveRemoveDrop.split('-').map(Number);
+      liveRemoveDrop(ei, si, di);
     });
   });
   container.querySelectorAll('[data-live-done]').forEach(btn => {
@@ -1348,15 +1595,13 @@ function liveFinishPrompt() {
 
   if (liveSession.type === 'gym') {
     const exCount = liveSession.exercises.length;
-    let totalSets = 0, tonnage = 0;
-    liveSession.exercises.forEach(ex => {
-      ex.sets.forEach(s => {
-        if (s.done && s.reps > 0) {
-          totalSets++;
-          tonnage += (s.reps || 0) * (s.weight || 0);
-        }
-      });
-    });
+    let totalSets = 0;
+    const doneOnly = liveSession.exercises.map(ex => ({
+      ...ex,
+      sets: (ex.sets || []).filter(s => s.done),
+    }));
+    doneOnly.forEach(ex => ex.sets.forEach(s => { if (s.reps > 0 || s.repsLeft > 0 || s.repsRight > 0) totalSets++; }));
+    const tonnage = Math.round(calcTonnage(doneOnly, settingsCache?.bodyweight || 0));
     summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Esercizi</span><span class="live-summary-value">${exCount}</span></div>`;
     summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Serie completate</span><span class="live-summary-value">${totalSets}</span></div>`;
     summaryHTML += `<div class="live-summary-row"><span class="live-summary-label">Tonnellaggio</span><span class="live-summary-value">${tonnage.toLocaleString()} kg</span></div>`;
@@ -1387,16 +1632,25 @@ async function liveSaveWorkout() {
       const sets = ex.sets
         .filter(s => s.done && ((s.reps > 0) || (s.repsLeft > 0) || (s.repsRight > 0)))
         .map(s => {
+          let out;
           if (ex.isUnilateral) {
-            return isReps
+            out = isReps
               ? { reps: s.reps, weightLeft: s.weightLeft || 0, weightRight: s.weightRight || 0, rpe: s.rpe || null }
               : { repsLeft: s.repsLeft || 0, repsRight: s.repsRight || 0, rpe: s.rpe || null };
+          } else {
+            out = { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
+            const drops = Array.isArray(s.drops)
+              ? s.drops.filter(d => d.reps > 0).map(d => ({ reps: d.reps, weight: d.weight || 0 }))
+              : [];
+            if (drops.length) out.drops = drops;
           }
-          return { reps: s.reps, weight: s.weight || 0, rpe: s.rpe || null };
+          if (s.bodyweight) out.bodyweight = true;
+          return out;
         });
       if (sets.length) exercises.push({
         name: ex.name,
         muscle: ex.muscle,
+        secondaryMuscles: Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles : [],
         weightMode: ex.weightMode || 'total',
         barbellWeight: ex.barbellWeight || null,
         isUnilateral: !!ex.isUnilateral,
@@ -1406,7 +1660,7 @@ async function liveSaveWorkout() {
     });
     if (!exercises.length) { toast('Nessuna serie completata!', 'error'); return; }
     const workout = { id: uid(), type: 'gym', date: liveSession.date, duration: durationMin, rpe, notes, exercises };
-    workout._tonnage = calcTonnage(exercises);
+    workout._tonnage = calcTonnage(exercises, settingsCache?.bodyweight || 0);
     workout.scores = scoreWorkout(workout, workoutsCache, settingsCache);
     workout.advice = getAdvice(workout, workoutsCache, settingsCache);
     const saved = await saveWorkout(workout);
@@ -2116,7 +2370,7 @@ function editWorkout(id) {
         if (editExercises[ei] && editExercises[ei].sets[si]) editExercises[ei].sets[si][field] = val;
       });
       updated.exercises = editExercises;
-      updated._tonnage = calcTonnage(updated.exercises);
+      updated._tonnage = calcTonnage(updated.exercises, settingsCache?.bodyweight || 0);
     } else if (w.type === 'running') {
       updated.distance = parseFloat(document.getElementById('edit-w-distance')?.value) || w.distance;
       updated.duration = parseInt(document.getElementById('edit-w-duration')?.value) || w.duration;
@@ -2470,8 +2724,10 @@ function renderExerciseLibrary(){
         const wmTag = (e.weightMode==='per_side') ? `<span class="opt-tag">per lato</span>` : '';
         const bbTag = (e.barbellWeight) ? `<span class="opt-tag">+${e.barbellWeight}kg bil.</span>` : '';
         const uniTag = e.isUnilateral ? `<span class="opt-tag opt-tag-uni">unilaterale</span>` : '';
+        const secMuscles = Array.isArray(e.secondaryMuscles) ? e.secondaryMuscles.filter(Boolean) : [];
+        const secTag = secMuscles.length ? `<span class="opt-tag" title="Muscoli secondari: ${secMuscles.join(', ')}">+${secMuscles.length} musc.</span>` : '';
         html+=`<div class="lib-item">
-          <span class="lib-item-name">${e.name} ${paramTag}${wmTag}${bbTag}${uniTag}</span>
+          <span class="lib-item-name">${e.name} ${paramTag}${wmTag}${bbTag}${uniTag}${secTag}</span>
           <div class="lib-item-actions">
             <button class="btn-icon" data-edit-lib="${origIdx}" title="Modifica">&#9998;</button>
             <button class="btn-icon" data-dup-lib="${origIdx}" title="Duplica">&#10697;</button>
@@ -2521,9 +2777,10 @@ async function addExerciseToLibrary(){
   if(!name){toast('Inserisci un nome!','error');return;}
   const lib=exercisesCache||[];
   if(lib.some(e=>e.name.toLowerCase()===name.toLowerCase())){toast('Esercizio gia presente!','error');return;}
-  const opts = param === 'reps' ? readLibWeightOptions() : { weightMode: 'total', barbellWeight: null };
+  const opts = readLibWeightOptions();
   const isUnilateral = !!document.getElementById('lib-unilateral')?.checked;
-  lib.push({name,muscle,param,...opts,isUnilateral});
+  const secondaryMuscles = readLibSecondaryChips().filter(m => m && m !== muscle);
+  lib.push({name,muscle,param,...opts,isUnilateral,secondaryMuscles});
   lib.sort((a,b)=>a.name.localeCompare(b.name));
   await saveExercisesToServer(lib);
   document.getElementById('lib-name').value='';
@@ -2531,6 +2788,7 @@ async function addExerciseToLibrary(){
   const wm = document.getElementById('lib-weightmode'); if (wm) wm.value = 'total';
   const bb = document.getElementById('lib-barbell'); if (bb) bb.value = '';
   const bbCustom = document.getElementById('lib-barbell-custom-group'); if (bbCustom) bbCustom.style.display = 'none';
+  renderLibSecondaryChips([]);
   toast('Esercizio aggiunto!','success');
   renderExerciseLibrary();
 }
@@ -2567,13 +2825,17 @@ function editExercise(idx){
   const curParam = ex.param || 'reps';
   let html=`<div style="display:flex;flex-direction:column;gap:12px">
     <div class="form-group"><label>Nome</label><input type="text" id="edit-ex-name" value="${ex.name}"></div>
-    <div class="form-group"><label>Gruppo Muscolare</label><select id="edit-ex-muscle">
+    <div class="form-group"><label>Gruppo Muscolare (primario)</label><select id="edit-ex-muscle">
       ${muscleGroups.map(m=>`<option value="${m}" ${m===ex.muscle?'selected':''}>${m}</option>`).join('')}
     </select></div>
+    <div class="form-group">
+      <label>Muscoli secondari (opzionale)</label>
+      <div id="edit-ex-secondary-muscles" class="muscle-chips"></div>
+    </div>
     <div class="form-group"><label>Parametro principale</label><select id="edit-ex-param">
       ${Object.entries(paramLabels).map(([k,v])=>`<option value="${k}" ${k===curParam?'selected':''}>${v}</option>`).join('')}
     </select></div>
-    <div id="edit-ex-weight-options" style="${curParam==='reps'?'display:flex':'display:none'};flex-direction:column;gap:12px">
+    <div id="edit-ex-weight-options" style="display:flex;flex-direction:column;gap:12px">
       <div class="form-group"><label>Modalita peso</label><select id="edit-ex-weightmode">
         <option value="total" ${curWM==='total'?'selected':''}>Peso totale</option>
         <option value="per_side" ${curWM==='per_side'?'selected':''}>Peso per lato</option>
@@ -2598,9 +2860,10 @@ function editExercise(idx){
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal-delete-btn').style.display='none';
   modal.classList.add('show');
-  const paramSel = document.getElementById('edit-ex-param');
-  const wOpts = document.getElementById('edit-ex-weight-options');
-  paramSel.addEventListener('change', () => { wOpts.style.display = paramSel.value === 'reps' ? '' : 'none'; });
+  renderLibSecondaryChips(ex.secondaryMuscles || [], 'edit-ex-secondary-muscles', 'edit-ex-muscle');
+  document.getElementById('edit-ex-muscle').addEventListener('change', () => {
+    renderLibSecondaryChips(readLibSecondaryChips('edit-ex-secondary-muscles'), 'edit-ex-secondary-muscles', 'edit-ex-muscle');
+  });
   const barbellSel = document.getElementById('edit-ex-barbell');
   const customGrp = document.getElementById('edit-ex-barbell-custom-group');
   barbellSel.addEventListener('change', () => { customGrp.style.display = barbellSel.value === 'custom' ? '' : 'none'; });
@@ -2608,19 +2871,19 @@ function editExercise(idx){
     const newName=document.getElementById('edit-ex-name').value.trim();
     if(!newName){toast('Inserisci un nome!','error');return;}
     const newParam = document.getElementById('edit-ex-param').value;
-    let weightMode = 'total', barbellWeight = null;
-    if (newParam === 'reps') {
-      weightMode = document.getElementById('edit-ex-weightmode').value || 'total';
-      const bSelVal = document.getElementById('edit-ex-barbell').value;
-      if (bSelVal === 'custom') {
-        const c = parseFloat(document.getElementById('edit-ex-barbell-custom').value);
-        barbellWeight = isFinite(c) && c > 0 ? c : null;
-      } else if (bSelVal !== '') {
-        barbellWeight = parseFloat(bSelVal) || null;
-      }
+    const weightMode = document.getElementById('edit-ex-weightmode').value || 'total';
+    let barbellWeight = null;
+    const bSelVal = document.getElementById('edit-ex-barbell').value;
+    if (bSelVal === 'custom') {
+      const c = parseFloat(document.getElementById('edit-ex-barbell-custom').value);
+      barbellWeight = isFinite(c) && c > 0 ? c : null;
+    } else if (bSelVal !== '') {
+      barbellWeight = parseFloat(bSelVal) || null;
     }
     const isUnilateral = !!document.getElementById('edit-ex-unilateral').checked;
-    lib[idx]={name:newName, muscle:document.getElementById('edit-ex-muscle').value, param:newParam, weightMode, barbellWeight, isUnilateral};
+    const newMuscle = document.getElementById('edit-ex-muscle').value;
+    const secondaryMuscles = readLibSecondaryChips('edit-ex-secondary-muscles').filter(m => m && m !== newMuscle);
+    lib[idx]={name:newName, muscle:newMuscle, param:newParam, weightMode, barbellWeight, isUnilateral, secondaryMuscles};
     await saveExercisesToServer(lib);
     toast('Esercizio modificato!','success');
     closeModal();
@@ -2710,6 +2973,33 @@ function populateMuscleSelect() {
   const sel = document.getElementById('lib-muscle');
   if (!sel) return;
   sel.innerHTML = muscleGroups.map(m => `<option value="${m}">${m}</option>`).join('');
+  renderLibSecondaryChips([]);
+  // Re-render secondary chips when primary changes (so we exclude current primary)
+  if (!sel.dataset.bound) {
+    sel.addEventListener('change', () => renderLibSecondaryChips(readLibSecondaryChips()));
+    sel.dataset.bound = '1';
+  }
+}
+
+function renderLibSecondaryChips(selected, containerId = 'lib-secondary-muscles', primaryId = 'lib-muscle') {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const set = new Set(selected || []);
+  const primary = document.getElementById(primaryId)?.value;
+  const opts = muscleGroups.filter(m => m !== primary);
+  el.style.display = 'flex';
+  el.style.flexWrap = 'wrap';
+  el.style.gap = '6px';
+  el.style.marginTop = '6px';
+  el.innerHTML = opts.map(m => `<button type="button" class="filter-btn ${set.has(m)?'active':''}" data-secondary-chip="${m}">${m}</button>`).join('');
+  el.querySelectorAll('[data-secondary-chip]').forEach(b => {
+    b.addEventListener('click', () => b.classList.toggle('active'));
+  });
+}
+
+function readLibSecondaryChips(containerId = 'lib-secondary-muscles') {
+  return Array.from(document.querySelectorAll(`#${containerId} [data-secondary-chip].active`))
+    .map(b => b.dataset.secondaryChip);
 }
 
 // ==================== SPORTS MANAGER ====================
@@ -2818,6 +3108,18 @@ function initApp() {
   updateSyncStatus();
   renderDashboard();
   liveCheckDraft();
+  // Persist wizard form fields on change
+  ['wiz-date', 'wiz-notes', 'wiz-gym-duration', 'wiz-gym-rpe'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.draftBound) {
+      el.addEventListener('change', () => wizSaveDraft());
+      el.dataset.draftBound = '1';
+    }
+  });
+  // Sport-specific fields are rendered dynamically; bind on change at render time via delegate
+  document.addEventListener('change', (e) => {
+    if (e.target?.id?.startsWith('wiz-field-')) wizSaveDraft();
+  });
 }
 
 // ==================== BACKWARD COMPATIBILITY (window.*) ====================
@@ -2929,6 +3231,8 @@ document.addEventListener('DOMContentLoaded', () => {
     liveRestDismiss: () => liveRestDismiss(),
     liveResumeDraft: () => liveResumeDraft(),
     liveDiscardDraft: () => liveDiscardDraft(),
+    wizResumeDraft: () => wizResumeDraft(),
+    wizDiscardDraft: () => wizDiscardDraft(),
   };
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
@@ -3060,15 +3364,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const libFilter = document.getElementById('lib-filter');
   if(libFilter) libFilter.addEventListener('input', () => renderExerciseLibrary());
 
-  // Exercise library weight options: show/hide based on param, custom barbell toggle
-  const libParamSel = document.getElementById('lib-param');
-  const libWeightOpts = document.getElementById('lib-weight-options');
-  if (libParamSel && libWeightOpts) {
-    libWeightOpts.style.display = libParamSel.value === 'reps' ? '' : 'none';
-    libParamSel.addEventListener('change', () => {
-      libWeightOpts.style.display = libParamSel.value === 'reps' ? '' : 'none';
-    });
-  }
+  // Exercise library weight options: always shown (kg also valid for duration/distance/calories)
   const libBarbell = document.getElementById('lib-barbell');
   const libBarbellCustom = document.getElementById('lib-barbell-custom-group');
   if (libBarbell && libBarbellCustom) {

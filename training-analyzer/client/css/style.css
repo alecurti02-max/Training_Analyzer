@@ -428,6 +428,18 @@ canvas{max-width:100%}
 .muscle-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;background:var(--accent-bg);color:var(--accent);font-size:.78rem;font-weight:600;margin:2px}
 .muscle-chip .remove-muscle{cursor:pointer;font-size:.85rem}
 .muscle-chip .remove-muscle:hover{color:var(--accent-dark)}
+.muscle-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+
+/* ============ BW TOGGLE + DROP SETS ============ */
+.bw-toggle{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:14px;background:var(--bg3);border:1px solid var(--border);font-size:.7rem;font-weight:700;color:var(--text2);cursor:pointer;user-select:none}
+.bw-toggle input{width:auto;margin:0}
+.bw-toggle:has(input:checked){background:var(--accent-bg);color:var(--accent);border-color:var(--accent)}
+.set-block{margin-bottom:6px}
+.drop-inline{display:flex;align-items:center;gap:6px;margin:4px 0 4px 28px;padding:4px 6px;border-left:2px solid var(--accent);background:var(--bg3);border-radius:4px}
+.drop-inline input{flex:1;min-width:0;padding:4px 6px;font-size:.82rem}
+.drop-arrow{color:var(--accent);font-weight:900;font-size:1rem}
+.set-block .btn-link-sm{margin-left:28px;font-size:.72rem;color:var(--accent);background:none;border:none;cursor:pointer;padding:2px 0}
+.set-block .btn-link-sm:hover{text-decoration:underline}
 
 /* ============ SEARCH ============ */
 .search-box{position:relative}
