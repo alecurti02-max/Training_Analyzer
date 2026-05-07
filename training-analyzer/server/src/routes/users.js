@@ -7,6 +7,7 @@ router.use(authenticate);
 router.get('/search', ctrl.search);
 router.get('/me/profile', ctrl.myProfile);
 router.get('/me/following', ctrl.myFollowing);
+router.delete('/me', ctrl.deleteAccount);
 router.get('/:uid/stats', ctrl.userStats);
 router.post('/:uid/follow', ctrl.follow);
 router.delete('/:uid/follow', ctrl.unfollow);

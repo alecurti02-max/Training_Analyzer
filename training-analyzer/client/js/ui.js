@@ -3110,6 +3110,22 @@ window.setLibMuscleFilter = setLibMuscleFilter;
 window.copyAppLink = copyAppLink;
 window.copyUID = copyUID;
 window.signOut = async () => { await logout(); showScreen('login'); setupLoginUI(); };
+
+async function deleteAccount() {
+  if (!confirm("Eliminare definitivamente l'account?\n\nVerranno cancellati: tutti gli allenamenti, esercizi della libreria, misurazioni corporee, log peso, impostazioni e relazioni con altri utenti.\n\nL'azione è IRREVERSIBILE.")) return;
+  const typed = prompt('Per confermare, scrivi ELIMINA in maiuscolo:');
+  if (typed !== 'ELIMINA') { toast('Eliminazione annullata', 'error'); return; }
+  try {
+    await api.del('/api/users/me');
+    try { await logout(); } catch (e) { /* token già invalido lato server */ }
+    showScreen('login');
+    setupLoginUI();
+    toast('Account eliminato', 'success');
+  } catch (e) {
+    toast('Errore: ' + (e.message || 'eliminazione fallita'), 'error');
+  }
+}
+window.deleteAccount = deleteAccount;
 window.searchUsers = searchUsersAPI;
 window.addFriendByUID = () => { const input = document.getElementById('friend-uid-input'); addFriendByUID(input?.value?.trim()); };
 window.toggleFollow = toggleFollow;
@@ -3145,6 +3161,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // data-action buttons — universal delegated handler
   const actionMap = {
     signOut: () => logout().then(() => { showScreen('login'); setupLoginUI(); }),
+    deleteAccount: () => deleteAccount(),
     exportAllData: () => window.exportAllData(),
     triggerImportJSON: () => document.getElementById('import-json')?.click(),
     openExerciseSheet: () => openExerciseSheet(addWizExercise),

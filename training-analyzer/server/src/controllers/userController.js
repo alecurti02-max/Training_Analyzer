@@ -147,4 +147,17 @@ async function myFollowing(req, res, next) {
   }
 }
 
-module.exports = { search, myProfile, userStats, follow, unfollow, myFollowing };
+// Permanent account deletion. All user-owned rows (workouts, exercises,
+// settings, weights, body measurements, follows in either direction) are
+// removed via ON DELETE CASCADE on the FK from each table to users.uid.
+async function deleteAccount(req, res, next) {
+  try {
+    const deleted = await User.destroy({ where: { uid: req.user.uid } });
+    if (!deleted) return res.status(404).json({ error: { message: 'User not found' } });
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { search, myProfile, userStats, follow, unfollow, myFollowing, deleteAccount };
