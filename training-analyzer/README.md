@@ -33,12 +33,12 @@ training-analyzer/
 │   │   │   ├── database.js      Sequelize + PostgreSQL
 │   │   │   ├── passport.js      Google OAuth2 + Local strategy
 │   │   │   └── env.js           Validazione variabili d'ambiente
-│   │   ├── models/              User, Workout, Exercise, Settings, Weight, Follow
+│   │   ├── models/              User, Workout, Exercise, Settings, Weight, Follow, BodyMeasurement
 │   │   ├── routes/              auth, workouts, exercises, settings, weights, users
 │   │   ├── controllers/         Logica business (un file per route)
 │   │   ├── middleware/          authenticate (JWT), authorize, errorHandler
 │   │   └── utils/jwt.js         Generazione/verifica JWT
-│   ├── migrations/              6 migration Sequelize
+│   ├── migrations/              Migration Sequelize (applicate auto al boot da src/index.js)
 │   ├── seeders/                 Demo user + 3 workout campione
 │   ├── scripts/
 │   │   └── migrateFromFirebase.js  Migrazione dati da Firebase
@@ -75,8 +75,8 @@ docker-compose up --build
 # Server su http://localhost:3000
 # PostgreSQL su localhost:5432
 
-# In un altro terminale, esegui le migrazioni:
-docker-compose exec server npx sequelize-cli db:migrate
+# Le migrazioni vengono applicate automaticamente dal server al boot (src/index.js).
+# Per i seed (demo user + workout campione) lancia in un altro terminale:
 docker-compose exec server npx sequelize-cli db:seed:all
 ```
 
@@ -94,10 +94,11 @@ cp .env.example .env
 # 4. Installa e avvia:
 cd server
 npm install
-npm run migrate
-npm run seed
+npm run seed   # opzionale: demo user + workout campione
 npm run dev
 
+# Le migrazioni vengono applicate automaticamente dal server al boot
+# (vedi runMigrations() in src/index.js).
 # Server su http://localhost:3000
 # Il client viene servito automaticamente da Express
 ```
@@ -234,6 +235,8 @@ fly deploy
 ### Railway / Render
 
 Collega il repo GitHub. Imposta le variabili d'ambiente. Il Dockerfile viene rilevato automaticamente.
+
+**Auto-migrate al boot:** all'avvio del server `runMigrations()` in [server/src/index.js](server/src/index.js) lancia `sequelize-cli db:migrate` prima di `app.listen`. Le migration sono idempotenti (tracciate via `SequelizeMeta`), quindi i deploy successivi le saltano. Questo bypassa la dipendenza da come la piattaforma di hosting avvia il container — su Render in particolare lo Start Command custom ignora sia il `CMD` del Dockerfile sia `npm start`. **Non rimuovere quella chiamata.** Per la stessa ragione `sequelize-cli` è in `dependencies` (non devDependencies).
 
 ---
 
