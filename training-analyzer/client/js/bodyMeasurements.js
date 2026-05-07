@@ -160,6 +160,7 @@ async function handleSave(target) {
     else _measurements.push(saved);
     _measurements.sort((a, b) => new Date(a.date) - new Date(b.date));
     toastMsg('Misurazione salvata', 'success');
+    if (window.__bmOnSave) window.__bmOnSave(saved);
     if (window.__bmOnChange) window.__bmOnChange();
   } catch (e) {
     toastMsg('Errore: ' + (e.message || ''), 'error');
@@ -458,11 +459,12 @@ function visceralBadge(v) {
 }
 
 // ---------- PUBLIC ENTRY ----------
-export function renderMeasurementsPage({ weights, settings, onChange, toast: toastFn } = {}) {
+export function renderMeasurementsPage({ weights, settings, onChange, onSave, toast: toastFn } = {}) {
   if (weights) _weights = weights;
   if (settings) _settings = settings;
   if (toastFn) window.__tsToast = toastFn;
   if (onChange) window.__bmOnChange = onChange;
+  if (onSave) window.__bmOnSave = onSave;
 
   const summary = document.getElementById('bm-summary');
   const form = document.getElementById('bm-form');

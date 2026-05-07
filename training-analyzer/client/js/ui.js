@@ -2449,6 +2449,7 @@ function renderWeightPage() {
     weights: weightsCache,
     settings: settingsCache,
     onChange: () => { renderMeasurementsPage({ weights: weightsCache, settings: settingsCache }); renderBmiBanner(); },
+    onSave: syncSettingsFromMeasurement,
     toast,
   });
 
@@ -2902,6 +2903,30 @@ function editExercise(idx){
 }
 window.duplicateExercise = duplicateExercise;
 window.editExercise = editExercise;
+
+// Mirror the latest body measurement into Settings, so the static fields under
+// "Corpo > Misure > Composizione corporea" reflect the most recent log without
+// requiring the user to re-type them. PUT /api/settings is upsert/merge, so
+// we only send the fields actually present in the measurement.
+async function syncSettingsFromMeasurement(m) {
+  if (!m || typeof m !== 'object') return;
+  const FIELDS = [
+    'circChest','circWaist','circHips','circShoulders','circBicep','circNeck','circThigh','circCalf',
+    'bodyFat','skeletalMuscle','subcutaneousFat','visceralFat','bodyWater','muscleMass','boneMass','protein',
+  ];
+  const patch = {};
+  for (const k of FIELDS) {
+    if (m[k] != null) patch[k] = m[k];
+  }
+  if (!Object.keys(patch).length) return;
+  settingsCache = { ...settingsCache, ...patch };
+  try {
+    await api.put('/api/settings', patch);
+    populateSettingsUI();
+  } catch (e) {
+    console.error('syncSettingsFromMeasurement failed:', e);
+  }
+}
 
 // ==================== SETTINGS ====================
 async function saveSettings(){
