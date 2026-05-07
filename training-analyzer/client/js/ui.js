@@ -16,6 +16,7 @@ import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
 // ==================== GLOBAL STATE ====================
 let currentUser = null;
 let workoutsCache = [], settingsCache = {}, exercisesCache = null, weightsCache = [];
+const EXERCISES_LOAD_FAILED = Symbol('exercises_load_failed');
 let followingCache = {};
 let activeSports = ['gym','running'];
 let muscleGroups = [...DEFAULT_MUSCLES];
@@ -99,7 +100,9 @@ async function loadAllData() {
     const [workoutsRes, settingsRes, exercisesRes, weightsRes, followingRes] = await Promise.all([
       api.get('/api/workouts?limit=5000').catch(() => []),
       api.get('/api/settings').catch(() => ({})),
-      api.get('/api/exercises').catch(() => null),
+      // Use a Symbol sentinel to distinguish network/server errors from a legitimate empty list,
+      // so we never auto-overwrite the server-side library with defaults on a transient failure.
+      api.get('/api/exercises').catch((e) => { console.error('exercises load failed:', e); return EXERCISES_LOAD_FAILED; }),
       api.get('/api/weights').catch(() => []),
       api.get('/api/users/me/following').catch(() => ({}))
     ]);
@@ -133,10 +136,16 @@ async function loadAllData() {
       }
     });
 
-    exercisesCache = exercisesRes;
-    if (!exercisesCache || (Array.isArray(exercisesCache) && !exercisesCache.length)) {
+    if (exercisesRes === EXERCISES_LOAD_FAILED) {
+      // Server/network error: keep working set empty for this session, do NOT overwrite the server.
+      exercisesCache = [];
+      toast('Errore caricamento libreria esercizi: i dati sul server non sono stati toccati', 'error');
+    } else if (Array.isArray(exercisesRes) && !exercisesRes.length) {
+      // Legitimate empty list (new user onboarding): seed with defaults.
       exercisesCache = getDefaultExercises();
       api.put('/api/exercises', exercisesCache).catch(() => {});
+    } else {
+      exercisesCache = exercisesRes;
     }
 
     weightsCache = Array.isArray(weightsRes) ? weightsRes : (weightsRes ? Object.values(weightsRes) : []);
