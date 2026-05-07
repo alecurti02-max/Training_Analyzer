@@ -73,6 +73,7 @@ app.use('/api/weights', require('./routes/weights'));
 app.use('/api/body-measurements', require('./routes/bodyMeasurements'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/profile', require('./routes/profile'));
 
 // --- Health check ---
 app.get('/health', (_req, res) => {

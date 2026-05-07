@@ -7,7 +7,8 @@ import { initAuth, setupLoginUI, logout } from './auth.js';
 import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports, getDefaultMusclesForSport } from './sports.js';
 import { scoreWorkout, getAdvice, renderAiAnalysis, getRecoveryStatus, calculateStreak, getFitnessAssessment, calcTonnage } from './scoring.js';
 import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
-import { loadMeasurements, renderMeasurementsPage } from './bodyMeasurements.js';
+import { loadMeasurements, renderMeasurementsPage, getMeasurements } from './bodyMeasurements.js';
+import { exportProfilePdf } from './pdfExport.js';
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
 import { renderAdmin, setupAdminGating } from './admin.js';
@@ -3111,6 +3112,34 @@ window.copyAppLink = copyAppLink;
 window.copyUID = copyUID;
 window.signOut = async () => { await logout(); showScreen('login'); setupLoginUI(); };
 
+async function handleExportProfilePdf() {
+  try {
+    toast('Generazione PDF in corso…');
+    const fitness = getFitnessAssessment(workoutsCache, settingsCache, weightsCache, muscleGroups);
+    let aiSummary = null;
+    try {
+      aiSummary = await api.post('/api/profile/coach-summary', {});
+    } catch (e) {
+      console.warn('AI summary skipped:', e);
+    }
+    await exportProfilePdf({
+      user: currentUser,
+      settings: settingsCache,
+      workouts: workoutsCache,
+      weights: weightsCache,
+      measurements: getMeasurements(),
+      muscleGroups,
+      fitness,
+      aiSummary,
+    });
+    toast('PDF esportato!', 'success');
+  } catch (e) {
+    console.error('Export PDF error:', e);
+    toast('Errore export PDF: ' + (e.message || 'imprevisto'), 'error');
+  }
+}
+window.handleExportProfilePdf = handleExportProfilePdf;
+
 async function deleteAccount() {
   if (!confirm("Eliminare definitivamente l'account?\n\nVerranno cancellati: tutti gli allenamenti, esercizi della libreria, misurazioni corporee, log peso, impostazioni e relazioni con altri utenti.\n\nL'azione è IRREVERSIBILE.")) return;
   const typed = prompt('Per confermare, scrivi ELIMINA in maiuscolo:');
@@ -3162,6 +3191,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const actionMap = {
     signOut: () => logout().then(() => { showScreen('login'); setupLoginUI(); }),
     deleteAccount: () => deleteAccount(),
+    exportProfilePdf: () => handleExportProfilePdf(),
     exportAllData: () => window.exportAllData(),
     triggerImportJSON: () => document.getElementById('import-json')?.click(),
     openExerciseSheet: () => openExerciseSheet(addWizExercise),
