@@ -904,7 +904,6 @@ async function wizSaveWorkout() {
     if (saved && saved.id) workout.id = saved.id;
     workoutsCache.push(workout);
     toast('Palestra salvata! Score: ' + workout.scores.overall, 'success');
-    fetchPubMedForWorkout(workout);
   } else {
     const tmpl = SPORT_TEMPLATES[wizType];
     const workout = { id: uid(), type: wizType, date, notes };
@@ -930,81 +929,9 @@ async function wizSaveWorkout() {
     workoutsCache.push(workout);
     const sportName = tmpl?.name || wizType;
     toast(sportName + ' salvato! Score: ' + workout.scores.overall, 'success');
-    if (wizType === 'running') fetchPubMedForWorkout(workout);
   }
   wizClearDraft();
   showPage('dashboard');
-}
-
-// ==================== PUBMED ====================
-const PUBMED_CACHE_KEY = 'ta_pubmed_cache';
-function getPubMedCache() { try { return JSON.parse(sessionStorage.getItem(PUBMED_CACHE_KEY)) || {}; } catch { return {}; } }
-function setPubMedCache(key, data) { const c = getPubMedCache(); c[key] = data; sessionStorage.setItem(PUBMED_CACHE_KEY, JSON.stringify(c)); }
-
-function buildPubMedQuery(workout) {
-  if (workout.type === 'gym') {
-    const muscles = [...new Set((workout.exercises || []).map(e => e.muscle).filter(Boolean))];
-    const muscleMap = {'Petto':'chest press bench','Schiena':'back rowing pull','Spalle':'shoulder overhead press',
-      'Bicipiti':'biceps curl','Tricipiti':'triceps extension','Quadricipiti':'squat quadriceps',
-      'Femorali':'hamstring deadlift','Glutei':'glute hip thrust','Polpacci':'calf raise',
-      'Addominali':'core abdominal','Full Body':'compound exercise'};
-    const muscleTerms = muscles.slice(0,2).map(m => muscleMap[m]||m).join(' ');
-    const rpe = workout.rpe||7;
-    const intensity = rpe>=8?'high intensity':rpe>=5?'moderate intensity':'low intensity';
-    return `strength training ${intensity} hypertrophy ${muscleTerms}`;
-  }
-  if (workout.type === 'running') {
-    const typeMap = {easy:'aerobic base training',tempo:'lactate threshold running',interval:'interval training VO2max',long:'long distance endurance',recovery:'active recovery running',race:'race performance'};
-    return `running ${typeMap[workout.runType]||'endurance'} cardiovascular adaptation`;
-  }
-  return 'exercise training adaptation performance';
-}
-
-async function fetchPubMedForWorkout(workout) {
-  const query = buildPubMedQuery(workout);
-  const cache = getPubMedCache();
-  if (cache[query]) return cache[query];
-  try {
-    const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=3&sort=date&term=${encodeURIComponent(query)}`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-    const ids = searchData.esearchresult?.idlist || [];
-    if (!ids.length) return [];
-    const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=${ids.join(',')}`;
-    const summaryRes = await fetch(summaryUrl);
-    const summaryData = await summaryRes.json();
-    const articles = ids.map(id => {
-      const item = summaryData.result?.[id];
-      if (!item) return null;
-      return { id, title: item.title, authors: (item.authors||[]).slice(0,3).map(a=>a.name).join(', '),
-        year: item.pubdate?.split(' ')[0]||'', source: item.source||'',
-        link: `https://pubmed.ncbi.nlm.nih.gov/${id}/` };
-    }).filter(Boolean);
-    try {
-      const abstractUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&retmode=xml&rettype=abstract&id=${ids.join(',')}`;
-      const abstractRes = await fetch(abstractUrl);
-      const abstractText = await abstractRes.text();
-      const xmlDoc = new DOMParser().parseFromString(abstractText, 'text/xml');
-      xmlDoc.querySelectorAll('PubmedArticle').forEach((node, i) => {
-        const el = node.querySelector('AbstractText');
-        if (el && articles[i]) {
-          const full = el.textContent;
-          articles[i].abstract = full.length > 300 ? full.slice(0,300)+'...' : full;
-        }
-      });
-    } catch(e) {}
-    setPubMedCache(query, articles);
-    return articles;
-  } catch(e) { return []; }
-}
-
-function renderPubMedBox(articles) {
-  if (!articles || !articles.length) return '';
-  let html = `<div class="research-box"><div class="research-header" onclick="this.nextElementSibling.classList.toggle('open')"><h4>Cosa dice la ricerca</h4><span style="font-size:.8rem;color:var(--text2)">&#9660;</span></div><div class="research-body">`;
-  articles.forEach(a => {
-    html += `<div class="research-article"><div class="article-title"><a href="${a.link}" target="_blank">${a.title}</a></div><div class="article-meta">${a.authors} - ${a.source} (${a.year})</div>${a.abstract?`<div class="article-insight">${a.abstract}</div>`:''}</div>`;
-  });
-  return html + '</div></div>';
 }
 
 // ==================== LIVE WORKOUT ====================
@@ -1676,7 +1603,6 @@ async function liveSaveWorkout() {
     if (saved && saved.id) workout.id = saved.id;
     workoutsCache.push(workout);
     toast('Palestra salvata! Score: ' + workout.scores.overall, 'success');
-    fetchPubMedForWorkout(workout);
   } else {
     const tmpl = SPORT_TEMPLATES[liveSession.type];
     const workout = { id: uid(), type: liveSession.type, date: liveSession.date, notes, duration: durationMin };
@@ -1700,7 +1626,6 @@ async function liveSaveWorkout() {
     workoutsCache.push(workout);
     const sportName = tmpl?.name || liveSession.type;
     toast(sportName + ' salvato! Score: ' + workout.scores.overall, 'success');
-    if (liveSession.type === 'running') fetchPubMedForWorkout(workout);
   }
 
   // Cleanup
@@ -2096,7 +2021,7 @@ function showWorkoutDetail(id) {
     }
   }
   if(w.notes) html+=`<p style="margin-top:10px;font-size:.85rem;font-style:italic;color:var(--text2)">"${w.notes}"</p>`;
-  html+='</div><div id="modal-pubmed"></div>';
+  html+='</div>';
   document.getElementById('modal-body').innerHTML=html;
 
   // Render HR chart if data exists
@@ -2136,10 +2061,6 @@ function showWorkoutDetail(id) {
   document.getElementById('modal-edit-btn').style.display='';
   bindAiAnalyzeButtons(w);
   document.getElementById('workout-modal').classList.add('show');
-  fetchPubMedForWorkout(w).then(articles=>{
-    const el=document.getElementById('modal-pubmed');
-    if(el) el.innerHTML=renderPubMedBox(articles);
-  });
 }
 
 function closeModal(){

@@ -338,18 +338,6 @@ canvas{max-width:100%}
 .bs-exercise-item .bs-ex-muscle{font-size:.78rem;color:var(--accent);font-weight:600}
 
 /* ============ PUBMED RESEARCH BOX ============ */
-.research-box{background:var(--accent-bg);border:1px solid var(--border);border-radius:var(--radius);margin-top:16px;overflow:hidden}
-.research-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none}
-.research-header:hover{background:var(--accent-bg2)}
-.research-header h4{font-size:.85rem;color:var(--accent);font-weight:700;text-transform:uppercase}
-.research-body{display:none;padding:0 16px 16px}
-.research-body.open{display:block}
-.research-article{padding:10px 0;border-bottom:1px solid var(--border);font-size:.82rem}
-.research-article:last-child{border:none}
-.research-article .article-title{font-weight:600;color:var(--text);margin-bottom:3px}
-.research-article .article-meta{color:var(--text2);font-size:.75rem;margin-bottom:4px}
-.research-article .article-insight{color:var(--text2);line-height:1.4}
-.research-article a{color:var(--accent);text-decoration:none;font-weight:600}
 
 /* ============ PROFILE ============ */
 .profile-card{display:flex;align-items:center;gap:20px;padding:24px}
