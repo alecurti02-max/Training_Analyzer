@@ -63,26 +63,35 @@ async function apiFetch(url, options = {}) {
 
   let res = await fetch(url, fetchOptions);
 
-  // Auto-refresh on 401 token_expired (retry once)
+  // Auto-refresh on 401 (retry once). The server's authenticate middleware nests
+  // the code under `error.code` (e.g. { error: { code: 'token_expired' } }), so we
+  // look there too — the previous flat-only check never matched and silently
+  // booted the user after 15 min of inactivity.
   if (res.status === 401) {
     let errorData;
     try { errorData = await res.json(); } catch (e) { errorData = {}; }
+    const code = errorData.code || errorData.error?.code || (typeof errorData.error === 'string' ? errorData.error : null);
 
-    if (errorData.code === 'token_expired' || errorData.error === 'token_expired') {
+    // Attempt refresh for any auth-related 401 (expired / missing / invalid).
+    // If there's no refresh token in storage, refreshTokens() returns false and we drop to login.
+    const isAuthIssue = code === 'token_expired' || code === 'no_token' || code === 'invalid_token' || !code;
+    if (isAuthIssue) {
       const refreshed = await refreshTokens();
       if (refreshed) {
-        // Retry the request with the new token
         headers['Authorization'] = 'Bearer ' + _accessToken;
         const retryOptions = { ...options, headers };
         res = await fetch(url, retryOptions);
+        if (res.status === 401) {
+          clearTokens();
+          window.location.reload();
+          throw new Error('Session expired');
+        }
       } else {
-        // Persistent 401: clear tokens and redirect to login
         clearTokens();
         window.location.reload();
         throw new Error('Session expired');
       }
     } else {
-      // Non-token 401: clear and redirect
       clearTokens();
       window.location.reload();
       throw new Error('Unauthorized');
