@@ -599,14 +599,45 @@ function addFooter(doc) {
   }
 }
 
-function saveOrFallback(doc, filename) {
-  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+async function saveOrFallback(doc, filename) {
+  const ua = navigator.userAgent || '';
+  const isIos = /iPad|iPhone|iPod/.test(ua);
+  // Standalone web-app on iOS Home Screen: window.open('_blank') doesn't work
+  // (no tab to open into) and <a download> is ignored. The reliable path is
+  // the Web Share API → user picks "Save to Files", "Mail", "WhatsApp", etc.
+  const isStandalone = window.navigator.standalone === true
+    || window.matchMedia?.('(display-mode: standalone)').matches;
+
   if (isIos) {
-    const url = doc.output('bloburl');
-    window.open(url, '_blank');
-  } else {
-    doc.save(filename);
+    const blob = doc.output('blob');
+    let file = null;
+    try { file = new File([blob], filename, { type: 'application/pdf' }); } catch (_) { /* old iOS */ }
+
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Panoramica fisica', text: filename });
+        return;
+      } catch (e) {
+        // User cancelled or share failed — fall through to next strategy
+        if (e?.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback for older iOS / Share API not available: open the blob URL in
+    // a new context. In standalone mode this opens Safari, where the user can
+    // tap the Share icon to save.
+    const url = URL.createObjectURL(blob);
+    if (isStandalone) {
+      // window.open from standalone may be blocked → use location swap instead.
+      window.location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
   }
+
+  doc.save(filename);
 }
 
 // ---------- PUBLIC ENTRY ----------
@@ -635,5 +666,5 @@ export async function exportProfilePdf(ctx) {
     || ctx.user?.email
     || 'utente');
   const dateForFile = new Date().toISOString().slice(0, 10);
-  saveOrFallback(doc, `panoramica-${nameForFile}-${dateForFile}.pdf`);
+  await saveOrFallback(doc, `panoramica-${nameForFile}-${dateForFile}.pdf`);
 }
