@@ -9,6 +9,7 @@ import { scoreWorkout, getAdvice, renderAiAnalysis, getRecoveryStatus, calculate
 import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
 import { loadMeasurements, renderMeasurementsPage, getMeasurements } from './bodyMeasurements.js';
 import { exportProfilePdf } from './pdfExport.js';
+import { loadRecoveryData, renderRecoveryPage, saveNutritionLog, saveSleepLog } from './recovery.js';
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
 import { renderAdmin, setupAdminGating } from './admin.js';
@@ -108,6 +109,7 @@ async function loadAllData() {
       api.get('/api/users/me/following').catch(() => ({}))
     ]);
     await loadMeasurements();
+    await loadRecoveryData();
 
     // Normalize workouts: server returns { workouts: [...] } with data in JSONB .data field
     const rawWorkouts = Array.isArray(workoutsRes) ? workoutsRes
@@ -170,7 +172,7 @@ function showScreen(name) {
   if (name === 'app') initApp();
 }
 
-const pageMap = {dashboard:'Dashboard',train:'Allenamento',history:'Storico',progress:'Progressi',body:'Corpo',profile:'Profilo',setup:'Setup',admin:'Admin'};
+const pageMap = {dashboard:'Dashboard',train:'Allenamento',history:'Storico',progress:'Progressi',body:'Corpo',recovery:'Recupero',profile:'Profilo',setup:'Setup',admin:'Admin'};
 
 // Old slugs → new page + tab (for backward compat with internal data-page="X" links and bookmarks)
 const PAGE_ALIAS = {
@@ -189,6 +191,7 @@ const PAGE_DEFAULT_TAB = {
   train:    'manual',
   progress: 'general',
   body:     'quicklog',
+  recovery: 'nutrition',
   profile:  'me',
   setup:    'library',
 };
@@ -212,6 +215,7 @@ function showPage(page) {
   if(page==='history') renderHistory();
   if(page==='progress') { renderProgress(); renderAthleticDetail(); }
   if(page==='body') { renderWeightPage(); populateSettingsUI(); }
+  if(page==='recovery') { renderRecoveryPage({ settings: settingsCache, toast }); }
   if(page==='profile') { renderProfile(); renderFriendsPageLocal(); }
   if(page==='train') { initLogWizard(); initLivePage(); }
   if(page==='setup') {
@@ -3192,6 +3196,8 @@ document.addEventListener('DOMContentLoaded', () => {
     signOut: () => logout().then(() => { showScreen('login'); setupLoginUI(); }),
     deleteAccount: () => deleteAccount(),
     exportProfilePdf: () => handleExportProfilePdf(),
+    saveNutritionLog: () => saveNutritionLog(),
+    saveSleepLog: () => saveSleepLog(),
     exportAllData: () => window.exportAllData(),
     triggerImportJSON: () => document.getElementById('import-json')?.click(),
     openExerciseSheet: () => openExerciseSheet(addWizExercise),

@@ -9,6 +9,8 @@ const ALLOWED_FIELDS = [
   // Composizione corporea (opzionale)
   'bodyFat', 'skeletalMuscle', 'subcutaneousFat', 'visceralFat',
   'bodyWater', 'muscleMass', 'boneMass', 'protein',
+  // Target alimentazione + sonno
+  'caloriesTarget', 'proteinTargetG', 'sleepHoursTarget',
 ];
 
 async function get(req, res, next) {

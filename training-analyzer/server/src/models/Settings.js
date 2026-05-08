@@ -50,6 +50,10 @@ module.exports = (sequelize) => {
       muscleMass: { type: DataTypes.FLOAT, allowNull: true },
       boneMass: { type: DataTypes.FLOAT, allowNull: true },
       protein: { type: DataTypes.FLOAT, allowNull: true },
+      // Target alimentazione + sonno
+      caloriesTarget: { type: DataTypes.INTEGER, allowNull: true },
+      proteinTargetG: { type: DataTypes.INTEGER, allowNull: true },
+      sleepHoursTarget: { type: DataTypes.FLOAT, allowNull: true },
     },
     {
       tableName: 'settings',
