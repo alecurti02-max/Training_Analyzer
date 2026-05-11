@@ -825,3 +825,456 @@ canvas{max-width:100%}
   .exercise-set-table th,.exercise-set-table td{padding:4px 3px!important}
   .exercise-set-table .col-derived{display:none}
 }
+
+/* ===========================================================
+   ============ PISTA SPORT — VISUAL OVERHAUL ===============
+   Override of legacy component styles for a bold sport look.
+   =========================================================== */
+
+/* --- Body decoration: diagonal stripes overlay --- */
+body{
+  position:relative;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+  background-image:repeating-linear-gradient(115deg,transparent 0 80px,rgba(225,29,44,0.025) 80px 81px,transparent 81px 160px);
+  background-attachment:fixed;
+}
+[data-theme="dark"] body::before,
+@media (prefers-color-scheme: dark){
+  body::before{
+    background-image:repeating-linear-gradient(115deg,transparent 0 80px,rgba(255,59,77,0.04) 80px 81px,transparent 81px 160px);
+  }
+}
+
+/* --- Selection --- */
+::selection{background:var(--race);color:#fff}
+
+/* --- Heading global --- */
+h1,h2,h3,h4,h5,h6{
+  font-family:var(--font-display);
+  font-weight:700;
+  letter-spacing:-0.01em;
+  line-height:1.05;
+}
+
+/* --- Container max width refresh --- */
+.container{max-width:1180px;margin:0 auto;padding:20px 18px 60px}
+@media (min-width: 760px){.container{padding:24px 28px 80px}}
+
+/* --- NAV — bold brand + pill active --- */
+.nav{
+  padding:14px 18px;
+  background:var(--nav-bg);
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:0;
+  z-index:50;
+  backdrop-filter:blur(20px) saturate(140%);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+}
+.nav-brand{
+  font-family:var(--font-display);
+  font-size:1.45rem;
+  font-style:italic;
+  font-weight:800;
+  color:var(--text);
+  text-transform:uppercase;
+  letter-spacing:-0.02em;
+  margin-right:14px;
+  white-space:nowrap;
+  line-height:1;
+}
+.nav-brand::after{
+  content:"";
+  display:inline-block;
+  width:6px;height:6px;
+  background:var(--race);
+  border-radius:50%;
+  margin-left:2px;
+  vertical-align:0.05em;
+}
+.nav-btn{
+  font-family:var(--font-body);
+  font-size:0.74rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--text2);
+  padding:9px 14px;
+  border-radius:6px;
+  background:transparent;
+  transition:all 0.15s ease;
+  position:relative;
+}
+.nav-btn:hover{color:var(--text);background:var(--bg3)}
+.nav-btn.active{
+  background:var(--race);
+  color:#fff;
+  box-shadow:0 2px 0 var(--race-deep),0 6px 18px -4px rgba(225,29,44,0.4);
+}
+.nav-btn.active::after{display:none}
+.nav-avatar{
+  width:34px;height:34px;
+  border-radius:50%;
+  border:2px solid var(--race);
+  object-fit:cover;
+}
+.sync-indicator{
+  font-family:var(--font-mono);
+  font-size:0.62rem;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+  font-weight:600;
+  padding:5px 10px;
+  border-radius:4px;
+  background:rgba(16,185,129,0.12);
+  color:var(--green);
+  border:1px solid rgba(16,185,129,0.20);
+}
+
+/* --- CARD — sharp edges, dramatic shadow on hover --- */
+.card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:22px 22px 24px;
+  box-shadow:0 1px 2px rgba(14,16,20,0.04),0 8px 24px -10px rgba(14,16,20,0.10);
+  transition:transform 0.22s cubic-bezier(.4,.2,.2,1),box-shadow 0.22s cubic-bezier(.4,.2,.2,1);
+  position:relative;
+}
+.card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 1px 2px rgba(14,16,20,0.04),0 18px 36px -10px rgba(14,16,20,0.18);
+}
+
+/* --- Card title — BIG display saira, accent bar --- */
+.card-title{
+  font-family:var(--font-display);
+  font-size:1.5rem;
+  font-weight:700;
+  font-style:italic;
+  text-transform:none;
+  letter-spacing:-0.015em;
+  color:var(--text);
+  margin:0 0 18px 0;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  line-height:1;
+}
+.card-title::before{
+  content:"";
+  width:5px;
+  height:24px;
+  background:var(--race);
+  border-radius:1px;
+  display:inline-block;
+  flex-shrink:0;
+}
+
+/* --- STAT-CARD — left aligned, MEGA italic number, accent bar --- */
+.stat-card,.stat-box,.weight-stat{
+  text-align:left;
+  padding:18px 20px 20px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-left:4px solid var(--race);
+  border-radius:6px;
+  position:relative;
+  overflow:hidden;
+  transition:transform 0.2s cubic-bezier(.4,.2,.2,1);
+}
+.stat-card:hover,.weight-stat:hover{transform:translateY(-2px)}
+.stat-card::before,.weight-stat::before{
+  content:"";
+  position:absolute;
+  top:0;right:0;
+  width:120px;height:120px;
+  background:radial-gradient(circle at top right,var(--accent-bg2) 0%,transparent 70%);
+  pointer-events:none;
+}
+.stat-value,.stat-box .stat-value{
+  font-family:var(--font-display);
+  font-size:clamp(2.4rem,5vw,3.2rem);
+  font-weight:800;
+  font-style:italic;
+  line-height:0.9;
+  letter-spacing:-0.03em;
+  color:var(--race);
+  display:inline-block;
+  transform:skewX(-4deg);
+  margin-bottom:6px;
+}
+.stat-label{
+  font-family:var(--font-body);
+  font-size:0.66rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.14em;
+  color:var(--text2);
+  margin-top:6px;
+  display:block;
+}
+
+/* Different tones per stat (cycles via parent index) */
+.card-grid > .stat-card:nth-child(1){border-left-color:var(--green)}
+.card-grid > .stat-card:nth-child(1) .stat-value{color:var(--green)}
+.card-grid > .stat-card:nth-child(1)::before{background:radial-gradient(circle at top right,rgba(16,185,129,0.14) 0%,transparent 70%)}
+.card-grid > .stat-card:nth-child(2){border-left-color:var(--race)}
+.card-grid > .stat-card:nth-child(2) .stat-value{color:var(--race)}
+.card-grid > .stat-card:nth-child(3){border-left-color:var(--green)}
+.card-grid > .stat-card:nth-child(3) .stat-value{color:var(--green)}
+.card-grid > .stat-card:nth-child(3)::before{background:radial-gradient(circle at top right,rgba(16,185,129,0.14) 0%,transparent 70%)}
+.card-grid > .stat-card:nth-child(4){border-left-color:var(--cyan)}
+.card-grid > .stat-card:nth-child(4) .stat-value{color:var(--cyan)}
+.card-grid > .stat-card:nth-child(4)::before{background:radial-gradient(circle at top right,rgba(34,211,238,0.16) 0%,transparent 70%)}
+
+/* --- WORKOUT-ITEM — grid layout, big score, sport badge --- */
+.workout-item{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:14px;
+  align-items:center;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-left:4px solid var(--race);
+  border-radius:6px;
+  padding:14px 18px;
+  margin-bottom:8px;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+  transition:transform 0.2s cubic-bezier(.4,.2,.2,1),box-shadow 0.2s cubic-bezier(.4,.2,.2,1);
+}
+.workout-item:hover{
+  transform:translateX(3px);
+  box-shadow:0 10px 24px -8px rgba(14,16,20,0.14);
+}
+.workout-item::after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:2px;
+  background:linear-gradient(90deg,var(--race) 0%,transparent 100%);
+  opacity:0;
+  transition:opacity 0.2s;
+}
+.workout-item:hover::after{opacity:1}
+
+/* --- SCORE CIRCLE — bigger with outer dashed orbit --- */
+.score-circle{
+  width:54px;
+  height:54px;
+  min-width:54px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:var(--font-display);
+  font-size:1.3rem;
+  font-style:italic;
+  font-weight:800;
+  letter-spacing:-0.02em;
+  background:var(--bg);
+  border:3px solid var(--race);
+  color:var(--race);
+  position:relative;
+  flex-shrink:0;
+}
+.score-circle::before{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:50%;
+  border:1px dashed currentColor;
+  opacity:0.35;
+  animation:score-orbit 30s linear infinite;
+  pointer-events:none;
+}
+@keyframes score-orbit{to{transform:rotate(360deg)}}
+.score-sm{
+  width:42px;
+  height:42px;
+  min-width:42px;
+  font-size:1rem;
+  border-width:2.5px;
+}
+.score-sm::before{inset:-5px}
+
+/* Workout-item type color override */
+.workout-item .score-circle{
+  /* Default red; specific types overridden below */
+}
+
+/* --- STREAK NUM — MEGA italic --- */
+.streak-num{
+  font-family:var(--font-display);
+  font-size:5rem;
+  font-weight:900;
+  font-style:italic;
+  color:var(--race);
+  line-height:0.85;
+  letter-spacing:-0.05em;
+  display:inline-block;
+  transform:skewX(-6deg);
+  margin-right:4px;
+}
+.streak-info,.streak-display{
+  align-items:flex-end;
+  gap:18px;
+}
+
+/* --- BUTTONS — sport pill --- */
+.btn-primary{
+  background:var(--race);
+  color:#fff;
+  border-radius:6px;
+  font-family:var(--font-body);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  font-size:0.78rem;
+  padding:11px 20px;
+  border:none;
+  box-shadow:0 2px 0 var(--race-deep),0 8px 20px -6px rgba(225,29,44,0.40);
+  transition:transform 0.15s,filter 0.15s,box-shadow 0.15s;
+  position:relative;
+  overflow:hidden;
+}
+.btn-primary:hover{
+  filter:brightness(1.08);
+  transform:translateY(-1px);
+  box-shadow:0 4px 0 var(--race-deep),0 14px 28px -8px rgba(225,29,44,0.50);
+}
+.btn-primary:active{transform:translateY(1px);box-shadow:0 0 0 var(--race-deep)}
+.btn-secondary,.btn-outline{
+  background:var(--bg2);
+  color:var(--text);
+  border:1px solid var(--border-strong);
+  border-radius:6px;
+  font-family:var(--font-body);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  font-size:0.78rem;
+  padding:10px 18px;
+}
+.btn-secondary:hover,.btn-outline:hover{border-color:var(--text);background:var(--bg3)}
+.btn-danger{
+  background:var(--danger);
+  color:#fff;
+  border-radius:6px;
+}
+
+/* --- CHIPS / BADGES — sport pill rounded square --- */
+.chip,.muscle-chip,.workout-type-badge,.barbell-tag,.opt-tag,.opt-tag-uni,.param-tag,.ana-chip{
+  font-family:var(--font-body);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  font-size:0.66rem;
+  border-radius:4px;
+  padding:4px 9px;
+  border:1px solid;
+}
+
+/* --- FORM INPUTS --- */
+input,select,textarea{
+  font-family:var(--font-body);
+  border-radius:6px;
+  background:var(--bg);
+  border:1px solid var(--border);
+  padding:11px 14px;
+  font-size:0.92rem;
+  transition:border-color 0.15s,box-shadow 0.15s;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--race);
+  box-shadow:0 0 0 3px var(--accent-bg2);
+}
+
+/* --- TABS --- */
+.bm-tab,.tab,.tab-btn{
+  font-family:var(--font-body);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  font-size:0.72rem;
+}
+.bm-tab.active,.tab.active,.tab-btn.active{
+  background:var(--race);
+  color:#fff;
+}
+
+/* --- HEATMAP legend --- */
+.heatmap-legend{
+  font-family:var(--font-mono);
+  font-size:0.66rem;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--text2);
+}
+
+/* --- HR Zones --- */
+.hr-zone{
+  font-family:var(--font-body);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  font-size:0.72rem;
+}
+
+/* --- Athletic metric value --- */
+.athletic-metric-value,.fitness-score{
+  font-family:var(--font-display);
+  font-size:2rem;
+  font-weight:800;
+  font-style:italic;
+  color:var(--race);
+  letter-spacing:-0.03em;
+  line-height:1;
+  display:inline-block;
+  transform:skewX(-4deg);
+}
+.athletic-metric-label,.fitness-label{
+  font-family:var(--font-body);
+  font-size:0.66rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+  color:var(--text2);
+  margin-top:6px;
+}
+
+/* --- 1RM, weight stat values --- */
+.weight-stat-value{
+  font-family:var(--font-display);
+  font-size:2.2rem;
+  font-weight:800;
+  font-style:italic;
+  color:var(--text);
+  letter-spacing:-0.03em;
+  display:inline-block;
+  transform:skewX(-4deg);
+}
+
+/* --- Container z-index so it sits above body::before stripes --- */
+.container,.nav,.login-screen,.bottom-sheet,.modal-overlay,.toast{
+  position:relative;
+  z-index:2;
+}
+
+/* --- Mobile tweaks --- */
+@media (max-width: 640px){
+  .stat-value{font-size:2rem}
+  .card-title{font-size:1.25rem}
+  .card-title::before{height:20px}
+  .streak-num{font-size:3.5rem}
+  .nav-brand{font-size:1.2rem}
+}
