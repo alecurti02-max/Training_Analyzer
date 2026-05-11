@@ -1265,11 +1265,13 @@ input:focus,select:focus,textarea:focus{
 }
 
 /* --- Container z-index so it sits above body::before stripes --- */
-/* NB: .bottom-sheet is intentionally NOT in this list — it needs position:fixed
-   (from its own rule) so transform:translateY(100%) parks it off-screen until
-   .show is added. Forcing position:relative here made it render in normal flow,
-   showing the "Cerca esercizio..." search bar on every page. */
-.container,.nav,.login-screen,.modal-overlay,.toast{
+/* NB: .bottom-sheet and .modal-overlay are intentionally NOT in this list —
+   they need position:fixed (from their own rules) to cover the viewport
+   (modal) or to park off-screen via transform:translateY(100%) until .show
+   is added (bottom-sheet). Forcing position:relative here broke both:
+   bottom-sheet showed "Cerca esercizio..." on every page; modal-overlay
+   rendered workout detail below the page instead of as overlay. */
+.container,.nav,.login-screen,.toast{
   position:relative;
   z-index:2;
 }
