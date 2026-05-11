@@ -26,12 +26,13 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
-    // During dev, proxy API calls to the backend on :3000 so the SPA can call
-    // /api/* without CORS gymnastics.
+    port: Number(process.env.VITE_DEV_PORT) || 5173,
+    // During dev, proxy API calls to the backend so the SPA can call
+    // /api/* without CORS gymnastics. Override with VITE_API_PORT when
+    // running multiple projects on different ports (e.g. VITE_API_PORT=3001).
     proxy: {
-      '/api': 'http://localhost:3000',
-      '/health': 'http://localhost:3000',
+      '/api': `http://localhost:${process.env.VITE_API_PORT || 3000}`,
+      '/health': `http://localhost:${process.env.VITE_API_PORT || 3000}`,
     },
   },
 });

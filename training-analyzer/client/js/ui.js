@@ -1644,43 +1644,21 @@ async function liveSaveWorkout() {
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
-  const workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const now=todayStr();
-  const thisWeek=workouts.filter(w=>daysBetween(now,w.date)<=7);
-  const weekGoal=settingsCache.weekgoal||4;
-  const avgScore=workouts.length?(workouts.reduce((s,w)=>s+(w.scores?.overall||0),0)/workouts.length).toFixed(1):'--';
-  const weekKm=thisWeek.filter(w=>w.type==='running').reduce((s,w)=>s+(w.distance||0),0).toFixed(1);
-  const weekTonnage=thisWeek.filter(w=>w.type==='gym').reduce((s,w)=>s+(w._tonnage||0),0);
+  const workouts = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  document.getElementById('dash-stats').innerHTML=`
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:${thisWeek.length>=weekGoal?'var(--green)':'var(--yellow)'}">${thisWeek.length}/${weekGoal}</div><div class="stat-label">Allenamenti settimana</div></div></div>
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:var(--accent)">${avgScore}</div><div class="stat-label">Score Medio</div></div></div>
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:var(--green)">${weekKm} km</div><div class="stat-label">Km corsa settimana</div></div></div>
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:var(--blue)">${Math.round(weekTonnage/1000*10)/10}t</div><div class="stat-label">Tonnellaggio settimana</div></div></div>`;
-
-  const streak = calculateStreak(workoutsCache);
-  document.getElementById('dash-streak').innerHTML = `
-    <div style="text-align:center"><div class="streak-num">${streak.current}</div><div class="streak-info"><div class="streak-label">giorni consecutivi</div></div></div>
-    <div style="text-align:center"><div class="streak-num" style="color:var(--yellow)">${streak.record}</div><div class="streak-info"><div class="streak-label">record storico</div></div></div>`;
+  // Fase 5: i 4 contenitori dinamici (#dash-stats, #dash-streak, #dash-recovery,
+  // #dash-recent) sono ora renderizzati dal componente Preact in
+  // src/pages/Dashboard/Dashboard.jsx. Le chart legacy (heatmap, weekly, radar)
+  // restano gestite imperativamente da charts.js qui sotto, fino a Fase 6/8.
+  if (globalThis.Preact?.dashboard) {
+    globalThis.Preact.dashboard.mount({
+      workouts: workoutsCache,
+      settings: settingsCache,
+      muscleGroups,
+    });
+  }
 
   renderHeatmap(workouts);
-
-  const recovery=getRecoveryStatus(workoutsCache, muscleGroups);
-  let recHTML='';
-  if(recovery.suggestedRestDays>0) recHTML+=`<div class="advice-box" style="margin-bottom:12px">Carico alto (${recovery.workoutsLast7} in 7gg). Consigliati ${recovery.suggestedRestDays} giorni di riposo.</div>`;
-  Object.entries(recovery.muscleRecovery).forEach(([muscle,info])=>{
-    if(info.pct>=100||!info.lastWorked) return;
-    const color=info.pct>=80?'var(--green)':info.pct>=50?'var(--yellow)':'var(--red)';
-    recHTML+=`<div class="muscle-item"><span>${muscle}</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:.8rem;color:var(--text2)">${info.daysAgo}g fa</span><div class="muscle-bar-bg"><div class="muscle-bar-fill" style="width:${info.pct}%;background:${color}"></div></div><span style="font-size:.8rem;width:35px;text-align:right">${info.pct}%</span></div></div>`;
-  });
-  if(!recHTML) recHTML='<p style="color:var(--text2);font-size:.85rem">Tutti i gruppi muscolari sono recuperati!</p>';
-  document.getElementById('dash-recovery').innerHTML=recHTML;
-
-  const recent=workouts.slice(0,5);
-  document.getElementById('dash-recent').innerHTML = recent.length ?
-    recent.map(w=>workoutItemHTML(w)).join('') :
-    '<div class="empty-state"><p>Nessun allenamento registrato</p><p style="font-size:.85rem">Vai su "Log" per iniziare!</p></div>';
-
   renderWeeklyChart(workouts);
   renderRadarChart(workouts);
 }
