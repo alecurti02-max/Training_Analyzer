@@ -1,0 +1,94 @@
+# Baseline LOC snapshot — 2026-05-11
+
+## Frontend
+
+### client/js/
+    8189 total
+    3406 client/js/ui.js
+     905 client/js/scoring.js
+     670 client/js/pdfExport.js
+     628 client/js/import.js
+     486 client/js/charts.js
+     478 client/js/bodyMeasurements.js
+     439 client/js/bodyAvatar.js
+     289 client/js/recovery.js
+     239 client/js/admin.js
+     210 client/js/friends.js
+     159 client/js/api.js
+     155 client/js/auth.js
+     112 client/js/sports.js
+      13 client/js/plan.js
+
+### client/css/
+    1613 client/css/style.css
+
+## Backend
+
+### server/src/controllers/
+    1430 total
+     216 server/src/controllers/profileController.js
+     189 server/src/controllers/workoutController.js
+     178 server/src/controllers/authController.js
+     163 server/src/controllers/userController.js
+     138 server/src/controllers/exerciseController.js
+     126 server/src/controllers/adminController.js
+      89 server/src/controllers/sleepController.js
+      83 server/src/controllers/weightController.js
+      79 server/src/controllers/nutritionController.js
+      75 server/src/controllers/bodyMeasurementController.js
+      54 server/src/controllers/settingsController.js
+      40 server/src/controllers/aiAnalysisController.js
+
+### server/src/services/
+     521 total
+     290 server/src/services/contextBuilder.js
+     212 server/src/services/aiAnalyzer.js
+      19 server/src/services/anthropicClient.js
+
+### server/src/models/
+     501 total
+      89 server/src/models/User.js
+      70 server/src/models/Workout.js
+      69 server/src/models/Settings.js
+      62 server/src/models/Exercise.js
+      46 server/src/models/BodyMeasurement.js
+      40 server/src/models/Weight.js
+      36 server/src/models/NutritionLog.js
+      35 server/src/models/SleepLog.js
+      33 server/src/models/Follow.js
+      21 server/src/models/index.js
+
+### server/src/routes/
+     165 total
+      32 server/src/routes/workouts.js
+      27 server/src/routes/auth.js
+      15 server/src/routes/users.js
+      13 server/src/routes/exercises.js
+      12 server/src/routes/weights.js
+      12 server/src/routes/sleep.js
+      12 server/src/routes/nutrition.js
+      12 server/src/routes/bodyMeasurements.js
+      11 server/src/routes/admin.js
+      10 server/src/routes/settings.js
+       9 server/src/routes/profile.js
+
+### server/src/middleware/
+     127 total
+      27 server/src/middleware/authorize.js
+      23 server/src/middleware/requireAiEnabled.js
+      23 server/src/middleware/errorHandler.js
+      22 server/src/middleware/authenticate.js
+      16 server/src/middleware/requirePremium.js
+      16 server/src/middleware/requireAdmin.js
+
+### server/src/ totals
+    3186 total
+
+### server/migrations/
+     582 total
+
+## Totals
+Frontend (client/js + client/css):
+    9802 total
+Backend (server/src):
+    3186 total
