@@ -3,148 +3,221 @@
 PWA full-stack per tracciare allenamenti multi-sport (gym, running, karting, altri),
 analizzare progressi con AI, condividere con amici. Deploy Render + Neon Postgres.
 
-> **REFACTOR IN CORSO**: il frontend sta migrando da Vanilla JS a Preact+Vite (strangler fig).
-> Vedi `docs/refactor-roadmap.md`. Questa CLAUDE.md riflette lo **stato attuale** del codice;
-> aggiornare a ogni fase completata.
->
-> **Fase corrente**: 1 done (Vite+Preact scaffold + bridge legacy). Pages ancora servite dal vecchio
-> `client/js/ui.js`. La nuova app Preact monta in `<div id="app">` ed è inattiva fino a Fase 5.
+> **Stato refactor**: 8 fasi su 9 completate (Fase 7 Train migration deferred).
+> Vedi `docs/refactor-roadmap.md` per dettaglio. Strangler fig: il vecchio
+> `client/js/ui.js` convive con i nuovi componenti Preact; le pagine migrate
+> usano Preact, il wizard log + live session restano vanilla per ora.
 
 ## Stack
 
-- **Frontend**: Vanilla JS via ESM (`<script type="module">`), no build, no framework.
-  Chart.js + jsPDF + autotable da CDN. CSS vanilla con custom properties.
-- **Backend**: Node + Express + Sequelize + PostgreSQL (Neon). Anthropic SDK per AI.
-- **Auth**: JWT (access + refresh) + Google OAuth via passport.
-- **Deploy**: Render (server custom start con `db:migrate` automatico). DB Neon.
+- **Frontend**: Preact 10 + Vite 5 + @preact/signals. Build → `client/dist/`.
+- **Legacy frontend**: Vanilla JS ESM in `client/js/` (ui.js orchestra + moduli satelliti).
+- **Backend**: Node 20 + Express + Sequelize + PostgreSQL (Neon). Anthropic SDK per AI.
+- **Auth**: JWT (access + refresh) + Google OAuth (solo prod).
+- **Test**: `node --test` + supertest per backend, vitest per frontend.
 
 ## Mappa progetto
 
 ```
 training-analyzer/
-├── client/                       Frontend statico (servito da Render)
-│   ├── index.html                Markup completo + tag <script type="module" src="js/ui.js">
-│   ├── js/                       14 file ESM
-│   │   ├── ui.js          3406  ⚠️ MONOLITE: 8 pagine, wizard, live, state globali
-│   │   ├── scoring.js      905  Business logic (workout score, recovery, streak, fitness)
-│   │   ├── pdfExport.js    670  Export PDF profilo
-│   │   ├── import.js       628  Parser GPX/CSV/Apple Health/FIT
-│   │   ├── charts.js       486  Chart.js wrappers
-│   │   ├── bodyMeasurements.js  478  Pagina misure corporee
-│   │   ├── bodyAvatar.js   439  Canvas avatar 3D
-│   │   ├── recovery.js     289  Pagina recupero (sonno + alimentazione)
-│   │   ├── admin.js        239  Pagina admin
-│   │   ├── friends.js      210  Social (search, follow, compare)
-│   │   ├── api.js          159  fetch wrapper + JWT auto-refresh
-│   │   ├── auth.js         155  login/logout + Google OAuth callback
-│   │   └── sports.js       112  SPORT_TEMPLATES + FIELD_DEFS + DEFAULT_MUSCLES
-│   ├── css/style.css      1613  ⚠️ Monolite con design tokens, dark/light, components
-│   ├── fonts/                    Poppins + BasementGrotesque self-hosted (~3MB)
-│   ├── manifest.json             PWA manifest
-│   └── mood-board/               Design exploration (NON usato in app)
+├── CLAUDE.md                   Questo file
+├── docs/
+│   ├── refactor-roadmap.md     Stato + metriche del refactor
+│   ├── refactor-baseline.txt   LOC snapshot pre-refactor
+│   └── smoke-tests.md          Checklist manuale (15 sezioni)
+├── client/
+│   ├── index.html              Markup + <div id="app"> per Preact + script ui.js legacy
+│   ├── vite.config.js          Alias @/ → src/, proxy /api → backend
+│   ├── vitest.config.js        Test runner per src/
+│   ├── package.json
+│   ├── css/
+│   │   ├── tokens.css          269 LOC — fonts, palette, vars, keyframes
+│   │   └── style.css           1380 LOC — components + pages, con TOC iniziale
+│   ├── js/                     LEGACY: vanilla ESM, da ridurre nel tempo
+│   │   ├── ui.js               3250 LOC — orchestra, wizard log (285-944),
+│   │   │                       live session (945-1640), bulk wiring
+│   │   ├── api.js              159 LOC — fetch wrapper (versione legacy)
+│   │   ├── auth.js             155 LOC — login/logout legacy
+│   │   ├── scoring.js          905 LOC — business logic (calculateStreak,
+│   │   │                       getRecoveryStatus, getFitnessAssessment, scoreWorkout)
+│   │   ├── sports.js           112 LOC — SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES
+│   │   ├── charts.js           486 LOC — Chart.js wrappers (heatmap, weekly, radar, ...)
+│   │   ├── pdfExport.js        670 LOC — Export PDF profilo
+│   │   ├── import.js           628 LOC — Parser GPX/CSV/Apple Health/FIT
+│   │   ├── bodyMeasurements.js 478 LOC — Pagina misure
+│   │   ├── bodyAvatar.js       439 LOC — Canvas avatar
+│   │   ├── recovery.js         289 LOC — Pagina recupero
+│   │   ├── admin.js            239 LOC — Pagina admin
+│   │   └── friends.js          210 LOC — Social (search, follow, compare)
+│   └── src/                    NUOVO: Preact app, strangler fig destination
+│       ├── main.jsx            Bootstrap + bridge globalThis.Preact.<page>
+│       ├── App.jsx             Passthrough (?preact=1 mostra banner)
+│       ├── lib/
+│       │   ├── api.js          137 LOC — fetch wrapper modernizzato (signals)
+│       │   ├── utils.js        57 LOC — uid, todayStr, formatDate, paceToSeconds, ...
+│       │   └── __tests__/utils.test.js   12 vitest unit
+│       ├── store/
+│       │   └── user.js         38 LOC — signal currentUser + login/logout
+│       ├── components/         Riusabili: Toast, Modal, WorkoutItem
+│       └── pages/              Una cartella per pagina migrata
+│           ├── Dashboard/      Stats + Streak + Recovery + Recent
+│           ├── History/        Filtri + lista workout
+│           ├── Profile/        FitnessAssessment + AthleticDetail
+│           ├── Setup/          SportsManager + MuscleGroupsManager
+│           └── Body/           BMI banner
 └── server/
     ├── src/
-    │   ├── index.js              Entry: runMigrations() + listen. VINCOLO Render.
-    │   ├── app.js                Express bootstrap, route mounting
-    │   ├── config/               env.js, database.js (Sequelize), passport.js
-    │   ├── models/               10 Sequelize models (User, Workout, Exercise, ...)
-    │   ├── controllers/          12 controller (workout, profile, auth, ...)
-    │   ├── routes/               11 route file (thin wrappers)
-    │   ├── services/             ai (anthropicClient, aiAnalyzer, contextBuilder)
-    │   ├── middleware/           authenticate, authorize, errorHandler, requireAdmin, ...
-    │   └── utils/jwt.js          Token gen + verify
-    ├── migrations/               15 file Sequelize CLI
-    ├── seeders/                  Demo user + workout campione
-    └── scripts/migrateFromFirebase.js  Tool storico, non più usato in deploy
+    │   ├── index.js, app.js
+    │   ├── config/             env, database (dialect auto: postgres prod / sqlite test),
+    │   │                       passport
+    │   ├── models/             10 Sequelize models
+    │   ├── controllers/        Sottili. CRUD via utils/crud.js (4 risorse).
+    │   ├── routes/             11 thin routers
+    │   ├── middleware/         authenticate, authorize, errorHandler, ...
+    │   ├── services/
+    │   │   ├── ai/             8 file: anthropicClient, workoutAnalyzer,
+    │   │   │                   coachSummary, contextBuilder, slimmers,
+    │   │   │                   hrSummary, splitsSummary, jsonExtract
+    │   │   ├── prompts/        System prompt Anthropic (workoutAnalyzerSystem,
+    │   │   │                   profileCoachSystem) — uno per file
+    │   │   └── workoutImporter.js  Parser JSON/CSV per import
+    │   └── utils/
+    │       ├── crud.js         makeDateUpsertController + pickFieldsFromSpec
+    │       ├── safeNum.js
+    │       └── jwt.js
+    ├── tests/
+    │   ├── setup.js            Env per test (sqlite in-memory)
+    │   ├── smoke.test.js       14 integration test
+    │   └── units.test.js       24 unit test su pure functions
+    ├── migrations/             Sequelize CLI
+    └── seeders/                Demo user
 ```
 
-## Dove sta cosa (attuale)
+## Dove sta cosa
 
-- **State frontend**: `client/js/ui.js:19-46` — `let currentUser, workoutsCache, settingsCache, exercisesCache, weightsCache, followingCache, activeSports, muscleGroups`.
-- **API client**: `client/js/api.js`.
-- **Routing pagine**: `client/js/ui.js::showPage` + `PAGE_ALIAS` + `PAGE_DEFAULT_TAB` (ui.js:175-230).
-- **Wizard log workout**: `client/js/ui.js::initLogWizard, wizSaveWorkout, renderWizSets` (ui.js:374-945).
-- **Live session**: `client/js/ui.js::initLivePage, liveStartTimer, liveDraft*` (ui.js:945-1600 circa).
-- **Scoring + recovery + fitness**: `client/js/scoring.js`.
-- **AI workout analysis**: `server/src/services/aiAnalyzer.js` + `contextBuilder.js` + `prompts/workoutAnalyzerSystem.js`.
-- **AI profile coach**: `server/src/controllers/profileController.js` (⚠️ system prompt inline alle righe 6-25, target estrazione in Fase 2).
-- **PDF export**: `client/js/pdfExport.js`.
-- **Import GPX/CSV/Apple Health/FIT**: `client/js/import.js`.
+### State
+
+- **Legacy (ui.js)**: `let workoutsCache, settingsCache, exercisesCache, weightsCache,`
+  `currentUser, muscleGroups, activeSports, followingCache` (linee 19-46).
+  Modificato direttamente da funzioni in ui.js. Passato come props a Preact via
+  `globalThis.Preact.<page>.mount({...})`.
+- **Preact**: `src/store/user.js` ha `currentUser` signal. Altri store arriveranno
+  quando il legacy state verrà smantellato (Fase 7 / 8 successiva).
+
+### Bridge Preact ↔ Legacy
+
+- `globalThis.Preact.dashboard.mount({workouts, settings, muscleGroups})`
+- `globalThis.Preact.history.mount({workouts, filter, selectMode, selectedIds})`
+- `globalThis.Preact.profile.mountFitness({...}) / .mountAthletic({...})`
+- `globalThis.Preact.setup.mountSports({activeSports}) / .mountMuscleGroups({muscleGroups})`
+- `globalThis.Preact.body.mountBmiBanner({weights, settings})`
+
+Ogni `render<Page>` in ui.js chiama il rispettivo `Preact.<page>.mount()`. Click
+handling (workout-item, hist-filter, ecc.) continua via global delegation in ui.js.
+
+### Pagine NON ancora migrate a Preact
+
+- **Train (wizard log + live session)** — linee ui.js 285-944 (wizard) +
+  945-1640 (live). State complesso + draft localStorage + timer real-time.
+  Migrazione deferred a quando si tocca per una nuova feature.
+- **Exercise Library** (Setup tab) — linee ~2580-2770. CRUD esercizi con filtri.
+- **Friends** wrapper in ui.js — delega a js/friends.js già modulare.
+- **Progress, Body (oltre BMI), Recovery, Admin** — delegano già a moduli esterni
+  modulari (charts.js, bodyMeasurements.js, recovery.js, admin.js).
+
+### AI
+
+- **Workout analysis**: `server/src/services/ai/workoutAnalyzer.js` +
+  `contextBuilder.js` + `services/prompts/workoutAnalyzerSystem.js`. Output JSON strict.
+- **Profile coach summary**: `services/ai/coachSummary.js` +
+  `services/prompts/profileCoachSystem.js`. POST /api/profile/health.
+
+### CRUD pattern (backend)
+
+- `server/src/utils/crud.js::makeDateUpsertController({Model, pickFields, entityName})`
+  genera list/create/update/destroy con `findOrCreate({userId, date})` upsert.
+- Usato da: weight, sleep, nutrition, body-measurement (4 controller, ~20 LOC ciascuno).
 
 ## Convenzioni
 
-- **Frontend ESM con import relativi**. NO bundler attuale (cambierà in Fase 1).
-- **Backend CommonJS** (Node 18+). Migrazione a ESM non in scope.
-- **Migration Sequelize**: ogni cambio model → file in `server/migrations/<timestamp>-<descr>.js`.
-  Render esegue `runMigrations()` allo start (`server/src/index.js`). **NON rimuovere quella chiamata**.
-- **CSS**: tokens in `:root` di `client/css/style.css`. Dark mode via `[data-theme="dark"]`.
-- **Niente classi globali nuove se possibile**: il refactor sposterà tutto in CSS Modules.
+- **Nessun file > 300 LOC** target per Preact code. Legacy ui.js fa eccezione
+  documentata (Train deferred).
+- **State**: niente `let` globali in src/. Solo signals in `src/store/`.
+  Per ora ui.js usa ancora `let` perché Train + caches sono legacy.
+- **CSS**: token globali in `css/tokens.css`. Resto in `style.css` con TOC.
+  Quando un componente cresce, valutare CSS Modules per quello specifico.
+- **Prompt AI**: SEMPRE in `server/src/services/prompts/`, mai inline.
+- **Migration Sequelize**: ogni cambio model → file in `server/migrations/`.
+  Render esegue `runMigrations()` in `server/src/index.js` allo start.
 
 ## Comandi
 
 ```bash
 # Backend dev
 cd server && npm run dev          # nodemon, http://localhost:3000
+# Se la 3000 e' occupata: imposta PORT=3001 nel .env
 
-# Frontend dev (Fase 1+: Vite con HMR)
-cd client && npm install          # solo la prima volta
-cd client && npm run dev          # http://localhost:5173, proxies /api a :3000
-cd client && npm run build        # build prod in client/dist/
-cd client && npm run preview      # serve client/dist/ in locale
+# Frontend dev (Vite con HMR)
+cd client && npm run dev          # http://localhost:5173, proxy /api a :3000
+# Se backend e' su altra porta: VITE_API_PORT=3001 npm run dev
+
+# Frontend build prod
+cd client && npm run build        # → client/dist/ (servito da server in prod)
+
+# Test backend
+cd server && npm run test:smoke   # 14 integration test (sqlite in-memory), ~1s
+cd server && npm run test:units   # 24 unit test su pure functions, ~50ms
+cd server && npm test             # tutto
+
+# Test frontend
+cd client && npm test             # vitest (utils + futuri)
 
 # Migrations
 cd server && npm run migrate            # applica forward
 cd server && npm run migrate:undo       # rollback ultima
-cd server && npm run seed               # demo user + workout
+cd server && npm run seed               # demo user
 
 # Docker full stack
-docker-compose up --build               # postgres + server + client
-
-# Test backend (Fase 3 in poi)
-cd server && npm run test:smoke    # 14 test integrazione HTTP+DB (SQLite in-memory), ~1s
-cd server && npm run test:units    # 24 unit test su pure functions (slimmers, hrSummary, ...), ~50ms
-cd server && npm test              # tutti i test
+docker-compose up --build
 ```
 
 ## Vincoli noti — leggere prima di toccare
 
-- **Render auto-migrate**: in `server/src/index.js::runMigrations()` viene chiamato Sequelize CLI all'avvio del server, perché Render bypassa `npm start`. Non rimuovere quella chiamata. Vedi memoria `project_neon_migration` e `project_render_deploy_migrations`.
-- **Build frontend per deploy**: il server serve `client/dist/` se esiste, altrimenti `client/` (fallback dev). Su Render aggiungere al start command: `cd client && npm ci && npm run build && cd ../server && npm start` (oppure equivalente Render build hook). Senza build, il server cade automaticamente sul vecchio `client/` ESM-puro, app funziona uguale ma senza la nuova UI Preact.
-- **Body composition da 2 fonti**: peso/body fat possono arrivare da `Settings.bodyweight` o `BodyMeasurement.weight`. Allineamento via `syncSettingsFromMeasurement` (oggi sparso, da centralizzare). Vedi memoria `project_tech_debt`.
-- **Live session draft**: `localStorage.liveSession_<uid>`. Cambio formato richiede forward-compat.
-- **Scoring user-visible**: ogni workout in storico mostra `score`. Prima di toccare `scoring.js`, **fai snapshot fixture** di 20 workout reali e confronta output prima/dopo.
-- **Render Start Command custom**: Render NON usa `npm start`, vedi memoria `project_render_deploy_migrations` per modifiche al deploy.
-- **Domain `daemon.fit` NON registrato**, rebrand codebase deferred. Vedi memoria `project_product_name`.
+- **Render auto-migrate**: `server/src/index.js::runMigrations()` chiama Sequelize CLI
+  all'avvio perche' Render bypassa `npm start`. NON rimuovere. Memorie
+  `project_neon_migration`, `project_render_deploy_migrations`.
+- **Build frontend per deploy Render**: aggiungere `cd client && npm ci && npm run build`
+  prima dello start del server. Il server serve `client/dist/` se esiste, altrimenti
+  fallback su `client/` raw (cosi' dev locale non rompe).
+- **Body composition da 2 fonti** (BodyMeasurement + Settings.bodyweight). Sync via
+  `syncSettingsFromMeasurement`. Memoria `project_tech_debt`.
+- **Live session draft**: `localStorage.liveSession_<uid>`. Cambio formato richiede
+  forward-compat.
+- **Wizard draft**: `localStorage.wizDraft_<uid>`. Idem.
+- **Scoring user-visible**: ogni workout in storico mostra `score`. Prima di toccare
+  `scoring.js`, fai snapshot fixture di 20 workout reali e confronta output.
+- **Domain `daemon.fit` NON registrato**, rebrand codebase deferred. Memoria
+  `project_product_name`.
 
 ## Quando modifichi X, leggi prima Y
 
-- **Wizard log**: leggi `client/js/ui.js:374-945` + `client/js/sports.js` (SPORT_TEMPLATES, FIELD_DEFS).
-- **Live session**: leggi `client/js/ui.js:945-1600` (timer, draft, rest preset).
-- **AI workout analysis**: leggi `server/src/services/contextBuilder.js` + `server/src/services/aiAnalyzer.js` + `server/src/services/prompts/workoutAnalyzerSystem.js`. Contratto JSON output strict.
+- **Wizard log**: `js/ui.js:285-944` + `js/sports.js`.
+- **Live session**: `js/ui.js:945-1640` (timer, draft, rest preset).
+- **Migrare una pagina legacy a Preact**: pattern in `src/pages/Dashboard/Dashboard.jsx`
+  + `src/main.jsx` (bridge) + ui.js (delega). Mantenere il markup uguale per non
+  rompere i CSS selector globali e la click delegation.
+- **AI workout analysis**: `server/src/services/ai/contextBuilder.js` +
+  `services/prompts/workoutAnalyzerSystem.js`. Output JSON strict.
 - **Scoring**: snapshot fixture prima, confronto obbligatorio dopo.
-- **Model**: scrivi migration in `server/migrations/<timestamp>-<descr>.js` (verifica timestamp non duplicato).
-- **Aggiungi pagina** (post-refactor): crea `client/src/pages/<Nome>/index.jsx`, registra in router.
-- **Endpoint CRUD nuovo**: estendi `routes/<resource>.js` + (post-Fase2) `services/<resource>Service.js`.
-
-## Refactor in corso
-
-Vedere `docs/refactor-roadmap.md` per la roadmap completa. Stato attuale: **Fase 0 — Foundation**.
-
-Fasi (ordinate):
-0. Foundation (CLAUDE.md, baseline, smoke checklist) — questa fase.
-1. Setup Vite + Preact + bridge legacy.
-2. Backend service layer + CRUD helper + split `contextBuilder.js`.
-3. Test backend smoke + scoring unit.
-4. Componenti core (Card, Modal, Tabs, ...) + store signals.
-5. Prima pagina migrata: Dashboard.
-6. Migrazione pagine semplici (Profile, History, Body, Recovery, Progress, Setup, Admin).
-7. Migrazione Train (wizard + live).
-8. Cleanup + CSS split + finalize.
+- **Model Sequelize**: scrivi migration in `server/migrations/<timestamp>-<descr>.js`.
+- **Endpoint CRUD nuovo (date-upsert)**: estendi `routes/<resource>.js` + crea
+  `services/<resource>Service.js`, usa `utils/crud.js::makeDateUpsertController`.
 
 ## Cosa NON fare
 
 - Non rimuovere `runMigrations()` da `server/src/index.js`.
-- Non scrivere prompt AI fuori da `server/src/services/prompts/` (post-Fase2).
-- Non toccare `scoring.js` senza snapshot fixture preventiva.
-- Non aggiungere TypeScript senza discussione (deferred, valutabile post-Fase 8).
-- Non centralizzare la doppia fonte body composition senza una migration di dati.
+- Non scrivere prompt AI fuori da `server/src/services/prompts/`.
+- Non aggiungere `let` globali in `src/`. Usa signals in `store/`.
+- Non aggiungere TypeScript senza discussione (deferred).
+- Non eliminare js/ui.js finche' Train non e' migrato.
+- Non toccare le migration Sequelize esistenti — sempre add forward.

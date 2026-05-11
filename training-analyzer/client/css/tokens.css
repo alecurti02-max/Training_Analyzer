@@ -1,0 +1,269 @@
+@import url('https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@font-face {
+  font-family: 'BasementGrotesque';
+  src: url('../fonts/BasementGrotesque-Black_v1.202.otf') format('opentype');
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../fonts/Poppins/Poppins-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-display: swap;
+}
+
+/* ============ THEME VARIABLES — Pista Sport ============ */
+:root {
+  /* Typography */
+  --font: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: var(--font);
+  --font-heading: 'Saira Condensed', 'BasementGrotesque', 'Arial Narrow', sans-serif;
+  --font-display: var(--font-heading);
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Brand accents - Pista Sport */
+  --race: #E11D2C;         /* red racing primary */
+  --race-deep: #A8101E;
+  --cyan: #22D3EE;         /* secondary info */
+  --green: #10B981;        /* success/running */
+  --orange: #FB923C;       /* warning */
+  --yellow: #FFD60A;       /* highlight/electric */
+  --danger: #DC2626;
+  --plasma: #7C3AED;       /* tertiary decorative */
+
+  /* Legacy aliases (keep var names used across 150+ selectors) */
+  --accent: var(--race);
+  --accent-light: rgba(225, 29, 44, 0.14);
+  --accent-dark: var(--race-deep);
+  --accent-bg: rgba(225, 29, 44, 0.08);
+  --accent-bg2: rgba(225, 29, 44, 0.18);
+  --pulse: var(--race);
+  --pulse-deep: var(--race-deep);
+  --aqua: var(--cyan);
+  --volt: var(--green);
+  --solar: var(--orange);
+  --crimson: var(--danger);
+  --amber: var(--yellow);
+  --light-green: #34D399;
+  --fuchsia: var(--race);
+  --fuchsia-bright: #F43F5E;
+  --red: var(--danger);
+  --blue: var(--cyan);
+
+  /* Ambient glow tokens */
+  --pulse-glow: rgba(225, 29, 44, 0.50);
+  --bg-glow-warm: rgba(225, 29, 44, 0.22);
+  --bg-glow-cool: rgba(34, 211, 238, 0.14);
+  --bg-glow-electric: rgba(255, 214, 10, 0.10);
+  --grain-blend: multiply;
+
+  /* Radius */
+  --radius: 16px;
+  --radius-sm: 10px;
+  --r-pill: 999px;
+
+  /* Motion */
+  --transition: all 0.22s cubic-bezier(0.4, 0.2, 0.2, 1);
+  --ease-trail: cubic-bezier(0.4, 0.2, 0.2, 1);
+  --ease-summit: cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  --ease-descent: cubic-bezier(0.7, 0, 0.3, 1);
+  --dur-quick: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 380ms;
+}
+
+/* Light Mode (default) */
+:root {
+  --bg: #EDEEF1;
+  --bg2: #FFFFFF;
+  --bg3: #F5F6F8;
+  --text: #0E1014;
+  --text2: #5A5F6C;
+  --border: rgba(14, 16, 20, 0.10);
+  --border-strong: rgba(14, 16, 20, 0.22);
+  --card-shadow: 0 1px 0 rgba(225, 29, 44, 0.05), 0 10px 28px -10px rgba(14, 16, 20, 0.14);
+  --shadow-lg: 0 2px 0 rgba(225, 29, 44, 0.08), 0 22px 50px -16px rgba(14, 16, 20, 0.22);
+  --nav-bg: rgba(237, 238, 241, 0.82);
+  --overlay: rgba(14, 16, 20, 0.42);
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16181D;
+    --bg2: #1F2228;
+    --bg3: #2A2D35;
+    --text: #F4F5F8;
+    --text2: #B0B4BE;
+    --border: rgba(244, 245, 248, 0.10);
+    --border-strong: rgba(244, 245, 248, 0.22);
+    --card-shadow: 0 1px 0 rgba(255, 59, 77, 0.08), 0 14px 36px -12px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 2px 0 rgba(255, 59, 77, 0.12), 0 28px 64px -18px rgba(0, 0, 0, 0.7);
+    --nav-bg: rgba(22, 24, 29, 0.78);
+    --overlay: rgba(0, 0, 0, 0.6);
+    --race: #FF3B4D;
+    --race-deep: #D1182A;
+    --cyan: #67E8F9;
+    --green: #34D399;
+    --orange: #FB923C;
+    --yellow: #FFE45C;
+    --danger: #EF4444;
+    --plasma: #A78BFA;
+    --pulse: var(--race);
+    --pulse-deep: var(--race-deep);
+    --aqua: var(--cyan);
+    --volt: var(--green);
+    --solar: var(--orange);
+    --crimson: var(--danger);
+    --amber: var(--yellow);
+    --pulse-glow: rgba(255, 59, 77, 0.65);
+    --bg-glow-warm: rgba(255, 59, 77, 0.32);
+    --bg-glow-cool: rgba(103, 232, 249, 0.20);
+    --bg-glow-electric: rgba(255, 228, 92, 0.14);
+    --grain-blend: overlay;
+    --accent-light: rgba(255, 59, 77, 0.14);
+    --accent-bg: rgba(255, 59, 77, 0.10);
+    --accent-bg2: rgba(255, 59, 77, 0.22);
+    --light-green: #6EE7B7;
+    --fuchsia-bright: #FB7185;
+    --red: var(--danger);
+    --fuchsia: var(--race);
+    --blue: var(--cyan);
+  }
+}
+
+[data-theme="dark"] {
+  --bg: #16181D;
+  --bg2: #1F2228;
+  --bg3: #2A2D35;
+  --text: #F4F5F8;
+  --text2: #B0B4BE;
+  --border: rgba(244, 245, 248, 0.10);
+  --border-strong: rgba(244, 245, 248, 0.22);
+  --card-shadow: 0 1px 0 rgba(255, 59, 77, 0.08), 0 14px 36px -12px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 2px 0 rgba(255, 59, 77, 0.12), 0 28px 64px -18px rgba(0, 0, 0, 0.7);
+  --nav-bg: rgba(22, 24, 29, 0.78);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --race: #FF3B4D;
+  --race-deep: #D1182A;
+  --cyan: #67E8F9;
+  --green: #34D399;
+  --orange: #FB923C;
+  --yellow: #FFE45C;
+  --danger: #EF4444;
+  --plasma: #A78BFA;
+  --pulse: var(--race);
+  --pulse-deep: var(--race-deep);
+  --aqua: var(--cyan);
+  --volt: var(--green);
+  --solar: var(--orange);
+  --crimson: var(--danger);
+  --amber: var(--yellow);
+  --pulse-glow: rgba(255, 59, 77, 0.65);
+  --bg-glow-warm: rgba(255, 59, 77, 0.32);
+  --bg-glow-cool: rgba(103, 232, 249, 0.20);
+  --bg-glow-electric: rgba(255, 228, 92, 0.14);
+  --grain-blend: overlay;
+  --accent-light: rgba(255, 59, 77, 0.14);
+  --accent-bg: rgba(255, 59, 77, 0.10);
+  --accent-bg2: rgba(255, 59, 77, 0.22);
+  --light-green: #6EE7B7;
+  --fuchsia-bright: #FB7185;
+  --red: var(--danger);
+  --fuchsia: var(--race);
+  --blue: var(--cyan);
+}
+
+[data-theme="light"] {
+  --bg: #EDEEF1;
+  --bg2: #FFFFFF;
+  --bg3: #F5F6F8;
+  --text: #0E1014;
+  --text2: #5A5F6C;
+  --border: rgba(14, 16, 20, 0.10);
+  --border-strong: rgba(14, 16, 20, 0.22);
+  --card-shadow: 0 1px 0 rgba(225, 29, 44, 0.05), 0 10px 28px -10px rgba(14, 16, 20, 0.14);
+  --shadow-lg: 0 2px 0 rgba(225, 29, 44, 0.08), 0 22px 50px -16px rgba(14, 16, 20, 0.22);
+  --nav-bg: rgba(237, 238, 241, 0.82);
+  --overlay: rgba(14, 16, 20, 0.42);
+  --race: #E11D2C;
+  --race-deep: #A8101E;
+  --cyan: #22D3EE;
+  --green: #10B981;
+  --orange: #FB923C;
+  --yellow: #FFD60A;
+  --danger: #DC2626;
+  --plasma: #7C3AED;
+  --pulse: var(--race);
+  --pulse-deep: var(--race-deep);
+  --aqua: var(--cyan);
+  --volt: var(--green);
+  --solar: var(--orange);
+  --crimson: var(--danger);
+  --amber: var(--yellow);
+  --pulse-glow: rgba(225, 29, 44, 0.50);
+  --bg-glow-warm: rgba(225, 29, 44, 0.22);
+  --bg-glow-cool: rgba(34, 211, 238, 0.14);
+  --bg-glow-electric: rgba(255, 214, 10, 0.10);
+  --grain-blend: multiply;
+  --accent-light: rgba(225, 29, 44, 0.14);
+  --accent-bg: rgba(225, 29, 44, 0.08);
+  --accent-bg2: rgba(225, 29, 44, 0.18);
+  --light-green: #34D399;
+  --fuchsia-bright: #F43F5E;
+  --red: var(--danger);
+  --fuchsia: var(--race);
+  --blue: var(--cyan);
+}
+
+/* ============ Keyframes ============ */
+@keyframes shimmer-sweep { 0%, 55% { transform: translateX(-120%) skewX(-22deg); } 100% { transform: translateX(260%) skewX(-22deg); } }
+@keyframes stripe-drift { from { background-position: 0 0; } to { background-position: 80px 0; } }
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 6px 0 var(--pulse-deep), 0 20px 40px -8px var(--pulse-glow), 0 0 0 0 var(--pulse-glow), inset 0 1px 0 rgba(255,255,255,0.22); }
+  50%      { box-shadow: 0 6px 0 var(--pulse-deep), 0 20px 40px -8px var(--pulse-glow), 0 0 0 14px transparent, inset 0 1px 0 rgba(255,255,255,0.22); }
+}
