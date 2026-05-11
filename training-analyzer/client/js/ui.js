@@ -2506,91 +2506,49 @@ function openBodyPartModal(partKey) {
 }
 
 function renderAthleticDetail() {
-  // Render body avatar (silhouette + side panel) at the top
+  // Render body avatar (silhouette + side panel) at the top — imperative.
   const avatarEl = document.getElementById('body-avatar-container');
   if (avatarEl) renderBodyAvatar(avatarEl, settingsCache);
 
-  const workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const now=todayStr();
-  const last30=workouts.filter(w=>daysBetween(now,w.date)<=30);
-  const gymW=last30.filter(w=>w.type==='gym'),runW=last30.filter(w=>w.type==='running');
-  const forza=gymW.length?Math.min(10,gymW.reduce((s,w)=>s+(w.scores?.volume||5),0)/gymW.length):3;
-  const totalKm=runW.reduce((s,w)=>s+(w.distance||0),0);
-  const resistenza=Math.min(10,Math.max(2,totalKm/5));
-  const uniqueDays=new Set(last30.map(w=>w.date)).size;
-  const consistenza=Math.min(10,Math.max(2,uniqueDays/3));
-  const highRPE=last30.filter(w=>(w.rpe||w.scores?.overall||5)>=8).length;
-  const recupero=Math.max(3,10-highRPE);
-  const progressione=gymW.length?gymW.reduce((s,w)=>s+(w.scores?.progression||5),0)/gymW.length:5;
-  const muscleSet=new Set();
-  gymW.forEach(w=>(w.exercises||[]).forEach(e=>{if(e.muscle)muscleSet.add(e.muscle);}));
-  const typesUsed=new Set(last30.map(w=>w.type)).size;
-  const varieta=Math.min(10,Math.max(2,muscleSet.size+typesUsed*2));
-
-  // Proporzioni corporee (dalle circonferenze in settings)
-  const circ = {
-    chest: settingsCache.circChest, waist: settingsCache.circWaist, hips: settingsCache.circHips,
-    bicep: settingsCache.circBicep, thigh: settingsCache.circThigh, calf: settingsCache.circCalf,
-    neck: settingsCache.circNeck, shoulders: settingsCache.circShoulders
-  };
-  const circCount = Object.values(circ).filter(v => v && v > 0).length;
-  let proporzioni = 5; // default
-  let circDesc = 'Inserisci le circonferenze corporee nelle Impostazioni per una valutazione completa.';
-  if (circCount >= 3) {
-    let circScore = 5;
-    if (circ.waist && circ.hips) {
-      const whr = circ.waist / circ.hips;
-      const isMale = settingsCache.gender !== 'F';
-      const idealWHR = isMale ? 0.9 : 0.8;
-      circScore += whr <= idealWHR ? 2 : (whr <= idealWHR + 0.1 ? 1 : -1);
-    }
-    if (circ.shoulders && circ.waist) {
-      const swr = circ.shoulders / circ.waist;
-      circScore += swr >= 1.6 ? 2 : (swr >= 1.4 ? 1 : 0);
-    }
-    if (circ.bicep) circScore += circ.bicep >= 35 ? 1 : 0;
-    proporzioni = Math.min(10, Math.max(2, circScore));
-    const parts = [];
-    if (circ.waist && circ.hips) parts.push(`WHR: ${(circ.waist/circ.hips).toFixed(2)}`);
-    if (circ.shoulders && circ.waist) parts.push(`Spalle/Vita: ${(circ.shoulders/circ.waist).toFixed(2)}`);
-    parts.push(`${circCount} misurazioni inserite`);
-    circDesc = parts.join(' | ') + '. ' + (proporzioni >= 7 ? 'Ottime proporzioni atletiche!' : 'Continua a lavorare sulle proporzioni.');
+  // Fase 6b: metric cards + athletic fitness assessment renderizzati da Preact.
+  // Il radar Chart.js resta imperative (richiede canvas + Chart instance lifecycle).
+  const ctx = { workouts: workoutsCache, settings: settingsCache, weights: weightsCache, muscleGroups };
+  let radarValues = null;
+  if (globalThis.Preact?.profile) {
+    const { radarValues: rv } = globalThis.Preact.profile.computeAthleticMetrics(ctx);
+    radarValues = rv;
+    globalThis.Preact.profile.mountAthletic(ctx);
   }
 
+  // Radar chart (legacy Chart.js)
   destroyChart('radarDetail');
-  const ctx=document.getElementById('chart-radar-detail')?.getContext('2d');
-  if(ctx){
-    const isLight=!window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const textColor=isLight?'#0E1014':'#F4F5F8';
-    const gridColor=isLight?'rgba(14,16,20,0.10)':'rgba(244,245,248,0.10)';
-    storeChart('radarDetail', new Chart(ctx,{type:'radar',
-      data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta','Proporzioni'],
-        datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta,proporzioni].map(v=>Math.round(v*10)/10),
-          backgroundColor:'rgba(225,29,44,0.15)',borderColor:'#E11D2C',pointBackgroundColor:'#E11D2C',pointBorderColor:'#fff',borderWidth:2}]},
-      options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
+  const canvasCtx = document.getElementById('chart-radar-detail')?.getContext('2d');
+  if (canvasCtx && radarValues) {
+    const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const textColor = isLight ? '#0E1014' : '#F4F5F8';
+    const gridColor = isLight ? 'rgba(14,16,20,0.10)' : 'rgba(244,245,248,0.10)';
+    storeChart('radarDetail', new Chart(canvasCtx, {
+      type: 'radar',
+      data: {
+        labels: ['Forza', 'Resistenza', 'Consistenza', 'Recupero', 'Progressione', 'Varieta', 'Proporzioni'],
+        datasets: [{
+          label: 'Profilo',
+          data: radarValues.map((v) => Math.round(v * 10) / 10),
+          backgroundColor: 'rgba(225,29,44,0.15)',
+          borderColor: '#E11D2C',
+          pointBackgroundColor: '#E11D2C',
+          pointBorderColor: '#fff',
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { r: { min: 0, max: 10, ticks: { stepSize: 2, color: textColor, backdropColor: 'transparent' }, grid: { color: gridColor }, pointLabels: { color: textColor, font: { size: 13, family: 'Poppins' } } } },
+        plugins: { legend: { display: false } },
+      },
     }));
   }
-
-  const metrics=[
-    {label:'Forza',value:forza,icon:'\u{1F4AA}',desc:gymW.length?`Basato sul volume medio di ${gymW.length} sessioni palestra negli ultimi 30 giorni. Tonnellaggio medio: ${Math.round(gymW.reduce((s,w)=>s+(w._tonnage||0),0)/gymW.length)} kg.`:'Nessuna sessione palestra negli ultimi 30 giorni.'},
-    {label:'Resistenza',value:resistenza,icon:'\u{1FAC0}',desc:`${totalKm.toFixed(1)} km totali corsi negli ultimi 30 giorni.${runW.length?' Media '+Math.round(totalKm/runW.length*10)/10+' km/sessione.':''}`},
-    {label:'Consistenza',value:consistenza,icon:'\u{1F4C5}',desc:`${uniqueDays} giorni di allenamento su 30. ${uniqueDays>=15?'Ottima costanza!':uniqueDays>=8?'Buona regolarita.':'Prova ad allenarti piu spesso.'}`},
-    {label:'Recupero',value:recupero,icon:'\u{1F50B}',desc:`${highRPE} sessioni ad alta intensita (RPE >= 8) negli ultimi 30 giorni. ${recupero>=7?'Buon equilibrio intensita/recupero.':'Attenzione al sovrallenamento.'}`},
-    {label:'Progressione',value:progressione,icon:'\u{1F4C8}',desc:gymW.length?`Score medio di progressione carichi: ${progressione.toFixed(1)}/10. ${progressione>=7?'Stai migliorando costantemente!':'Prova a incrementare gradualmente i carichi.'}`:'Serve almeno una sessione palestra.'},
-    {label:'Varieta',value:varieta,icon:'\u{1F3AF}',desc:`${muscleSet.size} gruppi muscolari allenati, ${typesUsed} sport diversi praticati. ${varieta>=7?'Allenamento ben bilanciato!':'Prova a variare di piu gli stimoli.'}`},
-    {label:'Proporzioni',value:proporzioni,icon:'\u{1F4D0}',desc:circDesc}
-  ];
-
-  const cardsEl = document.getElementById('athletic-detail-cards');
-  if(cardsEl) cardsEl.innerHTML=metrics.map(m=>`
-    <div class="card athletic-metric-card">
-      <div style="font-size:1.5rem;margin-bottom:4px">${m.icon}</div>
-      <div class="athletic-metric-value" style="color:${scoreColor(m.value)}">${m.value.toFixed(1)}</div>
-      <div class="athletic-metric-label">${m.label}</div>
-      <div class="athletic-metric-desc">${m.desc}</div>
-    </div>`).join('');
-
-  renderAthleticFitnessAssessment();
 }
 
 // ==================== EXERCISE LIBRARY ====================
