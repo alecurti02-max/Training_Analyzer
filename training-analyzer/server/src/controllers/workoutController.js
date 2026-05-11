@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const multer = require('multer');
 const { Workout } = require('../models');
+const { parseWorkoutFile } = require('../services/workoutImporter');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -48,12 +49,11 @@ async function create(req, res, next) {
       return res.status(400).json({ error: { message: 'type and date are required' } });
     }
 
-    const score = data?.scores?.overall ?? null;
     const workout = await Workout.create({
       userId: req.user.uid,
       type,
       date,
-      score,
+      score: data?.scores?.overall ?? null,
       data: data || {},
     });
 
@@ -70,7 +70,7 @@ async function bulkCreate(req, res, next) {
       return res.status(400).json({ error: { message: 'workouts array is required' } });
     }
 
-    const records = workouts.map(w => ({
+    const records = workouts.map((w) => ({
       userId: req.user.uid,
       type: w.type,
       date: w.date,
@@ -124,55 +124,12 @@ async function destroy(req, res, next) {
 
 async function importFile(req, res, next) {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: { message: 'No file uploaded' } });
-    }
-
-    const { originalname, buffer } = req.file;
-    const ext = originalname.split('.').pop().toLowerCase();
-    const text = buffer.toString('utf-8');
-    const workouts = [];
-
-    if (ext === 'json') {
-      const parsed = JSON.parse(text);
-      const items = Array.isArray(parsed) ? parsed : parsed.workouts || [parsed];
-      for (const w of items) {
-        workouts.push({
-          userId: req.user.uid,
-          type: w.type || 'gym',
-          date: w.date,
-          score: w.scores?.overall ?? w.score ?? null,
-          data: w,
-        });
-      }
-    } else if (ext === 'csv') {
-      const lines = text.trim().split('\n').slice(1); // skip header
-      const grouped = {};
-      for (const line of lines) {
-        const [date, exercise, sets, reps, weight, rpe] = line.split(',').map((s) => s.trim());
-        if (!grouped[date]) grouped[date] = { exercises: [], rpe: 0 };
-        grouped[date].exercises.push({
-          name: exercise,
-          sets: [{ reps: parseInt(reps, 10), weight: parseFloat(weight), rpe: parseInt(rpe, 10) || 6 }],
-        });
-        grouped[date].rpe = Math.max(grouped[date].rpe, parseInt(rpe, 10) || 6);
-      }
-      for (const [date, d] of Object.entries(grouped)) {
-        workouts.push({
-          userId: req.user.uid,
-          type: 'gym',
-          date,
-          score: null,
-          data: { exercises: d.exercises, rpe: d.rpe },
-        });
-      }
-    } else {
-      return res.status(400).json({ error: { message: `Unsupported file format: .${ext}. Use JSON or CSV.` } });
-    }
-
-    const created = await Workout.bulkCreate(workouts);
+    if (!req.file) return res.status(400).json({ error: { message: 'No file uploaded' } });
+    const { records } = parseWorkoutFile(req.file, req.user.uid);
+    const created = await Workout.bulkCreate(records);
     res.status(201).json({ imported: created.length });
   } catch (err) {
+    if (err.status === 400) return res.status(400).json({ error: { message: err.message } });
     next(err);
   }
 }

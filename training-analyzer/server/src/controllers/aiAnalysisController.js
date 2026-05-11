@@ -1,4 +1,4 @@
-const { analyzeWorkout, clearAnalysis } = require('../services/aiAnalyzer');
+const { analyzeWorkout, clearAnalysis } = require('../services/ai/workoutAnalyzer');
 
 async function analyze(req, res, next) {
   try {

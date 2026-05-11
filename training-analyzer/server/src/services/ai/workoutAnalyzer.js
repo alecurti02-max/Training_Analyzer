@@ -1,7 +1,8 @@
-const config = require('../config/env');
+const config = require('../../config/env');
 const { getClient } = require('./anthropicClient');
 const { buildAnalysisContext } = require('./contextBuilder');
-const { SYSTEM_PROMPT, PROMPT_VERSION } = require('./prompts/workoutAnalyzerSystem');
+const { tryParseJson } = require('./jsonExtract');
+const { SYSTEM_PROMPT, PROMPT_VERSION } = require('../prompts/workoutAnalyzerSystem');
 
 const MAX_TOKENS = 2048;
 const MAX_TOKENS_RETRY = 3072;
@@ -20,27 +21,6 @@ function buildUserMessage(profile, current, history) {
     '',
     'Rispondi con il JSON di analisi richiesto.',
   ].join('\n');
-}
-
-function tryParseJson(text) {
-  if (!text) return null;
-  let trimmed = text.trim();
-  if (trimmed.startsWith('```')) {
-    trimmed = trimmed.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-  }
-  try {
-    return JSON.parse(trimmed);
-  } catch (e) {
-    const match = trimmed.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch (e2) {
-        return null;
-      }
-    }
-    return null;
-  }
 }
 
 function validateAnalysis(parsed) {
@@ -130,7 +110,6 @@ async function callClaude({ profile, current, history }) {
   }
 
   if (!validated) {
-    // Log diagnostico per capire i format failures (visibile nei log Render).
     console.error('[ai-analyzer] parse_failed', {
       stopReason: attempt.stopReason,
       textPreview: (attempt.rawText || '').slice(0, 500),
@@ -192,7 +171,7 @@ async function analyzeWorkout({ userId, workoutId, force = false }) {
 }
 
 async function clearAnalysis({ userId, workoutId }) {
-  const { Workout } = require('../models');
+  const { Workout } = require('../../models');
   const workout = await Workout.findOne({ where: { id: workoutId, userId } });
   if (!workout) {
     const err = new Error('Workout not found');

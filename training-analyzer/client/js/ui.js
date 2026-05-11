@@ -1644,43 +1644,21 @@ async function liveSaveWorkout() {
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
-  const workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const now=todayStr();
-  const thisWeek=workouts.filter(w=>daysBetween(now,w.date)<=7);
-  const weekGoal=settingsCache.weekgoal||4;
-  const avgScore=workouts.length?(workouts.reduce((s,w)=>s+(w.scores?.overall||0),0)/workouts.length).toFixed(1):'--';
-  const weekKm=thisWeek.filter(w=>w.type==='running').reduce((s,w)=>s+(w.distance||0),0).toFixed(1);
-  const weekTonnage=thisWeek.filter(w=>w.type==='gym').reduce((s,w)=>s+(w._tonnage||0),0);
+  const workouts = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  document.getElementById('dash-stats').innerHTML=`
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:${thisWeek.length>=weekGoal?'var(--green)':'var(--yellow)'}">${thisWeek.length}/${weekGoal}</div><div class="stat-label">Allenamenti settimana</div></div></div>
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:var(--accent)">${avgScore}</div><div class="stat-label">Score Medio</div></div></div>
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:var(--green)">${weekKm} km</div><div class="stat-label">Km corsa settimana</div></div></div>
-    <div class="card"><div class="stat-box"><div class="stat-value" style="color:var(--blue)">${Math.round(weekTonnage/1000*10)/10}t</div><div class="stat-label">Tonnellaggio settimana</div></div></div>`;
-
-  const streak = calculateStreak(workoutsCache);
-  document.getElementById('dash-streak').innerHTML = `
-    <div style="text-align:center"><div class="streak-num">${streak.current}</div><div class="streak-info"><div class="streak-label">giorni consecutivi</div></div></div>
-    <div style="text-align:center"><div class="streak-num" style="color:var(--yellow)">${streak.record}</div><div class="streak-info"><div class="streak-label">record storico</div></div></div>`;
+  // Fase 5: i 4 contenitori dinamici (#dash-stats, #dash-streak, #dash-recovery,
+  // #dash-recent) sono ora renderizzati dal componente Preact in
+  // src/pages/Dashboard/Dashboard.jsx. Le chart legacy (heatmap, weekly, radar)
+  // restano gestite imperativamente da charts.js qui sotto, fino a Fase 6/8.
+  if (globalThis.Preact?.dashboard) {
+    globalThis.Preact.dashboard.mount({
+      workouts: workoutsCache,
+      settings: settingsCache,
+      muscleGroups,
+    });
+  }
 
   renderHeatmap(workouts);
-
-  const recovery=getRecoveryStatus(workoutsCache, muscleGroups);
-  let recHTML='';
-  if(recovery.suggestedRestDays>0) recHTML+=`<div class="advice-box" style="margin-bottom:12px">Carico alto (${recovery.workoutsLast7} in 7gg). Consigliati ${recovery.suggestedRestDays} giorni di riposo.</div>`;
-  Object.entries(recovery.muscleRecovery).forEach(([muscle,info])=>{
-    if(info.pct>=100||!info.lastWorked) return;
-    const color=info.pct>=80?'var(--green)':info.pct>=50?'var(--yellow)':'var(--red)';
-    recHTML+=`<div class="muscle-item"><span>${muscle}</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:.8rem;color:var(--text2)">${info.daysAgo}g fa</span><div class="muscle-bar-bg"><div class="muscle-bar-fill" style="width:${info.pct}%;background:${color}"></div></div><span style="font-size:.8rem;width:35px;text-align:right">${info.pct}%</span></div></div>`;
-  });
-  if(!recHTML) recHTML='<p style="color:var(--text2);font-size:.85rem">Tutti i gruppi muscolari sono recuperati!</p>';
-  document.getElementById('dash-recovery').innerHTML=recHTML;
-
-  const recent=workouts.slice(0,5);
-  document.getElementById('dash-recent').innerHTML = recent.length ?
-    recent.map(w=>workoutItemHTML(w)).join('') :
-    '<div class="empty-state"><p>Nessun allenamento registrato</p><p style="font-size:.85rem">Vai su "Log" per iniziare!</p></div>';
-
   renderWeeklyChart(workouts);
   renderRadarChart(workouts);
 }
@@ -1773,23 +1751,24 @@ async function deleteSelected() {
 }
 
 function renderHistory() {
-  const types = [...new Set(workoutsCache.map(w=>w.type))];
-  const filtersEl = document.getElementById('history-filters');
-  if (filtersEl) {
-    filtersEl.innerHTML = `<button class="filter-btn ${historyFilter==='all'?'active':''}" data-hist-filter="all">Tutti</button>` +
-      types.map(t => {
-        const name = SPORT_TEMPLATES[t]?.name || t;
-        return `<button class="filter-btn ${historyFilter===t?'active':''}" data-hist-filter="${t}">${name}</button>`;
-      }).join('');
-    filtersEl.querySelectorAll('[data-hist-filter]').forEach(btn => {
-      btn.addEventListener('click', function() { filterHistory(this.dataset.histFilter, this); });
+  // Fase 6a: filters + list rendered by Preact. Filter button clicks are
+  // handled below via delegation (filterHistory). Workout-item clicks reuse
+  // the global delegation set up at the bottom of this file.
+  if (globalThis.Preact?.history) {
+    globalThis.Preact.history.mount({
+      workouts: workoutsCache,
+      filter: historyFilter,
+      selectMode: _selectMode,
+      selectedIds: [..._selectedIds],
     });
   }
-
-  let workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  if(historyFilter!=='all') workouts=workouts.filter(w=>w.type===historyFilter);
-  const listEl = document.getElementById('history-list');
-  if(listEl) listEl.innerHTML=workouts.length?workouts.map(w=>workoutItemHTML(w)).join(''):'<div class="empty-state"><p>Nessun allenamento trovato</p></div>';
+  // Re-bind filter button delegation each render (Preact replaces nodes).
+  const filtersEl = document.getElementById('history-filters');
+  if (filtersEl) {
+    filtersEl.querySelectorAll('[data-hist-filter]').forEach((btn) => {
+      btn.addEventListener('click', function () { filterHistory(this.dataset.histFilter, this); });
+    });
+  }
 }
 
 // ==================== WORKOUT DETAIL ====================
@@ -2387,24 +2366,8 @@ function renderWeightPage() {
 }
 
 function renderBmiBanner() {
-  const bmiEl = document.getElementById('weight-bmi-section');
-  if (!bmiEl) return;
-  const latest = weightsCache.length ? weightsCache[weightsCache.length - 1] : null;
-  const height = settingsCache.height || parseInt(document.getElementById('weight-height')?.value);
-  if (!latest || !height) {
-    bmiEl.innerHTML = !height
-      ? '<p style="font-size:.8rem;color:var(--text2)">Inserisci l\'altezza per il BMI.</p>'
-      : '';
-    return;
-  }
-  const heightM = height / 100;
-  const bmi = (latest.value / (heightM * heightM)).toFixed(1);
-  let cat, cls;
-  if (bmi < 18.5) { cat = 'Sottopeso'; cls = 'bmi-underweight'; }
-  else if (bmi < 25) { cat = 'Normopeso'; cls = 'bmi-normal'; }
-  else if (bmi < 30) { cat = 'Sovrappeso'; cls = 'bmi-overweight'; }
-  else { cat = 'Obeso'; cls = 'bmi-obese'; }
-  bmiEl.innerHTML = `<span class="bmi-badge ${cls}">BMI ${bmi} — ${cat}</span>`;
+  // Fase 6c: delegated to Preact (src/pages/Body/Body.jsx).
+  globalThis.Preact?.body?.mountBmiBanner({ weights: weightsCache, settings: settingsCache });
 }
 
 async function saveWeight() {
@@ -2449,62 +2412,8 @@ function renderProfile() {
 function copyAppLink(){navigator.clipboard.writeText(window.location.href).then(()=>toast('Link copiato!')).catch(()=>toast('Errore copia','error'));}
 function copyUID(){navigator.clipboard.writeText(currentUser?.uid||'').then(()=>toast('UID copiato!')).catch(()=>toast('Errore copia','error'));}
 
-// ==================== FITNESS ASSESSMENT RENDERS ====================
-function renderFitnessAssessment() {
-  const fa = getFitnessAssessment(workoutsCache, settingsCache, weightsCache, muscleGroups);
-  const el = document.getElementById('fitness-assessment');
-  if (!el) return;
-  let html = `<div class="fitness-card">
-    <div class="fitness-score" style="color:${fa.levelColor}">${fa.score}%</div>
-    <div class="fitness-label" style="color:${fa.levelColor}">${fa.level}</div>
-    <div class="fitness-detail">Valutazione basata su forza, cardio, endurance, composizione corporea, flessibilita e atleticita</div>
-    <div class="fitness-bars">`;
-  fa.details.forEach(d => {
-    html += `<div class="fitness-bar-row"><span class="fb-label">${d.label}</span><div class="fb-track"><div class="fb-fill" style="width:${d.pct}%;background:${d.color}"></div></div><span style="font-size:.75rem;width:80px;text-align:right;color:var(--text2)">${d.value}</span></div>`;
-  });
-  html += '</div></div>';
-  el.innerHTML = html;
-}
-
-function renderAthleticFitnessAssessment() {
-  const fa = getFitnessAssessment(workoutsCache, settingsCache, weightsCache, muscleGroups);
-  const el = document.getElementById('athletic-fitness-assessment');
-  if (!el) return;
-  let html = `<div class="fitness-card">
-    <div class="fitness-score" style="color:${fa.levelColor}">${fa.score}%</div>
-    <div class="fitness-label" style="color:${fa.levelColor}">${fa.level}</div>
-    <div class="fitness-bars" style="margin-top:16px">`;
-  fa.details.forEach(d => {
-    html += `<div class="fitness-bar-row"><span class="fb-label">${d.label}</span><div class="fb-track"><div class="fb-fill" style="width:${d.pct}%;background:${d.color}"></div></div><span style="font-size:.75rem;width:80px;text-align:right;color:var(--text2)">${d.value}</span></div>
-    <div style="font-size:.78rem;color:var(--text2);margin-left:90px;margin-bottom:8px">${d.sublabel||''}</div>`;
-  });
-  html += `</div></div>`;
-
-  // Breakdown composizione corporea: card dettagliata se abbiamo dati
-  const bc = fa.bodyComp;
-  if (bc && bc.components && bc.components.length > 0) {
-    html += `<div class="card" style="margin-top:12px"><div class="card-title">Composizione Corporea — Dettaglio</div>
-      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Peso nel punteggio totale: <strong>${bc.weight}%</strong> (più dati inserisci, più peso ha).</p>
-      <div class="fitness-bars">`;
-    bc.components.forEach(c => {
-      const pct = Math.round((c.score / 10) * 100);
-      const color = c.score >= 7 ? 'var(--green)' : c.score >= 4 ? 'var(--yellow)' : 'var(--red)';
-      const tag = c.fallback ? ' <span style="color:var(--text2);font-size:.7rem">(fallback)</span>' : '';
-      html += `<div class="fitness-bar-row"><span class="fb-label">${c.label}${tag}</span><div class="fb-track"><div class="fb-fill" style="width:${pct}%;background:${color}"></div></div><span style="font-size:.75rem;width:80px;text-align:right;color:var(--text2)">${c.value} · ${c.score.toFixed(1)}/10</span></div>`;
-    });
-    html += `</div></div>`;
-  } else if (bc && bc.reason === 'gender-missing') {
-    html += `<div class="advice-box" style="margin-top:12px;border-left:3px solid var(--yellow)">
-      <strong>Composizione corporea non valutata:</strong> imposta il <strong>sesso</strong> in Impostazioni per attivare la valutazione (le soglie di riferimento sono differenti per uomo e donna).</div>`;
-  }
-
-  html += `<div class="advice-box" style="margin-top:12px">
-    <strong>Calcolati automaticamente:</strong> Forza (1RM e carichi), Cardio (pace e FC), Endurance (consistenza e km), Atleticita (varieta sport).<br>
-    <strong>Da inserire manualmente:</strong> VO2 Max, FC Riposo, Peso, Altezza, Flessibilita (Impostazioni).<br>
-    <strong>Composizione corporea (opzionale):</strong> circonferenze e valori bilancia impedenziometrica aumentano il peso del sub-score nel punteggio totale (15% → 35%).
-  </div>`;
-  el.innerHTML = html;
-}
+// Fitness assessment renders (legacy DOM versions) replaced by
+// src/pages/Profile/Profile.jsx in Fase 6b. Old functions removed in Fase 8b.
 
 // ==================== ATHLETIC DETAIL ====================
 function openBodyPartModal(partKey) {
@@ -2527,91 +2436,49 @@ function openBodyPartModal(partKey) {
 }
 
 function renderAthleticDetail() {
-  // Render body avatar (silhouette + side panel) at the top
+  // Render body avatar (silhouette + side panel) at the top — imperative.
   const avatarEl = document.getElementById('body-avatar-container');
   if (avatarEl) renderBodyAvatar(avatarEl, settingsCache);
 
-  const workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const now=todayStr();
-  const last30=workouts.filter(w=>daysBetween(now,w.date)<=30);
-  const gymW=last30.filter(w=>w.type==='gym'),runW=last30.filter(w=>w.type==='running');
-  const forza=gymW.length?Math.min(10,gymW.reduce((s,w)=>s+(w.scores?.volume||5),0)/gymW.length):3;
-  const totalKm=runW.reduce((s,w)=>s+(w.distance||0),0);
-  const resistenza=Math.min(10,Math.max(2,totalKm/5));
-  const uniqueDays=new Set(last30.map(w=>w.date)).size;
-  const consistenza=Math.min(10,Math.max(2,uniqueDays/3));
-  const highRPE=last30.filter(w=>(w.rpe||w.scores?.overall||5)>=8).length;
-  const recupero=Math.max(3,10-highRPE);
-  const progressione=gymW.length?gymW.reduce((s,w)=>s+(w.scores?.progression||5),0)/gymW.length:5;
-  const muscleSet=new Set();
-  gymW.forEach(w=>(w.exercises||[]).forEach(e=>{if(e.muscle)muscleSet.add(e.muscle);}));
-  const typesUsed=new Set(last30.map(w=>w.type)).size;
-  const varieta=Math.min(10,Math.max(2,muscleSet.size+typesUsed*2));
-
-  // Proporzioni corporee (dalle circonferenze in settings)
-  const circ = {
-    chest: settingsCache.circChest, waist: settingsCache.circWaist, hips: settingsCache.circHips,
-    bicep: settingsCache.circBicep, thigh: settingsCache.circThigh, calf: settingsCache.circCalf,
-    neck: settingsCache.circNeck, shoulders: settingsCache.circShoulders
-  };
-  const circCount = Object.values(circ).filter(v => v && v > 0).length;
-  let proporzioni = 5; // default
-  let circDesc = 'Inserisci le circonferenze corporee nelle Impostazioni per una valutazione completa.';
-  if (circCount >= 3) {
-    let circScore = 5;
-    if (circ.waist && circ.hips) {
-      const whr = circ.waist / circ.hips;
-      const isMale = settingsCache.gender !== 'F';
-      const idealWHR = isMale ? 0.9 : 0.8;
-      circScore += whr <= idealWHR ? 2 : (whr <= idealWHR + 0.1 ? 1 : -1);
-    }
-    if (circ.shoulders && circ.waist) {
-      const swr = circ.shoulders / circ.waist;
-      circScore += swr >= 1.6 ? 2 : (swr >= 1.4 ? 1 : 0);
-    }
-    if (circ.bicep) circScore += circ.bicep >= 35 ? 1 : 0;
-    proporzioni = Math.min(10, Math.max(2, circScore));
-    const parts = [];
-    if (circ.waist && circ.hips) parts.push(`WHR: ${(circ.waist/circ.hips).toFixed(2)}`);
-    if (circ.shoulders && circ.waist) parts.push(`Spalle/Vita: ${(circ.shoulders/circ.waist).toFixed(2)}`);
-    parts.push(`${circCount} misurazioni inserite`);
-    circDesc = parts.join(' | ') + '. ' + (proporzioni >= 7 ? 'Ottime proporzioni atletiche!' : 'Continua a lavorare sulle proporzioni.');
+  // Fase 6b: metric cards + athletic fitness assessment renderizzati da Preact.
+  // Il radar Chart.js resta imperative (richiede canvas + Chart instance lifecycle).
+  const ctx = { workouts: workoutsCache, settings: settingsCache, weights: weightsCache, muscleGroups };
+  let radarValues = null;
+  if (globalThis.Preact?.profile) {
+    const { radarValues: rv } = globalThis.Preact.profile.computeAthleticMetrics(ctx);
+    radarValues = rv;
+    globalThis.Preact.profile.mountAthletic(ctx);
   }
 
+  // Radar chart (legacy Chart.js)
   destroyChart('radarDetail');
-  const ctx=document.getElementById('chart-radar-detail')?.getContext('2d');
-  if(ctx){
-    const isLight=!window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const textColor=isLight?'#0E1014':'#F4F5F8';
-    const gridColor=isLight?'rgba(14,16,20,0.10)':'rgba(244,245,248,0.10)';
-    storeChart('radarDetail', new Chart(ctx,{type:'radar',
-      data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta','Proporzioni'],
-        datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta,proporzioni].map(v=>Math.round(v*10)/10),
-          backgroundColor:'rgba(225,29,44,0.15)',borderColor:'#E11D2C',pointBackgroundColor:'#E11D2C',pointBorderColor:'#fff',borderWidth:2}]},
-      options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
+  const canvasCtx = document.getElementById('chart-radar-detail')?.getContext('2d');
+  if (canvasCtx && radarValues) {
+    const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const textColor = isLight ? '#0E1014' : '#F4F5F8';
+    const gridColor = isLight ? 'rgba(14,16,20,0.10)' : 'rgba(244,245,248,0.10)';
+    storeChart('radarDetail', new Chart(canvasCtx, {
+      type: 'radar',
+      data: {
+        labels: ['Forza', 'Resistenza', 'Consistenza', 'Recupero', 'Progressione', 'Varieta', 'Proporzioni'],
+        datasets: [{
+          label: 'Profilo',
+          data: radarValues.map((v) => Math.round(v * 10) / 10),
+          backgroundColor: 'rgba(225,29,44,0.15)',
+          borderColor: '#E11D2C',
+          pointBackgroundColor: '#E11D2C',
+          pointBorderColor: '#fff',
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { r: { min: 0, max: 10, ticks: { stepSize: 2, color: textColor, backdropColor: 'transparent' }, grid: { color: gridColor }, pointLabels: { color: textColor, font: { size: 13, family: 'Poppins' } } } },
+        plugins: { legend: { display: false } },
+      },
     }));
   }
-
-  const metrics=[
-    {label:'Forza',value:forza,icon:'\u{1F4AA}',desc:gymW.length?`Basato sul volume medio di ${gymW.length} sessioni palestra negli ultimi 30 giorni. Tonnellaggio medio: ${Math.round(gymW.reduce((s,w)=>s+(w._tonnage||0),0)/gymW.length)} kg.`:'Nessuna sessione palestra negli ultimi 30 giorni.'},
-    {label:'Resistenza',value:resistenza,icon:'\u{1FAC0}',desc:`${totalKm.toFixed(1)} km totali corsi negli ultimi 30 giorni.${runW.length?' Media '+Math.round(totalKm/runW.length*10)/10+' km/sessione.':''}`},
-    {label:'Consistenza',value:consistenza,icon:'\u{1F4C5}',desc:`${uniqueDays} giorni di allenamento su 30. ${uniqueDays>=15?'Ottima costanza!':uniqueDays>=8?'Buona regolarita.':'Prova ad allenarti piu spesso.'}`},
-    {label:'Recupero',value:recupero,icon:'\u{1F50B}',desc:`${highRPE} sessioni ad alta intensita (RPE >= 8) negli ultimi 30 giorni. ${recupero>=7?'Buon equilibrio intensita/recupero.':'Attenzione al sovrallenamento.'}`},
-    {label:'Progressione',value:progressione,icon:'\u{1F4C8}',desc:gymW.length?`Score medio di progressione carichi: ${progressione.toFixed(1)}/10. ${progressione>=7?'Stai migliorando costantemente!':'Prova a incrementare gradualmente i carichi.'}`:'Serve almeno una sessione palestra.'},
-    {label:'Varieta',value:varieta,icon:'\u{1F3AF}',desc:`${muscleSet.size} gruppi muscolari allenati, ${typesUsed} sport diversi praticati. ${varieta>=7?'Allenamento ben bilanciato!':'Prova a variare di piu gli stimoli.'}`},
-    {label:'Proporzioni',value:proporzioni,icon:'\u{1F4D0}',desc:circDesc}
-  ];
-
-  const cardsEl = document.getElementById('athletic-detail-cards');
-  if(cardsEl) cardsEl.innerHTML=metrics.map(m=>`
-    <div class="card athletic-metric-card">
-      <div style="font-size:1.5rem;margin-bottom:4px">${m.icon}</div>
-      <div class="athletic-metric-value" style="color:${scoreColor(m.value)}">${m.value.toFixed(1)}</div>
-      <div class="athletic-metric-label">${m.label}</div>
-      <div class="athletic-metric-desc">${m.desc}</div>
-    </div>`).join('');
-
-  renderAthleticFitnessAssessment();
 }
 
 // ==================== EXERCISE LIBRARY ====================
@@ -2964,26 +2831,8 @@ function readLibSecondaryChips(containerId = 'lib-secondary-muscles') {
 
 // ==================== SPORTS MANAGER ====================
 function renderSportsManager() {
-  const activeEl = document.getElementById('active-sports-list');
-  if(activeEl) activeEl.innerHTML = activeSports.map(key => {
-    const s = SPORT_TEMPLATES[key];
-    if (!s) return '';
-    const isFixed = s.fixed;
-    return `<span class="sport-chip active">${s.icon} ${s.name}${isFixed?'':`<span class="remove-sport" data-remove-sport="${key}">&times;</span>`}</span>`;
-  }).join('');
-  activeEl?.querySelectorAll('[data-remove-sport]').forEach(btn => {
-    btn.addEventListener('click', () => removeSport(btn.dataset.removeSport));
-  });
-
-  const poolEl = document.getElementById('available-sports-pool');
-  const available = Object.keys(SPORT_TEMPLATES).filter(k => !activeSports.includes(k));
-  if(poolEl) poolEl.innerHTML = available.map(key => {
-    const s = SPORT_TEMPLATES[key];
-    return `<span class="sport-chip" data-add-sport="${key}">${s.icon} ${s.name}</span>`;
-  }).join('');
-  poolEl?.querySelectorAll('[data-add-sport]').forEach(btn => {
-    btn.addEventListener('click', () => addSport(btn.dataset.addSport));
-  });
+  // Fase 6c: delegated to Preact (src/pages/Setup/Setup.jsx).
+  globalThis.Preact?.setup?.mountSports({ activeSports });
 }
 
 function addSport(key) {
@@ -3004,15 +2853,9 @@ function removeSport(key) {
 
 // ==================== MUSCLE GROUPS MANAGER ====================
 function renderMuscleGroupsManager() {
-  const el = document.getElementById('muscle-groups-list');
-  if(!el) return;
-  el.innerHTML = muscleGroups.map(m => {
-    const isDefault = DEFAULT_MUSCLES.includes(m);
-    return `<span class="muscle-chip">${m}${isDefault?'':`<span class="remove-muscle" data-remove-muscle="${m}">&times;</span>`}</span>`;
-  }).join('');
-  el.querySelectorAll('[data-remove-muscle]').forEach(btn => {
-    btn.addEventListener('click', () => removeMuscleGroup(btn.dataset.removeMuscle));
-  });
+  // Fase 6c: chip list delegated to Preact. populateMuscleSelect still
+  // wires the legacy <select> dropdowns used by the wizard.
+  globalThis.Preact?.setup?.mountMuscleGroups({ muscleGroups });
   populateMuscleSelect();
 }
 

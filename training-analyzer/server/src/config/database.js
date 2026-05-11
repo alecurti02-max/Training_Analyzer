@@ -5,6 +5,10 @@ const databaseUrl =
   'postgres://ta_user:ta_pass@localhost:5432/training_analyzer';
 
 const isProduction = process.env.NODE_ENV === 'production';
+// SQLite is used in-process for the smoke test suite (server/tests/), so we
+// detect the dialect from the URL rather than hardcoding postgres.
+const isSqlite = databaseUrl.startsWith('sqlite:');
+const dialect = isSqlite ? 'sqlite' : 'postgres';
 
 // Neon-tuned settings for production:
 // - ssl required (Neon enforces sslmode=require)
@@ -28,7 +32,7 @@ const productionPool = {
 };
 
 const sequelize = new Sequelize(databaseUrl, {
-  dialect: 'postgres',
+  dialect,
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: isProduction ? productionPool : { max: 5, min: 0, idle: 10000 },
   dialectOptions: isProduction ? productionDialectOptions : {},
