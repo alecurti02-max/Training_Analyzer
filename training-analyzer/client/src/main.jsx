@@ -8,6 +8,8 @@ import {
   computeAthleticMetrics,
   unmountProfile,
 } from './pages/Profile/Profile.jsx';
+import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setup.jsx';
+import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
 
 const root = document.getElementById('app');
 if (root) render(<App />, root);
@@ -23,4 +25,13 @@ globalThis.Preact.profile = {
   mountAthletic: mountAthleticDetail,
   computeAthleticMetrics,
   unmount: unmountProfile,
+};
+globalThis.Preact.setup = {
+  mountSports,
+  mountMuscleGroups,
+  unmount: unmountSetup,
+};
+globalThis.Preact.body = {
+  mountBmiBanner,
+  unmount: unmountBody,
 };

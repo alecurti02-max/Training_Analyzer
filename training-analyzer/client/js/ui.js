@@ -2366,24 +2366,8 @@ function renderWeightPage() {
 }
 
 function renderBmiBanner() {
-  const bmiEl = document.getElementById('weight-bmi-section');
-  if (!bmiEl) return;
-  const latest = weightsCache.length ? weightsCache[weightsCache.length - 1] : null;
-  const height = settingsCache.height || parseInt(document.getElementById('weight-height')?.value);
-  if (!latest || !height) {
-    bmiEl.innerHTML = !height
-      ? '<p style="font-size:.8rem;color:var(--text2)">Inserisci l\'altezza per il BMI.</p>'
-      : '';
-    return;
-  }
-  const heightM = height / 100;
-  const bmi = (latest.value / (heightM * heightM)).toFixed(1);
-  let cat, cls;
-  if (bmi < 18.5) { cat = 'Sottopeso'; cls = 'bmi-underweight'; }
-  else if (bmi < 25) { cat = 'Normopeso'; cls = 'bmi-normal'; }
-  else if (bmi < 30) { cat = 'Sovrappeso'; cls = 'bmi-overweight'; }
-  else { cat = 'Obeso'; cls = 'bmi-obese'; }
-  bmiEl.innerHTML = `<span class="bmi-badge ${cls}">BMI ${bmi} — ${cat}</span>`;
+  // Fase 6c: delegated to Preact (src/pages/Body/Body.jsx).
+  globalThis.Preact?.body?.mountBmiBanner({ weights: weightsCache, settings: settingsCache });
 }
 
 async function saveWeight() {
@@ -2901,26 +2885,8 @@ function readLibSecondaryChips(containerId = 'lib-secondary-muscles') {
 
 // ==================== SPORTS MANAGER ====================
 function renderSportsManager() {
-  const activeEl = document.getElementById('active-sports-list');
-  if(activeEl) activeEl.innerHTML = activeSports.map(key => {
-    const s = SPORT_TEMPLATES[key];
-    if (!s) return '';
-    const isFixed = s.fixed;
-    return `<span class="sport-chip active">${s.icon} ${s.name}${isFixed?'':`<span class="remove-sport" data-remove-sport="${key}">&times;</span>`}</span>`;
-  }).join('');
-  activeEl?.querySelectorAll('[data-remove-sport]').forEach(btn => {
-    btn.addEventListener('click', () => removeSport(btn.dataset.removeSport));
-  });
-
-  const poolEl = document.getElementById('available-sports-pool');
-  const available = Object.keys(SPORT_TEMPLATES).filter(k => !activeSports.includes(k));
-  if(poolEl) poolEl.innerHTML = available.map(key => {
-    const s = SPORT_TEMPLATES[key];
-    return `<span class="sport-chip" data-add-sport="${key}">${s.icon} ${s.name}</span>`;
-  }).join('');
-  poolEl?.querySelectorAll('[data-add-sport]').forEach(btn => {
-    btn.addEventListener('click', () => addSport(btn.dataset.addSport));
-  });
+  // Fase 6c: delegated to Preact (src/pages/Setup/Setup.jsx).
+  globalThis.Preact?.setup?.mountSports({ activeSports });
 }
 
 function addSport(key) {
@@ -2941,15 +2907,9 @@ function removeSport(key) {
 
 // ==================== MUSCLE GROUPS MANAGER ====================
 function renderMuscleGroupsManager() {
-  const el = document.getElementById('muscle-groups-list');
-  if(!el) return;
-  el.innerHTML = muscleGroups.map(m => {
-    const isDefault = DEFAULT_MUSCLES.includes(m);
-    return `<span class="muscle-chip">${m}${isDefault?'':`<span class="remove-muscle" data-remove-muscle="${m}">&times;</span>`}</span>`;
-  }).join('');
-  el.querySelectorAll('[data-remove-muscle]').forEach(btn => {
-    btn.addEventListener('click', () => removeMuscleGroup(btn.dataset.removeMuscle));
-  });
+  // Fase 6c: chip list delegated to Preact. populateMuscleSelect still
+  // wires the legacy <select> dropdowns used by the wizard.
+  globalThis.Preact?.setup?.mountMuscleGroups({ muscleGroups });
   populateMuscleSelect();
 }
 
