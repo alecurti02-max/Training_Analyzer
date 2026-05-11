@@ -13,31 +13,31 @@ import { destroyChart, storeChart, getChartTheme } from './charts.js';
 // ---------- FIELD CONFIG (single source of truth) ----------
 export const FIELDS = [
   // Circonferenze
-  { key: 'circChest',       label: 'Petto',           unit: 'cm',      group: 'circ', chart: 'circ',       overview: true,  color: '#E02020' },
-  { key: 'circWaist',       label: 'Vita',            unit: 'cm',      group: 'circ', chart: 'circ',       overview: true,  color: '#FF4444' },
-  { key: 'circHips',        label: 'Fianchi',         unit: 'cm',      group: 'circ', chart: 'circ',       overview: true,  color: '#e17055' },
-  { key: 'circShoulders',   label: 'Spalle',          unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#fdcb6e' },
-  { key: 'circBicep',       label: 'Bicipite',        unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#fab1a0' },
-  { key: 'circNeck',        label: 'Collo',           unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#d35400' },
-  { key: 'circThigh',       label: 'Coscia',          unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#a29bfe' },
-  { key: 'circCalf',        label: 'Polpaccio',       unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#6c5ce7' },
+  { key: 'circChest',       label: 'Petto',           unit: 'cm',      group: 'circ', chart: 'circ',       overview: true,  color: '#FF2D7E' },
+  { key: 'circWaist',       label: 'Vita',            unit: 'cm',      group: 'circ', chart: 'circ',       overview: true,  color: '#FF4D94' },
+  { key: 'circHips',        label: 'Fianchi',         unit: 'cm',      group: 'circ', chart: 'circ',       overview: true,  color: '#FF3838' },
+  { key: 'circShoulders',   label: 'Spalle',          unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#FFC700' },
+  { key: 'circBicep',       label: 'Bicipite',        unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#FF8C00' },
+  { key: 'circNeck',        label: 'Collo',           unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#E54520' },
+  { key: 'circThigh',       label: 'Coscia',          unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#A855F7' },
+  { key: 'circCalf',        label: 'Polpaccio',       unit: 'cm',      group: 'circ', chart: 'circ',       overview: false, color: '#9333EA' },
   // Composizione: percentuali
-  { key: 'bodyFat',         label: 'Massa grassa',    unit: '%',       group: 'comp', chart: 'compPct',    overview: true,  color: '#E02020' },
-  { key: 'skeletalMuscle',  label: 'Muscolo scheletr.', unit: '%',     group: 'comp', chart: 'compPct',    overview: true,  color: '#00b894' },
-  { key: 'subcutaneousFat', label: 'Grasso sottocut.', unit: '%',      group: 'comp', chart: 'compPct',    overview: false, color: '#fdcb6e' },
-  { key: 'bodyWater',       label: 'Acqua',           unit: '%',       group: 'comp', chart: 'compPct',    overview: true,  color: '#0984e3' },
-  { key: 'protein',         label: 'Proteine',        unit: '%',       group: 'comp', chart: 'compPct',    overview: false, color: '#74b9ff' },
+  { key: 'bodyFat',         label: 'Massa grassa',    unit: '%',       group: 'comp', chart: 'compPct',    overview: true,  color: '#FF2D7E' },
+  { key: 'skeletalMuscle',  label: 'Muscolo scheletr.', unit: '%',     group: 'comp', chart: 'compPct',    overview: true,  color: '#9CCB00' },
+  { key: 'subcutaneousFat', label: 'Grasso sottocut.', unit: '%',      group: 'comp', chart: 'compPct',    overview: false, color: '#FFC700' },
+  { key: 'bodyWater',       label: 'Acqua',           unit: '%',       group: 'comp', chart: 'compPct',    overview: true,  color: '#00D9FF' },
+  { key: 'protein',         label: 'Proteine',        unit: '%',       group: 'comp', chart: 'compPct',    overview: false, color: '#3DE5FF' },
   // Composizione: masse
-  { key: 'muscleMass',      label: 'Massa muscolare', unit: 'kg',      group: 'comp', chart: 'compMass',   overview: false, color: '#00b894' },
-  { key: 'boneMass',        label: 'Massa ossea',     unit: 'kg',      group: 'comp', chart: 'compMass',   overview: false, color: '#b2bec3' },
+  { key: 'muscleMass',      label: 'Massa muscolare', unit: 'kg',      group: 'comp', chart: 'compMass',   overview: false, color: '#9CCB00' },
+  { key: 'boneMass',        label: 'Massa ossea',     unit: 'kg',      group: 'comp', chart: 'compMass',   overview: false, color: '#8B8E9F' },
   // Composizione: viscerale (scala a sé)
-  { key: 'visceralFat',     label: 'Grasso viscerale', unit: 'indice', group: 'comp', chart: 'visceral',   overview: true,  color: '#c0392b' },
+  { key: 'visceralFat',     label: 'Grasso viscerale', unit: 'indice', group: 'comp', chart: 'visceral',   overview: true,  color: '#FF3838' },
 ];
 
 export const VISCERAL_ZONES = [
-  { max: 9,        label: 'Buono',      color: 'rgba(0,184,148,0.12)', stroke: 'rgba(0,184,148,0.35)' },
-  { max: 12,       label: 'Attenzione', color: 'rgba(253,203,110,0.15)', stroke: 'rgba(253,203,110,0.4)' },
-  { max: Infinity, label: 'Alto',       color: 'rgba(224,32,32,0.12)', stroke: 'rgba(224,32,32,0.35)' },
+  { max: 9,        label: 'Buono',      color: 'rgba(156,203,0,0.12)', stroke: 'rgba(156,203,0,0.35)' },
+  { max: 12,       label: 'Attenzione', color: 'rgba(255,199,0,0.15)', stroke: 'rgba(255,199,0,0.4)' },
+  { max: Infinity, label: 'Alto',       color: 'rgba(255,45,126,0.12)', stroke: 'rgba(255,45,126,0.35)' },
 ];
 
 export const RANGE_OPTIONS = [
@@ -278,11 +278,11 @@ function drawWeight(ctx, ct) {
   const datasets = [{
     label: 'Peso (kg)',
     data: rows.map((r) => r.value),
-    borderColor: '#E02020', pointBackgroundColor: '#E02020', tension: 0.3, fill: false,
+    borderColor: '#FF2D7E', pointBackgroundColor: '#FF2D7E', tension: 0.3, fill: false,
   }];
   if (target) datasets.push({
     label: 'Obiettivo', data: rows.map(() => target),
-    borderColor: '#00b894', borderDash: [10, 5], pointRadius: 0, fill: false,
+    borderColor: '#9CCB00', borderDash: [10, 5], pointRadius: 0, fill: false,
   });
   storeChart('bm', new Chart(ctx, {
     type: 'line',
@@ -337,7 +337,7 @@ function drawVisceral(ctx, ct) {
       datasets: [{
         label: 'Grasso viscerale',
         data: rows.map((r) => r.visceralFat),
-        borderColor: '#c0392b', pointBackgroundColor: '#c0392b', tension: 0.3, fill: false,
+        borderColor: '#FF3838', pointBackgroundColor: '#FF3838', tension: 0.3, fill: false,
       }],
     },
     options: { ...baseLineOpts(ct), scales: { ...baseLineOpts(ct).scales, y: { ...baseLineOpts(ct).scales.y, min: 0, max: maxVal } } },

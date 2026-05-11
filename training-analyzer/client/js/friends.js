@@ -181,7 +181,7 @@ export async function compareSelected(followingList) {
     const myTon = myStats.weekTonnage || 0;
     const myTotal = myStats.totalWorkouts || 0;
 
-    const colors = ['var(--accent)', 'var(--green)', 'var(--blue)', '#fdcb6e', '#e17055'];
+    const colors = ['var(--pulse)', 'var(--volt)', 'var(--aqua)', 'var(--amber)', 'var(--solar)'];
     const metrics = [
       { label: 'Score Medio', myVal: myAvg, key: 'avgScore', unit: '' },
       { label: 'Allenamenti/Sett', myVal: myL7Count, key: 'weekWorkouts', unit: '' },

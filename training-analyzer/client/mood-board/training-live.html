@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trail Rugged · Live Session</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .live-page { padding: 0 14px 120px; max-width: 720px; margin: 0 auto; }
+  .live-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .control-btn {
+    padding: 13px 10px;
+    border-radius: var(--r-md);
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--rule-strong);
+    background: var(--surface-1);
+    color: var(--ink-0);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .control-btn:hover { background: var(--surface-2); transform: translateY(-1px); }
+  .control-btn-icon { font-size: 1rem; opacity: 0.8; }
+  .control-btn-pause { color: var(--amber); border-color: var(--amber-soft); }
+  .control-btn-end   { color: var(--surface-2); background: var(--ember); border-color: var(--ember-deep); }
+  .control-btn-end:hover { background: var(--ember-deep); }
+  .control-btn-cancel { color: var(--rust); border-color: var(--rust-soft); }
+
+  .session-meta-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    padding: 0 4px;
+  }
+
+  /* Exercise card refined */
+  .exercise-card {
+    transition: var(--transition);
+  }
+  .exercise-card.collapsed .set-list { display: none; }
+  .exercise-card-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    margin-bottom: 4px;
+  }
+  .exercise-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--ink-1);
+  }
+  .exercise-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--surface-sink);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+    position: relative;
+  }
+  .exercise-progress-fill {
+    height: 100%;
+    background: var(--ember);
+    border-radius: var(--r-pill);
+    transition: width var(--dur-slow) var(--ease-trail);
+  }
+  .set-list { padding-top: 6px; }
+  .set-list-head {
+    display: grid;
+    grid-template-columns: 30px 1fr 1fr 50px;
+    gap: 8px;
+    padding: 0 8px 6px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+  }
+  .set-list-head > div { text-align: center; }
+  .set-list-head > div:first-child { text-align: left; }
+  .set-add {
+    margin-top: 6px;
+    width: 100%;
+    padding: 7px;
+    border: 1px dashed var(--rule-strong);
+    background: transparent;
+    color: var(--ink-2);
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .set-add:hover { color: var(--ember); border-color: var(--ember); border-style: solid; }
+
+  /* RPE pill row */
+  .rpe-row {
+    display: flex;
+    gap: 5px;
+    padding: 8px 8px 4px;
+    flex-wrap: wrap;
+  }
+  .rpe-pill {
+    width: 28px; height: 28px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--rule-strong);
+    background: var(--surface-2);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ink-1);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rpe-pill:hover { border-color: var(--ember); color: var(--ember); }
+  .rpe-pill.active {
+    background: var(--ember);
+    border-color: var(--ember);
+    color: var(--surface-2);
+    box-shadow: 0 0 10px var(--ember-glow);
+  }
+
+  .rest-cta {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    background: var(--surface-sink);
+    border: 1px solid var(--rule);
+    color: var(--ink-1);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .rest-cta:hover { background: var(--ember-soft); color: var(--ember); }
+
+  /* Rest overlay positioning */
+  .rest-overlay {
+    align-items: flex-start;
+    padding-top: 18vh;
+  }
+  .rest-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 18px;
+  }
+  .rest-skip {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--ink-1);
+    border-radius: var(--r-md);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .rest-skip:hover { border-color: var(--ember); color: var(--ember); }
+
+  /* Bottom sheet pinned visible */
+  .bottom-sheet {
+    transform: translateY(0);
+  }
+  .bs-search {
+    margin-bottom: 12px;
+  }
+  .bs-search input {
+    background: var(--surface-sink);
+    border: 1px solid var(--rule);
+  }
+  .bs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+  .bs-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--surface-1);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+  }
+  .bs-item:hover { background: var(--ember-soft); border-color: var(--ember-soft-strong); }
+  .bs-item-icon {
+    width: 32px; height: 32px;
+    background: var(--surface-sink);
+    border-radius: var(--r-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+  .bs-item-main { flex: 1; }
+  .bs-item-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--ink-0);
+    letter-spacing: -0.005em;
+  }
+  .bs-item-meta {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--ink-1);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .bs-item-muscle {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    padding: 3px 7px;
+    border-radius: var(--r-pill);
+    background: var(--bronze-soft);
+    color: var(--bronze);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle">
+  <span class="theme-toggle-label">Dark</span>
+  <span class="theme-toggle-knob" id="themeKnob">☾</span>
+</button>
+
+<nav class="nav">
+  <div class="nav-logo" style="background:var(--ember);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);color:var(--surface-2);font-size:.8rem">TA</div>
+  <div class="nav-brand">Training Analyzer</div>
+  <div class="nav-scroll">
+    <button class="nav-btn">Dashboard</button>
+    <button class="nav-btn active">Allenamento</button>
+    <button class="nav-btn">Storico</button>
+    <button class="nav-btn">Progressi</button>
+    <button class="nav-btn">Corpo</button>
+    <button class="nav-btn">Recupero</button>
+    <button class="nav-btn">Profilo</button>
+  </div>
+  <div class="nav-right">
+    <span class="sync-indicator">Live · auto-sync</span>
+  </div>
+</nav>
+
+<div class="live-page">
+
+  <!-- LIVE HEADER -->
+  <div class="live-header">
+    <div class="live-status">In sessione · Push pettorali</div>
+    <div class="live-timer" id="liveTimer">42:18</div>
+    <div class="live-meta">
+      <div>
+        <span class="live-meta-value mono" id="liveSets">14</span>
+        <span class="live-meta-label">Set completati</span>
+      </div>
+      <div>
+        <span class="live-meta-value mono" id="liveVol">8.4 t</span>
+        <span class="live-meta-label">Tonnellaggio</span>
+      </div>
+      <div>
+        <span class="live-meta-value mono" id="liveHr">138 <span style="font-size:.65rem;color:var(--ink-2)">bpm</span></span>
+        <span class="live-meta-label">Cuore medio</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="live-controls">
+    <button class="control-btn control-btn-pause">
+      <span class="control-btn-icon">❚❚</span>
+      Pausa
+    </button>
+    <button class="control-btn control-btn-cancel">
+      <span class="control-btn-icon">✕</span>
+      Annulla
+    </button>
+    <button class="control-btn control-btn-end">
+      <span class="control-btn-icon">●</span>
+      Termina
+    </button>
+  </div>
+
+  <div class="session-meta-bar">
+    <span class="chip chip-bronze">Palestra</span>
+    <span class="chip chip-ink">3 esercizi · 14 set</span>
+    <span class="chip chip-moss">Su programma</span>
+    <span class="chip chip-ember">RPE medio 7.6</span>
+  </div>
+
+  <!-- EXERCISE 1 — DONE -->
+  <div class="exercise-card">
+    <div class="exercise-card-head">
+      <div>
+        <div class="exercise-card-eyebrow">Esercizio 1 · completato</div>
+        <div class="exercise-card-name">Panca piana bilanciere</div>
+      </div>
+      <div class="score-circle score-sm score-top">8.2</div>
+    </div>
+    <div class="exercise-progress">
+      <span>4 / 4 set</span>
+      <div class="exercise-progress-bar"><div class="exercise-progress-fill" style="width:100%;background:var(--moss)"></div></div>
+      <span class="mono">3.5 t</span>
+    </div>
+    <div class="set-list">
+      <div class="set-list-head">
+        <div>SET</div><div>KG</div><div>REPS</div><div>✓</div>
+      </div>
+      <div class="set-inline done">
+        <span class="set-inline-num">1</span>
+        <input value="80" readonly>
+        <input value="8" readonly>
+        <div class="set-inline-check">✓</div>
+      </div>
+      <div class="set-inline done">
+        <span class="set-inline-num">2</span>
+        <input value="92" readonly>
+        <input value="6" readonly>
+        <div class="set-inline-check">✓</div>
+      </div>
+      <div class="set-inline done">
+        <span class="set-inline-num">3</span>
+        <input value="92" readonly>
+        <input value="6" readonly>
+        <div class="set-inline-check">✓</div>
+      </div>
+      <div class="set-inline done">
+        <span class="set-inline-num">4</span>
+        <input value="92" readonly>
+        <input value="5" readonly>
+        <div class="set-inline-check">✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXERCISE 2 — IN PROGRESS -->
+  <div class="exercise-card" style="border-color:var(--ember);box-shadow:0 0 0 1px var(--ember-soft), var(--shadow-card)">
+    <div class="exercise-card-head">
+      <div>
+        <div class="exercise-card-eyebrow" style="color:var(--ember)">Esercizio 2 · in corso</div>
+        <div class="exercise-card-name">Spinte manubri inclinata 30°</div>
+      </div>
+      <span class="chip chip-ember">Prossimo set</span>
+    </div>
+    <div class="exercise-progress">
+      <span>2 / 4 set</span>
+      <div class="exercise-progress-bar"><div class="exercise-progress-fill" style="width:50%"></div></div>
+      <span class="mono">1.8 t</span>
+    </div>
+    <div class="set-list">
+      <div class="set-list-head">
+        <div>SET</div><div>KG</div><div>REPS</div><div>✓</div>
+      </div>
+      <div class="set-inline done">
+        <span class="set-inline-num">1</span>
+        <input value="28" readonly>
+        <input value="10" readonly>
+        <div class="set-inline-check">✓</div>
+      </div>
+      <div class="set-inline done">
+        <span class="set-inline-num">2</span>
+        <input value="30" readonly>
+        <input value="8" readonly>
+        <div class="set-inline-check">✓</div>
+      </div>
+      <div class="set-inline">
+        <span class="set-inline-num">3</span>
+        <input value="32" placeholder="kg">
+        <input value="" placeholder="reps">
+        <div class="set-inline-check">○</div>
+      </div>
+      <div class="set-inline">
+        <span class="set-inline-num">4</span>
+        <input placeholder="kg">
+        <input placeholder="reps">
+        <div class="set-inline-check">○</div>
+      </div>
+      <button class="set-add">+ Aggiungi set</button>
+      <div class="rpe-row">
+        <span class="caption" style="width:100%;margin-bottom:2px">RPE set corrente</span>
+        <button class="rpe-pill">6</button>
+        <button class="rpe-pill">7</button>
+        <button class="rpe-pill active">8</button>
+        <button class="rpe-pill">9</button>
+        <button class="rpe-pill">10</button>
+        <button class="rest-cta" style="margin-left:auto;margin-top:0">⏱ Riposo 2:00</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXERCISE 3 — TO DO -->
+  <div class="exercise-card collapsed" style="opacity:0.7">
+    <div class="exercise-card-head">
+      <div>
+        <div class="exercise-card-eyebrow">Esercizio 3 · da fare</div>
+        <div class="exercise-card-name">Croci ai cavi</div>
+      </div>
+      <span class="chip chip-ink">3 set previsti</span>
+    </div>
+    <div class="exercise-progress">
+      <span>0 / 3 set</span>
+      <div class="exercise-progress-bar"><div class="exercise-progress-fill" style="width:0%"></div></div>
+      <span class="mono">—</span>
+    </div>
+  </div>
+
+  <!-- ADD EXERCISE CTA -->
+  <button class="btn btn-outline btn-block" style="margin-top:14px" id="openSheet">+ Aggiungi esercizio</button>
+
+</div>
+
+<!-- LIVE FAB -->
+<div class="live-fab" id="liveFab" title="Riposo rapido">⏱</div>
+
+<!-- REST OVERLAY -->
+<div class="rest-overlay" id="restOverlay">
+  <div class="modal" style="max-width:340px;text-align:center">
+    <div class="caption" style="color:var(--ember);margin-bottom:4px">Riposo · Spinte manubri</div>
+    <div class="rest-circle-wrap">
+      <svg class="rest-circle-svg" viewBox="0 0 200 200">
+        <circle class="rest-circle-bg" cx="100" cy="100" r="85"/>
+        <circle id="restProgress" class="rest-circle-progress" cx="100" cy="100" r="85"
+                stroke-dasharray="534"
+                stroke-dashoffset="160"/>
+      </svg>
+      <div class="rest-circle-text">
+        <div class="num-big" id="restTime">1:28</div>
+        <div class="caption">su 2:00</div>
+      </div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:.78rem;color:var(--ink-1)">
+      Prossimo: <span style="color:var(--ink-0);font-weight:600">Set 3 · 32 kg × 6 reps</span>
+    </div>
+    <div class="rest-actions">
+      <button class="rest-skip">+ 30s</button>
+      <button class="rest-skip">- 30s</button>
+      <button class="btn btn-primary" id="closeRest" style="flex:1.4">Salta</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET -->
+<div class="bottom-sheet" id="bottomSheet" style="display:none">
+  <div class="card-title">Aggiungi esercizio</div>
+
+  <div class="form-group bs-search">
+    <input type="text" placeholder="🔍 Cerca per nome o muscolo" value="">
+  </div>
+
+  <div class="row mb-3" style="gap:4px;flex-wrap:wrap">
+    <span class="chip chip-bronze">Pettorali</span>
+    <span class="chip chip-ink">Tricipiti</span>
+    <span class="chip chip-ink">Spalle</span>
+    <span class="chip chip-ink">Dorso</span>
+    <span class="chip chip-ink">Gambe</span>
+    <span class="chip chip-ink">Bicipiti</span>
+    <span class="chip chip-ink">Core</span>
+  </div>
+
+  <div class="bs-list">
+    <div class="bs-item">
+      <div class="bs-item-icon">🏋️</div>
+      <div class="bs-item-main">
+        <div class="bs-item-name">Dips alle parallele</div>
+        <div class="bs-item-meta">Bilanciere · 4×8 standard</div>
+      </div>
+      <span class="bs-item-muscle">Petto</span>
+    </div>
+    <div class="bs-item">
+      <div class="bs-item-icon">💪</div>
+      <div class="bs-item-main">
+        <div class="bs-item-name">French press manubri</div>
+        <div class="bs-item-meta">Manubri · 3×10 standard</div>
+      </div>
+      <span class="bs-item-muscle" style="background:var(--moss-soft);color:var(--moss)">Tricipiti</span>
+    </div>
+    <div class="bs-item">
+      <div class="bs-item-icon">🏋️</div>
+      <div class="bs-item-main">
+        <div class="bs-item-name">Croci con manubri panca piana</div>
+        <div class="bs-item-meta">Manubri · 3×12 isolamento</div>
+      </div>
+      <span class="bs-item-muscle">Petto</span>
+    </div>
+    <div class="bs-item">
+      <div class="bs-item-icon">🤸</div>
+      <div class="bs-item-main">
+        <div class="bs-item-name">Push-up archer</div>
+        <div class="bs-item-meta">Corpo libero · 3×6/lato</div>
+      </div>
+      <span class="bs-item-muscle">Petto</span>
+    </div>
+    <div class="bs-item">
+      <div class="bs-item-icon">💪</div>
+      <div class="bs-item-main">
+        <div class="bs-item-name">Push-down corda</div>
+        <div class="bs-item-meta">Cavi · 3×12 pump</div>
+      </div>
+      <span class="bs-item-muscle" style="background:var(--moss-soft);color:var(--moss)">Tricipiti</span>
+    </div>
+    <div class="bs-item">
+      <div class="bs-item-icon">🏋️</div>
+      <div class="bs-item-main">
+        <div class="bs-item-name">Pull-over manubrio</div>
+        <div class="bs-item-meta">Manubri · 3×12 stretch</div>
+      </div>
+      <span class="bs-item-muscle">Petto</span>
+    </div>
+  </div>
+
+  <button class="btn btn-secondary btn-block" style="margin-top:14px" id="closeSheet">Chiudi</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast" style="display:none">
+  <span>Set 2 salvato · Spinte manubri 30 kg × 8</span>
+</div>
+
+<script>
+  /* Theme toggle */
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const knob = document.getElementById('themeKnob');
+  const label = toggle.querySelector('.theme-toggle-label');
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+    knob.textContent = theme === 'dark' ? '☾' : '☀';
+    try { localStorage.setItem('mb-theme', theme); } catch (e) {}
+  }
+  toggle.addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || 'dark';
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  try {
+    const saved = localStorage.getItem('mb-theme');
+    if (saved) applyTheme(saved);
+  } catch (e) {}
+
+  /* Cosmetic live timer */
+  let seconds = 42 * 60 + 18;
+  setInterval(() => {
+    seconds++;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    document.getElementById('liveTimer').textContent = m + ':' + String(s).padStart(2, '0');
+  }, 1000);
+
+  /* Cosmetic rest countdown */
+  const restTimeEl = document.getElementById('restTime');
+  const restProgressEl = document.getElementById('restProgress');
+  let restSeconds = 88;
+  const restTotal = 120;
+  const C = 2 * Math.PI * 85;
+  restProgressEl.setAttribute('stroke-dasharray', C);
+  function tickRest() {
+    const m = Math.floor(restSeconds / 60);
+    const s = restSeconds % 60;
+    restTimeEl.textContent = m + ':' + String(s).padStart(2, '0');
+    const offset = C * (1 - restSeconds / restTotal);
+    restProgressEl.setAttribute('stroke-dashoffset', offset);
+  }
+  tickRest();
+  setInterval(() => {
+    if (restSeconds > 0) restSeconds--;
+    else restSeconds = restTotal;
+    tickRest();
+  }, 1000);
+
+  /* RPE pill toggle */
+  document.querySelectorAll('.rpe-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      p.parentElement.querySelectorAll('.rpe-pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+    });
+  });
+
+  /* Live FAB → open rest overlay */
+  const overlay = document.getElementById('restOverlay');
+  document.getElementById('liveFab').addEventListener('click', () => overlay.style.display = 'flex');
+  document.getElementById('closeRest').addEventListener('click', () => overlay.style.display = 'none');
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+
+  /* Bottom sheet toggle */
+  const sheet = document.getElementById('bottomSheet');
+  document.getElementById('openSheet').addEventListener('click', () => sheet.style.display = 'block');
+  document.getElementById('closeSheet').addEventListener('click', () => sheet.style.display = 'none');
+
+  /* Toast cosmetic show after 2s */
+  const toast = document.getElementById('toast');
+  setTimeout(() => {
+    toast.style.display = 'flex';
+    setTimeout(() => toast.style.display = 'none', 2800);
+  }, 1800);
+</script>
+</body>
+</html>

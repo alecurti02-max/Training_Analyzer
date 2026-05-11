@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trail Rugged · Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .hero-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  @media (min-width: 720px) {
+    .hero-row { grid-template-columns: 1.4fr 1fr; }
+  }
+  .hero-greet {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--ember);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    margin-bottom: 6px;
+  }
+  .hero-name {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 2.8rem);
+    color: var(--ink-0);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .hero-line {
+    color: var(--ink-1);
+    font-size: 0.95rem;
+    max-width: 380px;
+    line-height: 1.45;
+  }
+  .hero-card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .hero-stat-val {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    color: var(--ink-0);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .hero-stat-unit {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .hero-stat-label {
+    font-family: var(--font-body);
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 4px;
+  }
+
+  .next-up {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-asym-b);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  .next-up::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='none'><g fill='none' stroke='%23FF2D7E' stroke-width='1' stroke-opacity='0.12'><path d='M0,60 Q90,30 180,80 T380,90'/><path d='M0,140 Q100,100 200,160 T380,180'/><path d='M0,220 Q90,180 200,240 T380,260'/></g></svg>");
+    background-size: 100% 100%;
+    pointer-events: none;
+  }
+  [data-theme="dark"] .next-up::before {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='none'><g fill='none' stroke='%23FF4D94' stroke-width='1' stroke-opacity='0.18'><path d='M0,60 Q90,30 180,80 T380,90'/><path d='M0,140 Q100,100 200,160 T380,180'/><path d='M0,220 Q90,180 200,240 T380,260'/></g></svg>");
+  }
+  .next-up > * { position: relative; }
+  .next-up-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ember);
+    margin-bottom: 4px;
+  }
+  .next-up-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--ink-0);
+    letter-spacing: -0.01em;
+  }
+  .next-up-detail {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--ink-1);
+    margin-top: 6px;
+  }
+  .next-up .btn { margin-top: 12px; align-self: flex-start; }
+
+  /* Heatmap container */
+  #heatmap-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Volume bar chart */
+  .volume-chart-wrap { padding: 8px 0 4px; }
+  .volume-svg { width: 100%; height: 200px; display: block; }
+  .volume-legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--ink-1);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .volume-legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-right: 5px;
+    vertical-align: -1px;
+  }
+
+  /* Radar */
+  .radar-wrap { padding: 10px 0; display: flex; align-items: center; gap: 14px; }
+  .radar-svg { width: 200px; height: 200px; flex-shrink: 0; }
+  .radar-side { flex: 1; }
+  .radar-metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+  }
+  .radar-metric:last-child { border-bottom: none; }
+  .radar-metric-name { color: var(--ink-1); font-weight: 600; }
+  .radar-metric-val {
+    font-family: var(--font-mono);
+    color: var(--ink-0);
+    font-weight: 600;
+  }
+  .radar-cta {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ember);
+    font-weight: 600;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .radar-cta::after { content: "→"; transition: transform var(--dur-quick) var(--ease-trail); }
+  .radar-cta:hover::after { transform: translateX(4px); }
+
+  /* Recovery muscle list */
+  .recovery-list { padding: 4px 0; }
+
+  /* Trend chip */
+  .trend-up   { color: var(--moss); }
+  .trend-down { color: var(--rust); }
+  .trend-eq   { color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle">
+  <span class="theme-toggle-label">Light</span>
+  <span class="theme-toggle-knob" id="themeKnob">☀</span>
+</button>
+
+<nav class="nav">
+  <div class="nav-logo" style="background:var(--ember);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);color:var(--surface-2);font-size:.8rem">TA</div>
+  <div class="nav-brand">Training Analyzer</div>
+  <div class="nav-scroll">
+    <button class="nav-btn active">Dashboard</button>
+    <button class="nav-btn">Allenamento</button>
+    <button class="nav-btn">Storico</button>
+    <button class="nav-btn">Progressi</button>
+    <button class="nav-btn">Corpo</button>
+    <button class="nav-btn">Recupero</button>
+    <button class="nav-btn">Profilo</button>
+    <button class="nav-btn">Setup</button>
+  </div>
+  <div class="nav-right">
+    <span class="sync-indicator">Sync OK</span>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- HERO ROW -->
+  <div class="hero-row">
+    <div class="card card-hero">
+      <div class="hero-greet">Mercoledì 8 maggio · settimana 19</div>
+      <h1 class="hero-name">Ciao, Ale</h1>
+      <p class="hero-line">12 giorni di striscia, 4 sessioni questa settimana. Domani recupero attivo, sabato long run programmato sul sentiero della Valgrande.</p>
+      <div class="hero-card-stats">
+        <div>
+          <div class="hero-stat-val">12 <span class="hero-stat-unit">gg</span></div>
+          <div class="hero-stat-label">Streak</div>
+        </div>
+        <div>
+          <div class="hero-stat-val">38.4 <span class="hero-stat-unit">km</span></div>
+          <div class="hero-stat-label">Corsa · 7gg</div>
+        </div>
+        <div>
+          <div class="hero-stat-val">12.8 <span class="hero-stat-unit">t</span></div>
+          <div class="hero-stat-label">Tonnellaggio</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-up">
+      <div class="next-up-eyebrow">Prossima sessione</div>
+      <div class="next-up-title">Pull · dorso &amp; bicipiti</div>
+      <div class="next-up-detail">Programma 5×5 · 6 esercizi · ~55 min</div>
+      <div class="row mt-2" style="gap:6px">
+        <span class="chip chip-bronze">Palestra</span>
+        <span class="chip chip-ink">7 set RPE 8</span>
+      </div>
+      <button class="btn btn-primary">Inizia ora</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD LAYOUT -->
+  <div class="dash-layout">
+
+    <!-- LEFT COLUMN -->
+    <div class="dash-col-main">
+
+      <!-- Heatmap -->
+      <div class="card">
+        <div class="card-title">Calendario allenamenti</div>
+        <div class="heatmap-container">
+          <svg id="heatmap-svg" viewBox="0 0 770 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <!-- generated by JS -->
+          </svg>
+        </div>
+        <div class="heatmap-legend">
+          <span>Meno</span>
+          <span class="heatmap-legend-cell heatmap-legend-cell-0"></span>
+          <span class="heatmap-legend-cell heatmap-legend-cell-1"></span>
+          <span class="heatmap-legend-cell heatmap-legend-cell-2"></span>
+          <span class="heatmap-legend-cell heatmap-legend-cell-3"></span>
+          <span class="heatmap-legend-cell heatmap-legend-cell-4"></span>
+          <span>Più</span>
+          <span style="margin-left:auto;font-family:var(--font-mono);color:var(--ink-0)">147 sessioni · 12 mesi</span>
+        </div>
+      </div>
+
+      <!-- Latest workouts -->
+      <div class="card">
+        <div class="flex-between mb-3">
+          <div class="card-title" style="margin-bottom:0">Ultimi allenamenti</div>
+          <button class="radar-cta">Storico completo</button>
+        </div>
+
+        <div class="workout-item" data-sport="gym">
+          <div class="workout-item-main">
+            <div class="workout-item-title">Push · pettorali &amp; tricipiti</div>
+            <div class="workout-item-meta">
+              <span>Mar 7 mag</span><span class="dot"></span>
+              <span>Panca 4×6 @ 92 kg</span><span class="dot"></span>
+              <span>52 min</span><span class="dot"></span>
+              <span>RPE 8</span>
+            </div>
+          </div>
+          <span class="chip chip-bronze">Palestra</span>
+          <div class="score-circle score-top">8.4</div>
+        </div>
+
+        <div class="workout-item" data-sport="running">
+          <div class="workout-item-main">
+            <div class="workout-item-title">Corsa lenta · sentiero</div>
+            <div class="workout-item-meta">
+              <span>Lun 6 mag</span><span class="dot"></span>
+              <span>12.4 km</span><span class="dot"></span>
+              <span>1:08:42</span><span class="dot"></span>
+              <span>5:32/km</span><span class="dot"></span>
+              <span>142 bpm</span>
+            </div>
+          </div>
+          <span class="chip chip-moss">Corsa</span>
+          <div class="score-circle score-high">7.1</div>
+        </div>
+
+        <div class="workout-item" data-sport="gym">
+          <div class="workout-item-main">
+            <div class="workout-item-title">Legs · squat day</div>
+            <div class="workout-item-meta">
+              <span>Dom 5 mag</span><span class="dot"></span>
+              <span>Squat 5×5 @ 110 kg</span><span class="dot"></span>
+              <span>1:08</span><span class="dot"></span>
+              <span>RPE 9</span>
+            </div>
+          </div>
+          <span class="chip chip-bronze">Palestra</span>
+          <div class="score-circle score-ember">9.2</div>
+        </div>
+
+        <div class="workout-item" data-sport="cycling">
+          <div class="workout-item-main">
+            <div class="workout-item-title">Bici · giro lago d'Iseo</div>
+            <div class="workout-item-meta">
+              <span>Sab 4 mag</span><span class="dot"></span>
+              <span>48 km</span><span class="dot"></span>
+              <span>2:12:30</span><span class="dot"></span>
+              <span>+860 m D+</span><span class="dot"></span>
+              <span>23.4 km/h</span>
+            </div>
+          </div>
+          <span class="chip chip-sky">Bici</span>
+          <div class="score-circle score-top">8.0</div>
+        </div>
+      </div>
+
+      <!-- Weekly volume chart -->
+      <div class="card">
+        <div class="flex-between mb-3">
+          <div class="card-title" style="margin-bottom:0">Volume settimanale · 12 settimane</div>
+          <span class="hex-pill" style="font-family:var(--font-mono);font-size:.66rem;background:var(--surface-2);border:1px solid var(--rule);padding:2px 8px;border-radius:var(--r-pill);color:var(--ink-1);letter-spacing:.06em;text-transform:uppercase">Sessioni / settimana</span>
+        </div>
+        <div class="volume-chart-wrap">
+          <svg class="volume-svg" id="volume-svg" viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <!-- generated by JS -->
+          </svg>
+        </div>
+        <div class="volume-legend">
+          <span><span class="volume-legend-dot" style="background:var(--bronze)"></span>Palestra</span>
+          <span><span class="volume-legend-dot" style="background:var(--moss)"></span>Corsa</span>
+          <span><span class="volume-legend-dot" style="background:var(--sky)"></span>Altro</span>
+          <span style="margin-left:auto;color:var(--ink-0)">Media 4.2 sessioni / settimana</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="dash-col-side">
+
+      <!-- Streak / consistency -->
+      <div class="card">
+        <div class="card-title">Consistenza</div>
+        <div class="streak-display">
+          <div class="streak-num">12</div>
+          <div>
+            <div class="streak-label">Giorni di striscia</div>
+            <div class="streak-meta">Record personale: 28 gg</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="flex" style="justify-content:space-between;font-family:var(--font-mono);font-size:.8rem;color:var(--ink-1)">
+          <span>Questa settimana</span>
+          <span class="trend-up">↑ 4 sessioni</span>
+        </div>
+        <div class="flex" style="justify-content:space-between;font-family:var(--font-mono);font-size:.8rem;color:var(--ink-1);margin-top:6px">
+          <span>Score medio 30gg</span>
+          <span class="trend-up">↑ 7.4 (+0.3)</span>
+        </div>
+        <div class="flex" style="justify-content:space-between;font-family:var(--font-mono);font-size:.8rem;color:var(--ink-1);margin-top:6px">
+          <span>Ore settimana</span>
+          <span class="trend-up">↑ 6h 18'</span>
+        </div>
+      </div>
+
+      <!-- Recovery -->
+      <div class="card">
+        <div class="card-title">Recupero muscolare</div>
+        <div class="recovery-list">
+          <div class="muscle-row">
+            <span class="muscle-name">Petto</span>
+            <div class="muscle-bar-track"><div class="muscle-bar-fill" style="width:78%"></div></div>
+            <span class="muscle-value">78%</span>
+          </div>
+          <div class="muscle-row">
+            <span class="muscle-name">Gambe</span>
+            <div class="muscle-bar-track"><div class="muscle-bar-fill" data-state="warning" style="width:42%"></div></div>
+            <span class="muscle-value">42%</span>
+          </div>
+          <div class="muscle-row">
+            <span class="muscle-name">Dorso</span>
+            <div class="muscle-bar-track"><div class="muscle-bar-fill" style="width:92%"></div></div>
+            <span class="muscle-value">92%</span>
+          </div>
+          <div class="muscle-row">
+            <span class="muscle-name">Spalle</span>
+            <div class="muscle-bar-track"><div class="muscle-bar-fill" style="width:68%"></div></div>
+            <span class="muscle-value">68%</span>
+          </div>
+          <div class="muscle-row">
+            <span class="muscle-name">Cardio</span>
+            <div class="muscle-bar-track"><div class="muscle-bar-fill" data-state="danger" style="width:24%"></div></div>
+            <span class="muscle-value">24%</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="row" style="font-family:var(--font-mono);font-size:.72rem;color:var(--ink-1)">
+          <span>Sonno 7h 24'</span>
+          <span class="dot" style="width:3px;height:3px;background:var(--ink-2);border-radius:var(--r-pill)"></span>
+          <span>Idratazione OK</span>
+          <span class="dot" style="width:3px;height:3px;background:var(--ink-2);border-radius:var(--r-pill)"></span>
+          <span>RPE medio 7.4</span>
+        </div>
+      </div>
+
+      <!-- Athletic radar -->
+      <div class="card">
+        <div class="flex-between mb-3">
+          <div class="card-title" style="margin-bottom:0">Profilo atletico</div>
+          <span class="chip chip-ember">7.4 / 10</span>
+        </div>
+        <div class="radar-wrap">
+          <svg class="radar-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <radialGradient id="radarFill" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="var(--ember)" stop-opacity="0.42"/>
+                <stop offset="100%" stop-color="var(--ember)" stop-opacity="0.12"/>
+              </radialGradient>
+            </defs>
+            <!-- grid rings -->
+            <g fill="none" stroke="currentColor" stroke-opacity="0.15" stroke-width="0.8" style="color:var(--ink-1)">
+              <polygon points="100,30 159,65 159,135 100,170 41,135 41,65"/>
+              <polygon points="100,46 145,72 145,128 100,154 55,128 55,72"/>
+              <polygon points="100,62 131,80 131,120 100,138 69,120 69,80"/>
+              <polygon points="100,78 117,87 117,113 100,122 83,113 83,87"/>
+            </g>
+            <!-- axes -->
+            <g stroke="currentColor" stroke-opacity="0.1" stroke-width="0.6" style="color:var(--ink-1)">
+              <line x1="100" y1="100" x2="100" y2="30"/>
+              <line x1="100" y1="100" x2="159" y2="65"/>
+              <line x1="100" y1="100" x2="159" y2="135"/>
+              <line x1="100" y1="100" x2="100" y2="170"/>
+              <line x1="100" y1="100" x2="41" y2="135"/>
+              <line x1="100" y1="100" x2="41" y2="65"/>
+            </g>
+            <!-- data polygon: Forza 7.4, Resistenza 8.2, Consistenza 8.8, Recupero 6.0, Progressione 7.1, Varietà 7.6 -->
+            <polygon
+              points="100,48 153,75 152,127 100,160 58,128 49,68"
+              fill="url(#radarFill)"
+              stroke="var(--ember)"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+            <!-- data points -->
+            <g fill="var(--ember)" stroke="var(--surface-2)" stroke-width="1.5">
+              <circle cx="100" cy="48"  r="3.5"/>
+              <circle cx="153" cy="75"  r="3.5"/>
+              <circle cx="152" cy="127" r="3.5"/>
+              <circle cx="100" cy="160" r="3.5"/>
+              <circle cx="58"  cy="128" r="3.5"/>
+              <circle cx="49"  cy="68"  r="3.5"/>
+            </g>
+            <!-- axis labels -->
+            <g fill="currentColor" style="color:var(--ink-1)" font-family="Familjen Grotesk, sans-serif" font-size="9" font-weight="600" text-anchor="middle">
+              <text x="100" y="22">FORZA</text>
+              <text x="172" y="63">RESIST.</text>
+              <text x="172" y="140">CONST.</text>
+              <text x="100" y="184">RECUP.</text>
+              <text x="28"  y="140">PROGR.</text>
+              <text x="28"  y="63">VARIETÀ</text>
+            </g>
+          </svg>
+          <div class="radar-side">
+            <div class="radar-metric"><span class="radar-metric-name">Forza</span><span class="radar-metric-val">7.4</span></div>
+            <div class="radar-metric"><span class="radar-metric-name">Resistenza</span><span class="radar-metric-val">8.2</span></div>
+            <div class="radar-metric"><span class="radar-metric-name">Consistenza</span><span class="radar-metric-val">8.8</span></div>
+            <div class="radar-metric"><span class="radar-metric-name">Recupero</span><span class="radar-metric-val">6.0</span></div>
+            <div class="radar-metric"><span class="radar-metric-name">Progressione</span><span class="radar-metric-val">7.1</span></div>
+            <div class="radar-metric"><span class="radar-metric-name">Varietà</span><span class="radar-metric-val">7.6</span></div>
+          </div>
+        </div>
+        <button class="radar-cta">Apri profilo atletico</button>
+      </div>
+
+      <!-- 1RM mini card -->
+      <div class="card">
+        <div class="card-title">1RM stimato</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:var(--font-mono)">
+          <div>
+            <div class="caption" style="color:var(--ink-2)">Panca piana</div>
+            <div class="display-num" style="font-size:1.6rem;color:var(--ink-0)">118 <span style="font-size:.7rem;color:var(--ink-2)">kg</span></div>
+            <div style="font-size:.7rem;color:var(--moss);margin-top:2px">↑ +4 kg in 30 gg</div>
+          </div>
+          <div>
+            <div class="caption" style="color:var(--ink-2)">Squat back</div>
+            <div class="display-num" style="font-size:1.6rem;color:var(--ink-0)">142 <span style="font-size:.7rem;color:var(--ink-2)">kg</span></div>
+            <div style="font-size:.7rem;color:var(--moss);margin-top:2px">↑ +6 kg in 30 gg</div>
+          </div>
+          <div>
+            <div class="caption" style="color:var(--ink-2)">Stacco</div>
+            <div class="display-num" style="font-size:1.6rem;color:var(--ink-0)">175 <span style="font-size:.7rem;color:var(--ink-2)">kg</span></div>
+            <div style="font-size:.7rem;color:var(--ink-2);margin-top:2px">= invariato</div>
+          </div>
+          <div>
+            <div class="caption" style="color:var(--ink-2)">Trazioni</div>
+            <div class="display-num" style="font-size:1.6rem;color:var(--ink-0)">+18 <span style="font-size:.7rem;color:var(--ink-2)">kg</span></div>
+            <div style="font-size:.7rem;color:var(--moss);margin-top:2px">↑ +3 kg in 30 gg</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="mt-6" style="border-top:1px solid var(--rule);padding-top:20px;font-family:var(--font-mono);font-size:.7rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em">
+    Training Analyzer · v3.2 · mood board Trail Rugged
+  </footer>
+
+</div>
+
+<div class="toast toast-success" style="display:none">
+  <span>Sessione salvata · Push pettorali</span>
+</div>
+
+<script>
+  /* ===== Theme toggle ===== */
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const knob = document.getElementById('themeKnob');
+  const label = toggle.querySelector('.theme-toggle-label');
+  function apply(theme) {
+    root.setAttribute('data-theme', theme);
+    label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+    knob.textContent = theme === 'dark' ? '☾' : '☀';
+    try { localStorage.setItem('mb-theme', theme); } catch (e) {}
+    renderHeatmap(); renderVolume();
+  }
+  toggle.addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') || 'light';
+    apply(cur === 'dark' ? 'light' : 'dark');
+  });
+  try {
+    const saved = localStorage.getItem('mb-theme');
+    if (saved) root.setAttribute('data-theme', saved), label.textContent = saved === 'dark' ? 'Dark' : 'Light', knob.textContent = saved === 'dark' ? '☾' : '☀';
+  } catch (e) {}
+
+  /* ===== Seeded RNG so the heatmap looks consistent ===== */
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function emberAlpha(score, isDark) {
+    if (score === 0) return null;
+    const base = isDark ? '255, 77, 148' : '255, 45, 126';
+    if (score < 4) return `rgba(${base}, 0.22)`;
+    if (score < 6) return `rgba(${base}, 0.42)`;
+    if (score < 8) return `rgba(${base}, 0.65)`;
+    return isDark ? '#FF4D94' : '#FF2D7E';
+  }
+
+  function renderHeatmap() {
+    const svg = document.getElementById('heatmap-svg');
+    if (!svg) return;
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    const emptyColor = isDark ? '#1C1E2A' : '#E8ECF1';
+    const labelColor = isDark ? '#6B6F82' : '#8B8E9F';
+
+    const weeks = 52;
+    const cellSize = 12, gap = 2;
+    const offsetX = 30, offsetY = 16;
+    const totalW = offsetX + weeks * (cellSize + gap) + 6;
+    const totalH = offsetY + 7 * (cellSize + gap) + 4;
+    svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
+
+    const rng = mulberry32(7);
+    let html = '';
+    const dayLabels = ['L','M','M','G','V','S','D'];
+    dayLabels.forEach((d,i) => {
+      if (i % 2 === 0) html += `<text x="0" y="${offsetY + i*(cellSize+gap) + cellSize - 2}" font-family="JetBrains Mono, monospace" font-size="9" fill="${labelColor}">${d}</text>`;
+    });
+
+    const monthLabels = ['Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic','Gen','Feb','Mar','Apr'];
+    monthLabels.forEach((m,i) => {
+      const x = offsetX + (i * 4.3) * (cellSize + gap);
+      html += `<text x="${x}" y="10" font-family="JetBrains Mono, monospace" font-size="9" fill="${labelColor}" letter-spacing="0.08em">${m.toUpperCase()}</text>`;
+    });
+
+    for (let w = 0; w < weeks; w++) {
+      for (let d = 0; d < 7; d++) {
+        const x = offsetX + w * (cellSize + gap);
+        const y = offsetY + d * (cellSize + gap);
+        // Pattern: more active on weekend, gaps every 6-7 weeks
+        const r = rng();
+        const isWeekend = d >= 5;
+        const gapWeek = (w % 7) === 3;
+        let score = 0;
+        if (gapWeek && r < 0.7) score = 0;
+        else {
+          const base = r + (isWeekend ? 0.18 : 0) - (d === 3 ? 0.12 : 0);
+          if (base > 0.78) score = 9;
+          else if (base > 0.6) score = 7.5;
+          else if (base > 0.46) score = 5.5;
+          else if (base > 0.32) score = 3.5;
+          else score = 0;
+        }
+        const fill = score === 0 ? emptyColor : emberAlpha(score, isDark);
+        html += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2.5" fill="${fill}"/>`;
+      }
+    }
+
+    svg.innerHTML = html;
+  }
+
+  function renderVolume() {
+    const svg = document.getElementById('volume-svg');
+    if (!svg) return;
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    const ink2 = isDark ? '#6B6F82' : '#8B8E9F';
+    const rule = isDark ? 'rgba(245,247,250,0.10)' : 'rgba(10,11,20,0.10)';
+
+    const data = [
+      {w:'18 feb', g:2, r:2, o:0},
+      {w:'25 feb', g:3, r:1, o:1},
+      {w:'4 mar',  g:3, r:2, o:0},
+      {w:'11 mar', g:2, r:3, o:0},
+      {w:'18 mar', g:3, r:2, o:1},
+      {w:'25 mar', g:0, r:1, o:0},
+      {w:'1 apr',  g:3, r:3, o:0},
+      {w:'8 apr',  g:4, r:2, o:1},
+      {w:'15 apr', g:3, r:3, o:0},
+      {w:'22 apr', g:3, r:4, o:1},
+      {w:'29 apr', g:4, r:3, o:0},
+      {w:'6 mag',  g:3, r:4, o:1}
+    ];
+
+    const W = 720, H = 200;
+    const padL = 28, padR = 8, padT = 12, padB = 36;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const maxVal = 8;
+    const barGroupW = innerW / data.length;
+    const barW = barGroupW * 0.22;
+    const gap = 2;
+
+    let html = '';
+    // y grid + labels
+    for (let i = 0; i <= 4; i++) {
+      const val = i * 2;
+      const y = padT + innerH - (val / maxVal) * innerH;
+      html += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="${rule}" stroke-width="0.8"/>`;
+      html += `<text x="${padL - 6}" y="${y + 3}" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="9" fill="${ink2}">${val}</text>`;
+    }
+    // bars
+    const colors = {
+      g: isDark ? '#FFA92E' : '#FF8C00',
+      r: isDark ? '#C8FF00' : '#9CCB00',
+      o: isDark ? '#3DE5FF' : '#00D9FF'
+    };
+    data.forEach((d, i) => {
+      const cx = padL + (i + 0.5) * barGroupW;
+      const order = [['g', d.g], ['r', d.r], ['o', d.o]];
+      order.forEach(([key, val], idx) => {
+        const x = cx - (1.5 - idx) * (barW + gap);
+        const h = (val / maxVal) * innerH;
+        const y = padT + innerH - h;
+        html += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="2" fill="${colors[key]}"/>`;
+      });
+      html += `<text x="${cx}" y="${padT + innerH + 18}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="${ink2}" letter-spacing="0.04em">${d.w}</text>`;
+    });
+
+    svg.innerHTML = html;
+  }
+
+  renderHeatmap();
+  renderVolume();
+  window.addEventListener('resize', () => { renderHeatmap(); renderVolume(); });
+</script>
+</body>
+</html>
