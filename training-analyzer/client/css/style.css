@@ -1265,7 +1265,11 @@ input:focus,select:focus,textarea:focus{
 }
 
 /* --- Container z-index so it sits above body::before stripes --- */
-.container,.nav,.login-screen,.bottom-sheet,.modal-overlay,.toast{
+/* NB: .bottom-sheet is intentionally NOT in this list — it needs position:fixed
+   (from its own rule) so transform:translateY(100%) parks it off-screen until
+   .show is added. Forcing position:relative here made it render in normal flow,
+   showing the "Cerca esercizio..." search bar on every page. */
+.container,.nav,.login-screen,.modal-overlay,.toast{
   position:relative;
   z-index:2;
 }
