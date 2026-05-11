@@ -19,7 +19,7 @@ Backend: introdurre `makeCrudController` per eliminare boilerplate, splittare `c
 | # | Nome | Stima | Stato |
 |---|---|---|---|
 | 0 | Foundation (CLAUDE.md, baseline, smoke checklist) | 2h | ✅ done |
-| 1 | Setup Vite + Preact + bridge legacy | 6h | ⚪ pending |
+| 1 | Setup Vite + Preact + bridge legacy | 6h | ✅ done |
 | 2 | Backend service layer + CRUD helper + split contextBuilder | 6h | ✅ done |
 | 3 | Test backend smoke + scoring unit | 5h | ✅ done |
 | 4 | Componenti core + store signals | 6h | ⚪ pending |

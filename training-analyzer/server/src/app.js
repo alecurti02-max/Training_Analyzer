@@ -61,7 +61,13 @@ app.use(
 app.use(passport.initialize());
 
 // --- Static files (client) ---
-const clientDir = path.join(__dirname, '../../client');
+// Prefer the Vite-built dist/ when present (production), otherwise serve the
+// raw client/ folder (legacy dev workflow before Fase 1, or when Vite hasn't
+// been built yet).
+const fs = require('fs');
+const clientRoot = path.join(__dirname, '../../client');
+const clientDist = path.join(clientRoot, 'dist');
+const clientDir = fs.existsSync(path.join(clientDist, 'index.html')) ? clientDist : clientRoot;
 app.use(express.static(clientDir));
 
 // --- API routes ---

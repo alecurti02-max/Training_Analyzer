@@ -6,6 +6,9 @@ analizzare progressi con AI, condividere con amici. Deploy Render + Neon Postgre
 > **REFACTOR IN CORSO**: il frontend sta migrando da Vanilla JS a Preact+Vite (strangler fig).
 > Vedi `docs/refactor-roadmap.md`. Questa CLAUDE.md riflette lo **stato attuale** del codice;
 > aggiornare a ogni fase completata.
+>
+> **Fase corrente**: 1 done (Vite+Preact scaffold + bridge legacy). Pages ancora servite dal vecchio
+> `client/js/ui.js`. La nuova app Preact monta in `<div id="app">` ed è inattiva fino a Fase 5.
 
 ## Stack
 
@@ -83,9 +86,11 @@ training-analyzer/
 # Backend dev
 cd server && npm run dev          # nodemon, http://localhost:3000
 
-# Frontend dev
-# Per ora: aprire client/index.html con un static server qualsiasi (Live Server,
-# http-server, python -m http.server 8080). Endpoint API: localhost:3000.
+# Frontend dev (Fase 1+: Vite con HMR)
+cd client && npm install          # solo la prima volta
+cd client && npm run dev          # http://localhost:5173, proxies /api a :3000
+cd client && npm run build        # build prod in client/dist/
+cd client && npm run preview      # serve client/dist/ in locale
 
 # Migrations
 cd server && npm run migrate            # applica forward
@@ -104,6 +109,7 @@ cd server && npm test              # tutti i test
 ## Vincoli noti — leggere prima di toccare
 
 - **Render auto-migrate**: in `server/src/index.js::runMigrations()` viene chiamato Sequelize CLI all'avvio del server, perché Render bypassa `npm start`. Non rimuovere quella chiamata. Vedi memoria `project_neon_migration` e `project_render_deploy_migrations`.
+- **Build frontend per deploy**: il server serve `client/dist/` se esiste, altrimenti `client/` (fallback dev). Su Render aggiungere al start command: `cd client && npm ci && npm run build && cd ../server && npm start` (oppure equivalente Render build hook). Senza build, il server cade automaticamente sul vecchio `client/` ESM-puro, app funziona uguale ma senza la nuova UI Preact.
 - **Body composition da 2 fonti**: peso/body fat possono arrivare da `Settings.bodyweight` o `BodyMeasurement.weight`. Allineamento via `syncSettingsFromMeasurement` (oggi sparso, da centralizzare). Vedi memoria `project_tech_debt`.
 - **Live session draft**: `localStorage.liveSession_<uid>`. Cambio formato richiede forward-compat.
 - **Scoring user-visible**: ogni workout in storico mostra `score`. Prima di toccare `scoring.js`, **fai snapshot fixture** di 20 workout reali e confronta output prima/dopo.

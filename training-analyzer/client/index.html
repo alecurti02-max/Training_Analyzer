@@ -777,6 +777,13 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Preact mount point for the strangler-fig migration. Empty until pages are migrated. -->
+<div id="app"></div>
+
+<!-- Legacy vanilla app (will be replaced page-by-page). Loaded as ESM. -->
 <script type="module" src="js/ui.js"></script>
+
+<!-- New Preact app entry. In dev Vite serves it directly; in build it's bundled to dist/. -->
+<script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

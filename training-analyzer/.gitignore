@@ -4,3 +4,7 @@ node_modules/
 .DS_Store
 firebase-service-account.json
 server/uploads/
+
+# Vite build output (Fase 1+)
+client/dist/
+
