@@ -1278,3 +1278,336 @@ input:focus,select:focus,textarea:focus{
   .streak-num{font-size:3.5rem}
   .nav-brand{font-size:1.2rem}
 }
+
+/* ===========================================================
+   ============ PAGE LAYOUT + BENTO + TABS ==================
+   Page eyebrow + title big, bento grid dashboard, sport tabs.
+   =========================================================== */
+
+/* --- Page header (eyebrow + big title) generated via data attrs --- */
+.page.active{
+  display:flex !important;
+  flex-direction:column;
+  gap:0;
+  position:relative;
+  padding-top:8px;
+}
+.page::before{
+  content:attr(data-eyebrow);
+  font-family:var(--font-mono);
+  font-size:0.7rem;
+  font-weight:700;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:var(--race);
+  margin-bottom:6px;
+  order:-2;
+}
+.page::after{
+  content:attr(data-title);
+  font-family:var(--font-display);
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  font-weight:900;
+  font-style:italic;
+  text-transform:uppercase;
+  letter-spacing:-0.03em;
+  line-height:0.9;
+  color:var(--text);
+  margin:0 0 28px 0;
+  transform:skewX(-3deg);
+  transform-origin:left;
+  order:-1;
+}
+.page:not([data-eyebrow])::before,
+.page:not([data-title])::after{content:none}
+
+/* Mobile shrink */
+@media (max-width: 640px){
+  .page::after{font-size:2rem}
+  .page::before{font-size:0.62rem;letter-spacing:0.18em}
+}
+
+/* --- DASHBOARD bento grid asymmetric --- */
+#dash-stats{
+  display:grid;
+  grid-template-columns:1.6fr 1fr 1fr 1fr;
+  gap:14px;
+  margin-bottom:24px;
+}
+@media (max-width: 900px){
+  #dash-stats{grid-template-columns:1fr 1fr}
+}
+
+/* First stat = HERO full red */
+#dash-stats > .stat-card:first-child{
+  background:linear-gradient(135deg,var(--race) 0%,var(--race-deep) 100%) !important;
+  color:#fff;
+  border-left-color:transparent !important;
+  border-color:transparent !important;
+  padding:24px 26px 26px;
+  box-shadow:0 4px 0 var(--race-deep),0 14px 40px -10px rgba(225,29,44,0.4) !important;
+  overflow:hidden;
+}
+#dash-stats > .stat-card:first-child .stat-value{
+  color:#fff !important;
+  background:none !important;
+  -webkit-text-fill-color:#fff !important;
+  font-size:clamp(3.4rem,7vw,5rem) !important;
+  font-weight:900 !important;
+  letter-spacing:-0.04em !important;
+  transform:skewX(-6deg) !important;
+}
+#dash-stats > .stat-card:first-child .stat-label{color:rgba(255,255,255,0.85) !important}
+#dash-stats > .stat-card:first-child::before{
+  background:radial-gradient(circle at top right,rgba(255,255,255,0.18) 0%,transparent 70%) !important;
+  width:200px !important;height:200px !important;
+}
+#dash-stats > .stat-card:first-child::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background-image:repeating-linear-gradient(115deg,transparent 0 40px,rgba(255,255,255,0.06) 40px 41px,transparent 41px 80px);
+  z-index:0;
+}
+
+/* Other stats — different accent borders */
+#dash-stats > .stat-card:nth-child(2){border-left-color:var(--race) !important}
+#dash-stats > .stat-card:nth-child(2) .stat-value{color:var(--race) !important}
+#dash-stats > .stat-card:nth-child(2)::before{background:radial-gradient(circle at top right,var(--accent-bg2) 0%,transparent 70%) !important}
+
+#dash-stats > .stat-card:nth-child(3){border-left-color:var(--green) !important}
+#dash-stats > .stat-card:nth-child(3) .stat-value{color:var(--green) !important}
+#dash-stats > .stat-card:nth-child(3)::before{background:radial-gradient(circle at top right,rgba(16,185,129,0.14) 0%,transparent 70%) !important}
+
+#dash-stats > .stat-card:nth-child(4){border-left-color:var(--cyan) !important}
+#dash-stats > .stat-card:nth-child(4) .stat-value{color:var(--cyan) !important}
+#dash-stats > .stat-card:nth-child(4)::before{background:radial-gradient(circle at top right,rgba(34,211,238,0.16) 0%,transparent 70%) !important}
+
+/* --- Dashboard layout 2-col --- */
+.dash-layout{
+  display:grid;
+  grid-template-columns:1.6fr 1fr;
+  gap:14px;
+}
+@media (max-width: 900px){
+  .dash-layout{grid-template-columns:1fr}
+}
+.dash-col-main,.dash-col-side{display:flex;flex-direction:column;gap:14px}
+
+/* --- TABS as sport-pill switcher --- */
+.bm-tabs,.tabs{
+  display:flex;
+  gap:4px;
+  background:var(--bg3);
+  padding:4px;
+  border-radius:8px;
+  margin-bottom:18px;
+  border:1px solid var(--border);
+}
+.bm-tab,.tab,.tab-btn{
+  flex:1;
+  padding:10px 14px;
+  background:transparent;
+  font-family:var(--font-body);
+  font-size:0.74rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--text2);
+  border-radius:6px;
+  cursor:pointer;
+  transition:all 0.15s ease;
+  border:none;
+}
+.bm-tab:hover,.tab:hover,.tab-btn:hover{color:var(--text)}
+.bm-tab.active,.tab.active,.tab-btn.active{
+  background:var(--race);
+  color:#fff !important;
+  box-shadow:0 2px 0 var(--race-deep),0 6px 14px -4px rgba(225,29,44,0.30);
+}
+
+/* --- Filter chips (e.g. storico filters) --- */
+.filter-btn,.lib-filter-btn{
+  font-family:var(--font-body);
+  font-size:0.7rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  padding:7px 13px;
+  border-radius:6px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  color:var(--text2);
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.filter-btn:hover,.lib-filter-btn:hover{border-color:var(--race);color:var(--text)}
+.filter-btn.active,.lib-filter-btn.active{
+  background:var(--race);
+  color:#fff;
+  border-color:var(--race);
+}
+
+/* --- Search box --- */
+.search-box{
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--bg2);
+  padding:0 14px;
+}
+.search-box input{
+  border:none;
+  background:transparent;
+  padding:12px 0;
+}
+
+/* --- WORKOUT-ITEM in Storico (more presence) --- */
+#page-history .workout-item{
+  padding:18px 22px;
+  margin-bottom:10px;
+}
+#page-history .workout-item .score-circle{
+  width:58px;height:58px;min-width:58px;
+  font-size:1.4rem;
+}
+
+/* --- Workout item type stripe colors --- */
+.workout-item[data-type="running"],
+.workout-item.type-running{border-left-color:var(--green)}
+.workout-item[data-type="running"] .score-circle,
+.workout-item.type-running .score-circle{border-color:var(--green);color:var(--green)}
+
+.workout-item[data-type="cycling"],
+.workout-item.type-cycling{border-left-color:var(--cyan)}
+.workout-item[data-type="cycling"] .score-circle,
+.workout-item.type-cycling .score-circle{border-color:var(--cyan);color:var(--cyan)}
+
+.workout-item[data-type="gym"],
+.workout-item.type-gym{border-left-color:var(--race)}
+
+.workout-item[data-type="other"],
+.workout-item.type-other,
+.workout-item[data-type="hiking"],
+.workout-item[data-type="swimming"],
+.workout-item[data-type="karting"]{border-left-color:var(--orange)}
+
+/* --- Progressi page: chart cards --- */
+#page-progress .chart-container{
+  border-radius:8px;
+  overflow:hidden;
+  padding:8px 0;
+}
+
+/* --- Body page: avatar + side stack --- */
+#page-body .body-avatar-wrap{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:18px;
+}
+
+/* --- Setup page: hero tabs --- */
+#page-setup .bm-tabs{
+  margin-bottom:24px;
+}
+
+/* --- Profile page: avatar + info card --- */
+.profile-avatar-lg{
+  width:96px !important;height:96px !important;
+  border-radius:50% !important;
+  border:3px solid var(--race) !important;
+  box-shadow:0 8px 24px -6px rgba(225,29,44,0.30);
+}
+
+/* --- Friend / compare cards --- */
+.friend-card,.compare-card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:14px 16px;
+  transition:all 0.18s;
+}
+.friend-card:hover,.compare-card:hover{
+  border-color:var(--race);
+  transform:translateY(-1px);
+  box-shadow:0 12px 28px -10px rgba(14,16,20,0.12);
+}
+
+/* --- Recovery muscle-bar / heat coloring --- */
+.body-avatar-bar-fill{
+  border-radius:4px !important;
+  background:linear-gradient(90deg,var(--green) 0%,var(--yellow) 50%,var(--race) 100%) !important;
+}
+
+/* --- Recovery status banner --- */
+.advice-box{
+  background:linear-gradient(135deg,var(--accent-bg) 0%,transparent 100%);
+  border:1px solid var(--accent-bg2);
+  border-left:4px solid var(--race);
+  border-radius:6px;
+  padding:14px 18px;
+  font-family:var(--font-body);
+  font-weight:500;
+}
+
+/* --- Heatmap legend cells (already styled) --- */
+.heatmap-legend span:not(:first-child):not(:last-child){
+  border-radius:3px !important;
+}
+
+/* --- Modal — sharper edges, bold header --- */
+.modal{
+  border-radius:8px !important;
+  border:1px solid var(--border-strong);
+}
+.modal-header{
+  font-family:var(--font-display);
+  font-size:1.4rem;
+  font-weight:700;
+  font-style:italic;
+  text-transform:none;
+  letter-spacing:-0.01em;
+  margin-bottom:14px;
+}
+
+/* --- Bottom sheet refinements --- */
+.bottom-sheet{
+  border-radius:14px 14px 0 0 !important;
+}
+.bottom-sheet-handle{
+  background:var(--border-strong) !important;
+  width:38px !important;
+  height:4px !important;
+  border-radius:2px !important;
+}
+
+/* --- Toast — sport sharp --- */
+.toast{
+  border-radius:6px !important;
+  font-family:var(--font-body);
+  font-weight:700;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  font-size:0.78rem !important;
+}
+
+/* --- Card on hover lift refinement --- */
+.clickable-card{cursor:pointer}
+.clickable-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 18px 40px -12px rgba(14,16,20,0.18);
+}
+
+/* --- Section eyebrow inside cards (mini) --- */
+.section-eyebrow{
+  font-family:var(--font-mono);
+  font-size:0.62rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.18em;
+  color:var(--race);
+  margin-bottom:6px;
+  display:block;
+}
+
