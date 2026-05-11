@@ -13,8 +13,8 @@
 
 import { render } from 'preact';
 import { calculateStreak, getRecoveryStatus } from '../../../js/scoring.js';
-import { SPORT_TEMPLATES } from '../../../js/sports.js';
-import { todayStr, daysBetween, formatDate, scoreColor, secondsToPace } from '@/lib/utils.js';
+import { todayStr, daysBetween } from '@/lib/utils.js';
+import { WorkoutItem } from '@/components/WorkoutItem/WorkoutItem.jsx';
 
 // ─────────────────────────────────────────────
 // Stats: 4 cards (week workouts, avg score, week km, week tonnage)
@@ -121,52 +121,8 @@ function RecoveryList({ workouts, muscleGroups }) {
 // ─────────────────────────────────────────────
 // Recent workouts: top 5 list. Click handled by legacy global delegation
 // on .workout-item[data-workout-id] -> showWorkoutDetail (ui.js).
+// Uses the shared <WorkoutItem/> primitive.
 // ─────────────────────────────────────────────
-function workoutDetail(w) {
-  if (w.type === 'gym') return `${(w.exercises || []).length} esercizi · ${Math.round((w._tonnage || 0) / 1000 * 10) / 10}t`;
-  if (w.type === 'running') {
-    let s = `${w.distance || 0} km · ${secondsToPace(w._pace)}`;
-    if (w.avghr) s += ` · FC ${w.avghr}`;
-    return s;
-  }
-  if (w.type === 'walking' || w.type === 'cycling') {
-    let s = `${w.distance || 0} km · ${w.duration || 0} min`;
-    if (w.avghr) s += ` · FC ${w.avghr}`;
-    return s;
-  }
-  if (w.type === 'swimming') {
-    let s = `${w.distance ? w.distance + ' km · ' : ''}${w.duration || 0} min`;
-    if (w.strokes) s += ` · ${w.strokes} bracciate`;
-    return s;
-  }
-  if (w.type === 'karting') return `${w.track || ''} · Best: ${w.bestLap || '--'}s`;
-  const parts = [];
-  if (w.duration) parts.push(w.duration + ' min');
-  if (w.distance) parts.push(w.distance + ' km');
-  if (w.avghr) parts.push('FC ' + w.avghr);
-  return parts.join(' · ');
-}
-
-function WorkoutItem({ w }) {
-  const tmpl = SPORT_TEMPLATES[w.type];
-  const typeName = tmpl?.name || w.type;
-  const score = w.scores?.overall ?? '--';
-  const scoreLabel = typeof score === 'number' ? score.toFixed(1) : score;
-  const typeClass = tmpl ? `type-${w.type}` : 'type-custom';
-  return (
-    <div class="workout-item" data-workout-id={w.id}>
-      <div class="score-sm" style={{ background: scoreColor(score), color: '#fff' }}>{scoreLabel}</div>
-      <div class="workout-info">
-        <h4>
-          {formatDate(w.date)}{' '}
-          <span class={`workout-type-badge ${typeClass}`}>{typeName}</span>
-        </h4>
-        <p>{workoutDetail(w)}</p>
-      </div>
-    </div>
-  );
-}
-
 function RecentList({ workouts }) {
   if (!workouts.length) {
     return (

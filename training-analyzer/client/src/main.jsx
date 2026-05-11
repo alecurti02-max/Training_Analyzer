@@ -1,6 +1,7 @@
 import { render } from 'preact';
 import { App } from './App.jsx';
 import { mountDashboard, unmountDashboard } from './pages/Dashboard/Dashboard.jsx';
+import { mountHistory, unmountHistory } from './pages/History/History.jsx';
 
 const root = document.getElementById('app');
 if (root) render(<App />, root);
@@ -10,3 +11,4 @@ if (root) render(<App />, root);
 // Removed in Fase 8 once ui.js itself is gone.
 globalThis.Preact = globalThis.Preact || {};
 globalThis.Preact.dashboard = { mount: mountDashboard, unmount: unmountDashboard };
+globalThis.Preact.history = { mount: mountHistory, unmount: unmountHistory };

@@ -1751,23 +1751,24 @@ async function deleteSelected() {
 }
 
 function renderHistory() {
-  const types = [...new Set(workoutsCache.map(w=>w.type))];
-  const filtersEl = document.getElementById('history-filters');
-  if (filtersEl) {
-    filtersEl.innerHTML = `<button class="filter-btn ${historyFilter==='all'?'active':''}" data-hist-filter="all">Tutti</button>` +
-      types.map(t => {
-        const name = SPORT_TEMPLATES[t]?.name || t;
-        return `<button class="filter-btn ${historyFilter===t?'active':''}" data-hist-filter="${t}">${name}</button>`;
-      }).join('');
-    filtersEl.querySelectorAll('[data-hist-filter]').forEach(btn => {
-      btn.addEventListener('click', function() { filterHistory(this.dataset.histFilter, this); });
+  // Fase 6a: filters + list rendered by Preact. Filter button clicks are
+  // handled below via delegation (filterHistory). Workout-item clicks reuse
+  // the global delegation set up at the bottom of this file.
+  if (globalThis.Preact?.history) {
+    globalThis.Preact.history.mount({
+      workouts: workoutsCache,
+      filter: historyFilter,
+      selectMode: _selectMode,
+      selectedIds: [..._selectedIds],
     });
   }
-
-  let workouts=[...workoutsCache].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  if(historyFilter!=='all') workouts=workouts.filter(w=>w.type===historyFilter);
-  const listEl = document.getElementById('history-list');
-  if(listEl) listEl.innerHTML=workouts.length?workouts.map(w=>workoutItemHTML(w)).join(''):'<div class="empty-state"><p>Nessun allenamento trovato</p></div>';
+  // Re-bind filter button delegation each render (Preact replaces nodes).
+  const filtersEl = document.getElementById('history-filters');
+  if (filtersEl) {
+    filtersEl.querySelectorAll('[data-hist-filter]').forEach((btn) => {
+      btn.addEventListener('click', function () { filterHistory(this.dataset.histFilter, this); });
+    });
+  }
 }
 
 // ==================== WORKOUT DETAIL ====================
