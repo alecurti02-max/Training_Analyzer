@@ -9,14 +9,14 @@ import { calcTonnage, getRecoveryStatus, calculateStreak } from './scoring.js';
 
 // ---------- THEME (CSS var → RGB hex, jsPDF can't read CSS) ----------
 const COLORS = {
-  red: '#FF2D7E',
-  green: '#9CCB00',
-  yellow: '#FFC700',
-  orange: '#FF8C00',
-  blue: '#00D9FF',
-  text: '#0A0B14',
-  text2: '#4A4D5E',
-  border: '#E8ECF1',
+  red: '#E11D2C',
+  green: '#10B981',
+  yellow: '#FFD60A',
+  orange: '#FB923C',
+  blue: '#22D3EE',
+  text: '#0E1014',
+  text2: '#5A5F6C',
+  border: '#DEE0E6',
   bg: '#FFFFFF',
 };
 
@@ -336,7 +336,7 @@ async function renderFitnessProfileSection(doc, ctx) {
       datasets: [{
         label: 'Profilo',
         data: values,
-        backgroundColor: 'rgba(255,45,126,0.20)',
+        backgroundColor: 'rgba(225,29,44,0.20)',
         borderColor: COLORS.red,
         borderWidth: 2,
         pointBackgroundColor: COLORS.red,
@@ -344,7 +344,7 @@ async function renderFitnessProfileSection(doc, ctx) {
     },
     options: {
       plugins: { legend: { display: false } },
-      scales: { r: { min: 0, max: 100, ticks: { stepSize: 25, color: '#A8ABBE', font: { size: 11 } }, pointLabels: { font: { size: 13 } } } },
+      scales: { r: { min: 0, max: 100, ticks: { stepSize: 25, color: '#B0B4BE', font: { size: 11 } }, pointLabels: { font: { size: 13 } } } },
     },
     width: 700, height: 700,
   });
@@ -411,22 +411,22 @@ async function renderTrendChartsSection(doc, ctx) {
   const charts = [
     {
       title: 'Peso (kg)',
-      data: { labels: weights.map((w) => w.date.slice(5)), datasets: [{ label: 'kg', data: weights.map((w) => w.value), borderColor: COLORS.red, backgroundColor: 'rgba(255,45,126,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
+      data: { labels: weights.map((w) => w.date.slice(5)), datasets: [{ label: 'kg', data: weights.map((w) => w.value), borderColor: COLORS.red, backgroundColor: 'rgba(225,29,44,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
       empty: !weights.length,
     },
     {
       title: 'Tonnellaggio settimanale (kg)',
-      data: { labels: tonnageWeekly.map((b) => b.date.slice(5)), datasets: [{ label: 'kg', data: tonnageWeekly.map((b) => Math.round(b.value)), borderColor: COLORS.blue, backgroundColor: 'rgba(0,217,255,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
+      data: { labels: tonnageWeekly.map((b) => b.date.slice(5)), datasets: [{ label: 'kg', data: tonnageWeekly.map((b) => Math.round(b.value)), borderColor: COLORS.blue, backgroundColor: 'rgba(34,211,238,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
       empty: !tonnageWeekly.length,
     },
     {
       title: 'Km running settimanali',
-      data: { labels: kmWeekly.map((b) => b.date.slice(5)), datasets: [{ label: 'km', data: kmWeekly.map((b) => +b.value.toFixed(1)), borderColor: COLORS.green, backgroundColor: 'rgba(156,203,0,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
+      data: { labels: kmWeekly.map((b) => b.date.slice(5)), datasets: [{ label: 'km', data: kmWeekly.map((b) => +b.value.toFixed(1)), borderColor: COLORS.green, backgroundColor: 'rgba(16,185,129,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
       empty: !kmWeekly.length,
     },
     {
       title: 'Massa grassa (%)',
-      data: { labels: bf.map((m) => m.date.slice(5)), datasets: [{ label: '%', data: bf.map((m) => m.bodyFat), borderColor: COLORS.orange, backgroundColor: 'rgba(255,140,0,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
+      data: { labels: bf.map((m) => m.date.slice(5)), datasets: [{ label: '%', data: bf.map((m) => m.bodyFat), borderColor: COLORS.orange, backgroundColor: 'rgba(251,146,60,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
       empty: !bf.length,
     },
   ];
@@ -491,7 +491,7 @@ function renderRecoveryStreakSection(doc, ctx) {
   tiles.forEach((t, i) => {
     const x = margin + i * (tileW + 6);
     doc.setDrawColor(COLORS.border);
-    doc.setFillColor('#F5F7FA');
+    doc.setFillColor('#EDEEF1');
     doc.roundedRect(x, tileY, tileW, 26, 2, 2, 'FD');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);

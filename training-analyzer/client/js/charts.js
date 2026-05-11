@@ -27,28 +27,28 @@ export function getChartTheme() {
   const explicitDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const explicitLight = document.documentElement.getAttribute('data-theme') === 'light';
   const isLight = explicitLight || (!explicitDark && !window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const pulse = get('--pulse') || (isLight ? '#FF2D7E' : '#FF4D94');
-  const aqua  = get('--aqua')  || (isLight ? '#00D9FF' : '#3DE5FF');
-  const volt  = get('--volt')  || (isLight ? '#9CCB00' : '#C8FF00');
-  const solar = get('--solar') || (isLight ? '#FF8C00' : '#FFA92E');
-  const crimson = get('--crimson') || (isLight ? '#FF3838' : '#FF5757');
-  const amber = get('--amber') || (isLight ? '#FFC700' : '#FFD93D');
-  const ink   = get('--text')  || (isLight ? '#0A0B14' : '#F5F7FA');
-  const ink2  = get('--text2') || (isLight ? '#4A4D5E' : '#A8ABBE');
-  const rule  = isLight ? 'rgba(10,11,20,0.08)' : 'rgba(245,247,250,0.08)';
+  const pulse = get('--pulse') || (isLight ? '#E11D2C' : '#FF3B4D');
+  const aqua  = get('--aqua')  || (isLight ? '#22D3EE' : '#67E8F9');
+  const volt  = get('--volt')  || (isLight ? '#10B981' : '#34D399');
+  const solar = get('--solar') || (isLight ? '#FB923C' : '#FB923C');
+  const crimson = get('--crimson') || (isLight ? '#DC2626' : '#EF4444');
+  const amber = get('--amber') || (isLight ? '#FFD60A' : '#FFE45C');
+  const ink   = get('--text')  || (isLight ? '#0E1014' : '#F4F5F8');
+  const ink2  = get('--text2') || (isLight ? '#5A5F6C' : '#B0B4BE');
+  const rule  = isLight ? 'rgba(14,16,20,0.08)' : 'rgba(244,245,248,0.08)';
   return {
     isLight,
     pulse, aqua, volt, solar, crimson, amber, ink, ink2,
-    pulseAlpha15: isLight ? 'rgba(255,45,126,0.15)' : 'rgba(255,77,148,0.18)',
-    voltAlpha40: isLight ? 'rgba(156,203,0,0.4)'   : 'rgba(200,255,0,0.5)',
-    aquaAlpha40: isLight ? 'rgba(0,217,255,0.4)'   : 'rgba(61,229,255,0.5)',
-    aquaAlpha10: isLight ? 'rgba(0,217,255,0.10)'  : 'rgba(61,229,255,0.12)',
+    pulseAlpha15: isLight ? 'rgba(225,29,44,0.15)' : 'rgba(255,59,77,0.18)',
+    voltAlpha40: isLight ? 'rgba(16,185,129,0.4)'   : 'rgba(200,255,0,0.5)',
+    aquaAlpha40: isLight ? 'rgba(34,211,238,0.4)'   : 'rgba(61,229,255,0.5)',
+    aquaAlpha10: isLight ? 'rgba(34,211,238,0.10)'  : 'rgba(61,229,255,0.12)',
     solarAlpha60: isLight ? 'rgba(255,140,0,0.6)'  : 'rgba(255,169,46,0.7)',
-    font: "'Familjen Grotesk', system-ui, sans-serif",
+    font: "'Manrope', system-ui, sans-serif",
     fontDisplay: "'Big Shoulders Display', 'BasementGrotesque', sans-serif",
     fontMono: "'JetBrains Mono', ui-monospace, monospace",
     grid:{color: rule},
-    ticks:{color: ink2, font:{family:"Familjen Grotesk, sans-serif", size:11}},
+    ticks:{color: ink2, font:{family:"Manrope, sans-serif", size:11}},
     textColor: ink2
   };
 }
@@ -68,10 +68,10 @@ export function renderHeatmap(workouts) {
   workouts.forEach(w=>{ const d=w.date; if(!dateScores[d])dateScores[d]=0; dateScores[d]=Math.max(dateScores[d],w.scores?.overall||5); });
   const today=new Date();
   const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.getAttribute('data-theme') !== 'dark';
-  const emptyColor = isLight ? '#E8ECF1' : '#1C1E2A';
-  const labelColor = isLight ? '#4A4D5E' : '#A8ABBE';
+  const emptyColor = isLight ? '#DEE0E6' : '#2A2D35';
+  const labelColor = isLight ? '#5A5F6C' : '#B0B4BE';
   const dayLabels=['L','M','M','G','V','S','D'];
-  ctx.fillStyle=labelColor; ctx.font='10px Familjen Grotesk, sans-serif';
+  ctx.fillStyle=labelColor; ctx.font='10px Manrope, sans-serif';
   for(let d=0;d<7;d++){if(d%2===0) ctx.fillText(dayLabels[d],0,d*(cellSize+cellGap)+cellSize+12);}
   for(let week=0;week<weeksToShow;week++){
     for(let day=0;day<7;day++){
@@ -81,7 +81,7 @@ export function renderHeatmap(workouts) {
       const dateStr=correctedDate.toISOString().slice(0,10);
       const score=dateScores[dateStr]||0;
       const x=20+week*(cellSize+cellGap), y=12+day*(cellSize+cellGap);
-      ctx.fillStyle = score===0?emptyColor:score<5?'rgba(255,45,126,0.25)':score<7?'rgba(255,45,126,0.5)':score<8.5?'rgba(255,45,126,0.75)':'rgba(255,45,126,1)';
+      ctx.fillStyle = score===0?emptyColor:score<5?'rgba(225,29,44,0.25)':score<7?'rgba(225,29,44,0.5)':score<8.5?'rgba(225,29,44,0.75)':'rgba(225,29,44,1)';
       ctx.beginPath(); ctx.roundRect(x,y,cellSize,cellSize,2); ctx.fill();
     }
   }
@@ -109,13 +109,13 @@ export function renderRadarChart(workouts) {
   const ctx=document.getElementById('chart-radar')?.getContext('2d');
   if(!ctx) return;
   const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const textColor = isLight ? '#0A0B14' : '#F5F7FA';
-  const gridColor = isLight ? 'rgba(10,11,20,0.10)' : 'rgba(245,247,250,0.10)';
+  const textColor = isLight ? '#0E1014' : '#F4F5F8';
+  const gridColor = isLight ? 'rgba(14,16,20,0.10)' : 'rgba(244,245,248,0.10)';
   charts.radar=new Chart(ctx,{type:'radar',
     data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta'],
       datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta].map(v=>Math.round(v*10)/10),
-        backgroundColor:'rgba(255,45,126,0.15)',borderColor:'#FF2D7E',pointBackgroundColor:'#FF2D7E',pointBorderColor:'#fff',borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:12,family:'Familjen Grotesk'}}}},plugins:{legend:{display:false}}}
+        backgroundColor:'rgba(225,29,44,0.15)',borderColor:'#E11D2C',pointBackgroundColor:'#E11D2C',pointBorderColor:'#fff',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:12,family:'Manrope'}}}},plugins:{legend:{display:false}}}
   });
 }
 
@@ -131,11 +131,11 @@ export function renderWeeklyChart(workouts) {
   charts.weekly=new Chart(ctx,{type:'bar',
     data:{labels:labels.map(l=>{const d=new Date(l);return d.getDate()+'/'+(d.getMonth()+1);}),
       datasets:[
-        {label:'Palestra',data:labels.map(l=>weeks[l]?.gym||0),backgroundColor:'rgba(255,45,126,0.7)'},
-        {label:'Corsa',data:labels.map(l=>weeks[l]?.running||0),backgroundColor:'rgba(156,203,0,0.7)'},
-        {label:'Altro',data:labels.map(l=>weeks[l]?.other||0),backgroundColor:'rgba(0,217,255,0.7)'}
+        {label:'Palestra',data:labels.map(l=>weeks[l]?.gym||0),backgroundColor:'rgba(225,29,44,0.7)'},
+        {label:'Corsa',data:labels.map(l=>weeks[l]?.running||0),backgroundColor:'rgba(16,185,129,0.7)'},
+        {label:'Altro',data:labels.map(l=>weeks[l]?.other||0),backgroundColor:'rgba(34,211,238,0.7)'}
       ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ct.textColor,font:{family:'Familjen Grotesk'}}}},scales:{x:{stacked:true,...ct},y:{stacked:true,...ct}}}
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ct.textColor,font:{family:'Manrope'}}}},scales:{x:{stacked:true,...ct},y:{stacked:true,...ct}}}
   });
 }
 
@@ -150,9 +150,9 @@ export function renderProgress(workoutsCache, settingsCache) {
     const ctx=document.getElementById('chart-scores')?.getContext('2d');
     if(ctx) charts.scores=new Chart(ctx,{type:'line',
       data:{labels:scored.map(w=>formatDate(w.date)),datasets:[
-        {label:'Palestra',data:scored.map(w=>w.type==='gym'?w.scores.overall:null),borderColor:'#FF2D7E',pointBackgroundColor:'#FF2D7E',spanGaps:false,tension:.3},
-        {label:'Corsa',data:scored.map(w=>w.type==='running'?w.scores.overall:null),borderColor:'#9CCB00',pointBackgroundColor:'#9CCB00',spanGaps:false,tension:.3},
-        {label:'Altro',data:scored.map(w=>w.type!=='gym'&&w.type!=='running'?w.scores.overall:null),borderColor:'#00D9FF',pointBackgroundColor:'#00D9FF',spanGaps:false,tension:.3}
+        {label:'Palestra',data:scored.map(w=>w.type==='gym'?w.scores.overall:null),borderColor:'#E11D2C',pointBackgroundColor:'#E11D2C',spanGaps:false,tension:.3},
+        {label:'Corsa',data:scored.map(w=>w.type==='running'?w.scores.overall:null),borderColor:'#10B981',pointBackgroundColor:'#10B981',spanGaps:false,tension:.3},
+        {label:'Altro',data:scored.map(w=>w.type!=='gym'&&w.type!=='running'?w.scores.overall:null),borderColor:'#22D3EE',pointBackgroundColor:'#22D3EE',spanGaps:false,tension:.3}
       ]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ct.textColor}}},scales:{x:{...ct,ticks:{...ct.ticks,maxTicksLimit:10}},y:{min:0,max:10,...ct}}}
     });
@@ -163,7 +163,7 @@ export function renderProgress(workoutsCache, settingsCache) {
   if(gymW.length){
     const ctx=document.getElementById('chart-gym-volume')?.getContext('2d');
     if(ctx) charts.gymVolume=new Chart(ctx,{type:'bar',
-      data:{labels:gymW.map(w=>formatDate(w.date)),datasets:[{label:'Tonnellaggio (kg)',data:gymW.map(w=>w._tonnage||0),backgroundColor:'rgba(255,45,126,0.6)'}]},
+      data:{labels:gymW.map(w=>formatDate(w.date)),datasets:[{label:'Tonnellaggio (kg)',data:gymW.map(w=>w._tonnage||0),backgroundColor:'rgba(225,29,44,0.6)'}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{...ct,ticks:{...ct.ticks,maxTicksLimit:10}},y:ct}}
     });
   }
@@ -180,8 +180,8 @@ export function renderProgress(workoutsCache, settingsCache) {
     if(ctx) charts.runPace=new Chart(ctx,{type:'line',
       data:{labels:dates.map(d=>formatDate(d)),
         datasets:[
-          {label:'Pace (ponderato)',data:paceData,borderColor:'#9CCB00',pointBackgroundColor:'#9CCB00',tension:.3,fill:false,yAxisID:'y'},
-          {label:'Distanza (km)',data:distData,borderColor:'rgba(0,217,255,0.4)',backgroundColor:'rgba(0,217,255,0.1)',pointRadius:0,tension:.3,fill:true,yAxisID:'y1',type:'bar'}
+          {label:'Pace (ponderato)',data:paceData,borderColor:'#10B981',pointBackgroundColor:'#10B981',tension:.3,fill:false,yAxisID:'y'},
+          {label:'Distanza (km)',data:distData,borderColor:'rgba(34,211,238,0.4)',backgroundColor:'rgba(34,211,238,0.1)',pointRadius:0,tension:.3,fill:true,yAxisID:'y1',type:'bar'}
         ]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{labels:{color:ct.textColor}},tooltip:{callbacks:{label:c=>{if(c.datasetIndex===0)return'Pace: '+secondsToPace(c.raw)+'/km';return'Distanza: '+c.raw.toFixed(1)+' km';}}}},
@@ -200,10 +200,10 @@ export function renderProgress(workoutsCache, settingsCache) {
   if(Object.keys(muscleCount).length){
     const ctx=document.getElementById('chart-muscles')?.getContext('2d');
     const lbls=Object.keys(muscleCount);
-    const colors=['#FF2D7E','#9CCB00','#00D9FF','#FFC700','#FF3838','#FF4D94','#3DE5FF','#A855F7','#FFD93D','#FF8C00','#A8ABBE','#8B8E9F','#4A4D5E'];
+    const colors=['#E11D2C','#10B981','#22D3EE','#FFD60A','#DC2626','#FF3B4D','#67E8F9','#A78BFA','#FFE45C','#FB923C','#B0B4BE','#9CA0AB','#5A5F6C'];
     if(ctx) charts.muscles=new Chart(ctx,{type:'doughnut',
       data:{labels:lbls,datasets:[{data:Object.values(muscleCount),backgroundColor:colors.slice(0,lbls.length)}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:ct.textColor,font:{size:11,family:'Familjen Grotesk'}}}}}
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:ct.textColor,font:{size:11,family:'Manrope'}}}}}
     });
   }
 
@@ -216,7 +216,7 @@ export function renderProgress(workoutsCache, settingsCache) {
     const goal=settingsCache.weekgoal||4;
     if(ctx) charts.frequency=new Chart(ctx,{type:'bar',
       data:{labels:freqLabels.map(l=>{const d=new Date(l);return d.getDate()+'/'+(d.getMonth()+1);}),
-        datasets:[{label:'Allenamenti',data:freqLabels.map(l=>freqWeeks[l]||0),backgroundColor:freqLabels.map(l=>(freqWeeks[l]||0)>=goal?'rgba(156,203,0,0.7)':'rgba(255,199,0,0.7)')}]},
+        datasets:[{label:'Allenamenti',data:freqLabels.map(l=>freqWeeks[l]||0),backgroundColor:freqLabels.map(l=>(freqWeeks[l]||0)>=goal?'rgba(16,185,129,0.7)':'rgba(255,214,10,0.7)')}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:ct,y:{...ct,ticks:{...ct.ticks,stepSize:1}}}}
     });
   }
@@ -254,18 +254,18 @@ export function updateORMChart() {
   const ctx=document.getElementById('chart-1rm')?.getContext('2d');
   if(!ctx) return;
   charts.orm=new Chart(ctx,{type:'line',
-    data:{labels:data.map(d=>formatDate(d.date)),datasets:[{label:'1RM Stimato (kg)',data:data.map(d=>d.orm),borderColor:'#FF2D7E',pointBackgroundColor:'#FF2D7E',tension:.3,fill:false}]},
+    data:{labels:data.map(d=>formatDate(d.date)),datasets:[{label:'1RM Stimato (kg)',data:data.map(d=>d.orm),borderColor:'#E11D2C',pointBackgroundColor:'#E11D2C',tension:.3,fill:false}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{...ct,ticks:{...ct.ticks,maxTicksLimit:10}},y:ct}}
   });
 }
 
 // ==================== HR ZONES ====================
 const HR_ZONES_DEF = [
-  {name:'Z1 Recupero', color:'#A8ABBE'},
-  {name:'Z2 Base',     color:'#00D9FF'},
-  {name:'Z3 Aerobica', color:'#9CCB00'},
-  {name:'Z4 Soglia',   color:'#FFC700'},
-  {name:'Z5 Max',      color:'#FF2D7E'},
+  {name:'Z1 Recupero', color:'#B0B4BE'},
+  {name:'Z2 Base',     color:'#22D3EE'},
+  {name:'Z3 Aerobica', color:'#10B981'},
+  {name:'Z4 Soglia',   color:'#FFD60A'},
+  {name:'Z5 Max',      color:'#E11D2C'},
 ];
 const HR_PERIOD_PRESETS = [
   {key:'7',   label:'7g',     days:7},
@@ -474,10 +474,10 @@ export function renderWeightChart(weightsCache, settingsCache) {
   const intercept=(sumY-slope*sumX)/n;
   const trendData=xVals.map(x=>Math.round((slope*x+intercept)*10)/10);
   const datasets=[
-    {label:'Peso',data:yVals,borderColor:'#FF2D7E',pointBackgroundColor:'#FF2D7E',tension:.3,fill:false},
-    {label:'Tendenza',data:trendData,borderColor:'#FF4D94',borderDash:[5,5],pointRadius:0,tension:.3,fill:false}
+    {label:'Peso',data:yVals,borderColor:'#E11D2C',pointBackgroundColor:'#E11D2C',tension:.3,fill:false},
+    {label:'Tendenza',data:trendData,borderColor:'#FF3B4D',borderDash:[5,5],pointRadius:0,tension:.3,fill:false}
   ];
-  if(target) datasets.push({label:'Obiettivo',data:data.map(()=>target),borderColor:'#9CCB00',borderDash:[10,5],pointRadius:0,fill:false});
+  if(target) datasets.push({label:'Obiettivo',data:data.map(()=>target),borderColor:'#10B981',borderDash:[10,5],pointRadius:0,fill:false});
   const ctx=document.getElementById('chart-weight')?.getContext('2d');
   if(!ctx) return;
   charts.weight=new Chart(ctx,{type:'line',data:{labels:data.map(d=>formatDate(d.date)),datasets},

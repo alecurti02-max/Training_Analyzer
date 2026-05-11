@@ -113,8 +113,8 @@ function renderSignupsChart(signupsDaily) {
       datasets: [{
         label: 'Nuovi utenti',
         data,
-        borderColor: 'rgba(255,45,126,1)',
-        backgroundColor: 'rgba(255,45,126,0.15)',
+        borderColor: 'rgba(225,29,44,1)',
+        backgroundColor: 'rgba(225,29,44,0.15)',
         fill: true,
         tension: 0.3,
         pointRadius: 3,
@@ -134,13 +134,13 @@ function renderSignupsChart(signupsDaily) {
 }
 
 const SPORT_COLORS = [
-  'rgba(255,45,126,0.85)',  /* pulse */
-  'rgba(0,217,255,0.85)',   /* aqua */
-  'rgba(156,203,0,0.85)',   /* volt */
-  'rgba(255,199,0,0.85)',   /* amber */
-  'rgba(168,85,247,0.85)',  /* plasma */
-  'rgba(255,140,0,0.85)',   /* solar */
-  'rgba(61,229,255,0.85)',  /* aqua-light */
+  'rgba(225,29,44,0.85)',   /* race */
+  'rgba(34,211,238,0.85)',  /* cyan */
+  'rgba(16,185,129,0.85)',  /* green */
+  'rgba(255,214,10,0.85)',  /* yellow */
+  'rgba(167,139,250,0.85)', /* plasma */
+  'rgba(251,146,60,0.85)',  /* orange */
+  'rgba(103,232,249,0.85)', /* cyan-light */
 ];
 
 function renderSportsChart(bySport) {
@@ -197,7 +197,7 @@ async function renderUsers(page) {
       : (u.displayName || '—');
     const isAdmin = u.role === 'admin';
     const badge = isAdmin
-      ? '<span style="background:rgba(255,45,126,0.15);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">ADMIN</span>'
+      ? '<span style="background:rgba(225,29,44,0.15);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">ADMIN</span>'
       : '';
     const provIcon = u.provider === 'google' ? 'Google' : 'Email';
     return `<tr>

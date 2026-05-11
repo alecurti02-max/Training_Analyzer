@@ -2034,22 +2034,22 @@ function showWorkoutDetail(id) {
   if(hrCanvas&&w.hrSeries?.length){
     new Chart(hrCanvas,{type:'line',data:{
       labels:w.hrSeries.map(p=>{const m=Math.floor(p.t/60);return m+'\'';} ),
-      datasets:[{data:w.hrSeries.map(p=>p.hr),borderColor:'#FF3838',backgroundColor:'rgba(255,56,56,.1)',fill:true,
+      datasets:[{data:w.hrSeries.map(p=>p.hr),borderColor:'#DC2626',backgroundColor:'rgba(220,38,38,.1)',fill:true,
         borderWidth:1.5,pointRadius:0,tension:.3}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#A8ABBE'}},
-          y:{display:true,ticks:{font:{size:10},color:'#A8ABBE'},title:{display:true,text:'bpm',font:{size:10}}}}}});
+        scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#B0B4BE'}},
+          y:{display:true,ticks:{font:{size:10},color:'#B0B4BE'},title:{display:true,text:'bpm',font:{size:10}}}}}});
   }
   // Render elevation chart if data exists
   const eleCanvas=document.getElementById('modal-ele-chart');
   if(eleCanvas&&w.eleSeries?.length){
     new Chart(eleCanvas,{type:'line',data:{
       labels:w.eleSeries.map(p=>{const m=Math.floor(p.t/60);return m+'\'';} ),
-      datasets:[{data:w.eleSeries.map(p=>p.ele),borderColor:'#9CCB00',backgroundColor:'rgba(156,203,0,.15)',fill:true,
+      datasets:[{data:w.eleSeries.map(p=>p.ele),borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.15)',fill:true,
         borderWidth:1.5,pointRadius:0,tension:.3}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#A8ABBE'}},
-          y:{display:true,ticks:{font:{size:10},color:'#A8ABBE'},title:{display:true,text:'m',font:{size:10}}}}}});
+        scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#B0B4BE'}},
+          y:{display:true,ticks:{font:{size:10},color:'#B0B4BE'},title:{display:true,text:'m',font:{size:10}}}}}});
   }
 
   document.getElementById('modal-delete-btn').onclick=async ()=>{
@@ -2582,12 +2582,12 @@ function renderAthleticDetail() {
   const ctx=document.getElementById('chart-radar-detail')?.getContext('2d');
   if(ctx){
     const isLight=!window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const textColor=isLight?'#0A0B14':'#F5F7FA';
-    const gridColor=isLight?'rgba(10,11,20,0.10)':'rgba(245,247,250,0.10)';
+    const textColor=isLight?'#0E1014':'#F4F5F8';
+    const gridColor=isLight?'rgba(14,16,20,0.10)':'rgba(244,245,248,0.10)';
     storeChart('radarDetail', new Chart(ctx,{type:'radar',
       data:{labels:['Forza','Resistenza','Consistenza','Recupero','Progressione','Varieta','Proporzioni'],
         datasets:[{label:'Profilo',data:[forza,resistenza,consistenza,recupero,progressione,varieta,proporzioni].map(v=>Math.round(v*10)/10),
-          backgroundColor:'rgba(255,45,126,0.15)',borderColor:'#FF2D7E',pointBackgroundColor:'#FF2D7E',pointBorderColor:'#fff',borderWidth:2}]},
+          backgroundColor:'rgba(225,29,44,0.15)',borderColor:'#E11D2C',pointBackgroundColor:'#E11D2C',pointBorderColor:'#fff',borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:10,ticks:{stepSize:2,color:textColor,backdropColor:'transparent'},grid:{color:gridColor},pointLabels:{color:textColor,font:{size:13,family:'Poppins'}}}},plugins:{legend:{display:false}}}
     }));
   }
