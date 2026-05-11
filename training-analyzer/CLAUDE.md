@@ -95,7 +95,10 @@ cd server && npm run seed               # demo user + workout
 # Docker full stack
 docker-compose up --build               # postgres + server + client
 
-# Test (non ancora introdotti — vedi Fase 3 della roadmap)
+# Test backend (Fase 3 in poi)
+cd server && npm run test:smoke    # 14 test integrazione HTTP+DB (SQLite in-memory), ~1s
+cd server && npm run test:units    # 24 unit test su pure functions (slimmers, hrSummary, ...), ~50ms
+cd server && npm test              # tutti i test
 ```
 
 ## Vincoli noti — leggere prima di toccare
