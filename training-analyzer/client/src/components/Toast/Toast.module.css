@@ -1,0 +1,42 @@
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 12px 20px;
+  background: var(--surface-2, #1f2330);
+  color: var(--text, #fff);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font, system-ui, sans-serif);
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease-out, transform 220ms ease-out;
+  z-index: 10000;
+  max-width: calc(100vw - 48px);
+  text-align: center;
+}
+
+.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Type variants pick up brand tokens; fall back to neutral if unset. */
+.success {
+  background: var(--green, #1aa971);
+  color: #fff;
+}
+
+.error {
+  background: var(--red, #d23142);
+  color: #fff;
+}
+
+.warn {
+  background: var(--orange, #e8800c);
+  color: #fff;
+}
