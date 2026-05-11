@@ -1,5 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const config = require('../config/env');
+const config = require('../../config/env');
 
 let client = null;
 

@@ -1,74 +1,10 @@
-const { Op } = require('sequelize');
-const { Workout, Settings, User } = require('../models');
+const { safeNum } = require('../../utils/safeNum');
+const { downsampleSeries, summariseHrSeries } = require('./hrSummary');
+const { summariseSplits } = require('./splitsSummary');
 
-const HISTORY_LIMIT = 10;
-const HR_SERIES_BUCKETS = 12;
 const SPLITS_LIMIT = 30;
 
-function safeNum(n, decimals = 2) {
-  if (n == null || Number.isNaN(n)) return null;
-  const f = parseFloat(n);
-  if (!Number.isFinite(f)) return null;
-  return Math.round(f * 10 ** decimals) / 10 ** decimals;
-}
-
-function downsampleSeries(series, buckets) {
-  if (!Array.isArray(series) || series.length <= buckets) return series || [];
-  const step = series.length / buckets;
-  const out = [];
-  for (let i = 0; i < buckets; i++) {
-    const start = Math.floor(i * step);
-    const end = Math.floor((i + 1) * step);
-    const slice = series.slice(start, end);
-    if (!slice.length) continue;
-    const hrAvg = slice.reduce((s, p) => s + (p.hr || 0), 0) / slice.length;
-    out.push({ t: slice[Math.floor(slice.length / 2)].t, hr: Math.round(hrAvg) });
-  }
-  return out;
-}
-
-function summariseHrSeries(series) {
-  if (!Array.isArray(series) || series.length < 4) return null;
-  const hrs = series.map((p) => p.hr || 0).filter((v) => v > 0);
-  if (hrs.length < 4) return null;
-  const half = Math.floor(hrs.length / 2);
-  const avg1 = hrs.slice(0, half).reduce((a, b) => a + b, 0) / half;
-  const avg2 = hrs.slice(half).reduce((a, b) => a + b, 0) / (hrs.length - half);
-  const driftPct = avg1 > 0 ? Math.round(((avg2 - avg1) / avg1) * 1000) / 10 : 0;
-  return {
-    samples: hrs.length,
-    firstHalfAvg: Math.round(avg1),
-    secondHalfAvg: Math.round(avg2),
-    driftPct,
-  };
-}
-
-function summariseSplits(splits) {
-  if (!Array.isArray(splits) || !splits.length) return null;
-  const paces = splits.map((s) => s.pace).filter((v) => v > 0);
-  if (paces.length < 2) return { count: splits.length };
-  const avg = paces.reduce((a, b) => a + b, 0) / paces.length;
-  const variance = paces.reduce((a, b) => a + (b - avg) ** 2, 0) / paces.length;
-  const stdDev = Math.sqrt(variance);
-  const cv = avg > 0 ? Math.round((stdDev / avg) * 1000) / 10 : 0;
-  const firstThird = paces.slice(0, Math.ceil(paces.length / 3));
-  const lastThird = paces.slice(-Math.ceil(paces.length / 3));
-  const firstAvg = firstThird.reduce((a, b) => a + b, 0) / firstThird.length;
-  const lastAvg = lastThird.reduce((a, b) => a + b, 0) / lastThird.length;
-  return {
-    count: splits.length,
-    avgPaceSec: Math.round(avg),
-    stdDevSec: Math.round(stdDev),
-    cvPct: cv,
-    firstThirdAvgSec: Math.round(firstAvg),
-    lastThirdAvgSec: Math.round(lastAvg),
-    pacingShift: lastAvg < firstAvg ? 'negative_split' : lastAvg > firstAvg ? 'positive_split' : 'even',
-  };
-}
-
 function slimRunningWorkout(d) {
-  const splitsSummary = summariseSplits(d.splits);
-  const hrSummary = summariseHrSeries(d.hrSeries);
   return {
     type: 'running',
     distanceKm: safeNum(d.distance),
@@ -81,41 +17,38 @@ function slimRunningWorkout(d) {
     rpe: d.rpe || null,
     cadence: d.cadence || null,
     notes: d.notes ? String(d.notes).slice(0, 200) : null,
-    splitsSummary,
+    splitsSummary: summariseSplits(d.splits),
     splitsHead: Array.isArray(d.splits) ? d.splits.slice(0, SPLITS_LIMIT) : null,
-    hrSeriesDownsampled: downsampleSeries(d.hrSeries, HR_SERIES_BUCKETS),
-    hrSeriesSummary: hrSummary,
+    hrSeriesDownsampled: downsampleSeries(d.hrSeries),
+    hrSeriesSummary: summariseHrSeries(d.hrSeries),
     scores: d.scores || null,
   };
 }
 
 function slimGymWorkout(d) {
   const exercises = Array.isArray(d.exercises) ? d.exercises : [];
-  const slimExercises = exercises.map((ex) => {
-    const sec = Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles : [];
-    return {
-      name: ex.name,
-      muscle: ex.muscle || null,
-      secondaryMuscles: sec,
-      isUnilateral: !!ex.isUnilateral,
-      weightMode: ex.weightMode || 'total',
-      barbellWeight: ex.barbellWeight || 0,
-      sets: (ex.sets || []).map((s) => {
-        const out = {
-          reps: s.reps || 0,
-          weight: s.weight || 0,
-          weightLeft: s.weightLeft || null,
-          weightRight: s.weightRight || null,
-          rpe: s.rpe || null,
-        };
-        if (s.bodyweight) out.bodyweight = true;
-        if (Array.isArray(s.drops) && s.drops.length) {
-          out.drops = s.drops.map((dr) => ({ reps: dr.reps || 0, weight: dr.weight || 0 }));
-        }
-        return out;
-      }),
-    };
-  });
+  const slimExercises = exercises.map((ex) => ({
+    name: ex.name,
+    muscle: ex.muscle || null,
+    secondaryMuscles: Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles : [],
+    isUnilateral: !!ex.isUnilateral,
+    weightMode: ex.weightMode || 'total',
+    barbellWeight: ex.barbellWeight || 0,
+    sets: (ex.sets || []).map((s) => {
+      const out = {
+        reps: s.reps || 0,
+        weight: s.weight || 0,
+        weightLeft: s.weightLeft || null,
+        weightRight: s.weightRight || null,
+        rpe: s.rpe || null,
+      };
+      if (s.bodyweight) out.bodyweight = true;
+      if (Array.isArray(s.drops) && s.drops.length) {
+        out.drops = s.drops.map((dr) => ({ reps: dr.reps || 0, weight: dr.weight || 0 }));
+      }
+      return out;
+    }),
+  }));
   const muscleSet = new Set();
   exercises.forEach((e) => {
     if (e.muscle) muscleSet.add(e.muscle);
@@ -167,6 +100,8 @@ function slimWorkout(workout) {
   return slimGenericWorkout(d, workout.type);
 }
 
+// Compact history entry used to give Claude context on past workouts.
+// For gym, computes tonnage on the fly (bodyweight added when set is bodyweight-flagged).
 function slimHistoryEntry(workout, userBodyweight = 0) {
   const d = workout.data || {};
   const base = { date: workout.date, type: workout.type, score: workout.score };
@@ -256,35 +191,12 @@ function buildUserProfile(user, settings) {
   };
 }
 
-async function buildAnalysisContext({ userId, workoutId }) {
-  const workout = await Workout.findOne({ where: { id: workoutId, userId } });
-  if (!workout) {
-    const err = new Error('Workout not found');
-    err.status = 404;
-    err.code = 'workout_not_found';
-    throw err;
-  }
-  const [user, settings, history] = await Promise.all([
-    User.findByPk(userId, { attributes: ['uid', 'plan'] }),
-    Settings.findOne({ where: { userId } }),
-    Workout.findAll({
-      where: {
-        userId,
-        type: workout.type,
-        id: { [Op.ne]: workout.id },
-      },
-      order: [['date', 'DESC'], ['createdAt', 'DESC']],
-      limit: HISTORY_LIMIT,
-    }),
-  ]);
-
-  const userBW = settings?.bodyweight || 0;
-  return {
-    workout,
-    profile: buildUserProfile(user, settings),
-    current: slimWorkout(workout),
-    history: history.map((w) => slimHistoryEntry(w, userBW)),
-  };
-}
-
-module.exports = { buildAnalysisContext, slimWorkout, slimHistoryEntry };
+module.exports = {
+  slimRunningWorkout,
+  slimGymWorkout,
+  slimKartingWorkout,
+  slimGenericWorkout,
+  slimWorkout,
+  slimHistoryEntry,
+  buildUserProfile,
+};
