@@ -2913,6 +2913,11 @@ function initApp() {
   if(wizDateEl) wizDateEl.value = todayStr();
   const weightDateEl = document.getElementById('weight-date');
   if(weightDateEl) weightDateEl.value = todayStr();
+  // Default page e' Dashboard (index.html ha #page-dashboard.active hard-coded).
+  // Senza questo attributo, i token v2 scoped a :root[data-active-page] non si
+  // attivano al primo paint -> bug: refresh mostra stile legacy finche' l'utente
+  // non clicca una tab (showPage lo setta).
+  document.documentElement.dataset.activePage = 'dashboard';
   updateSyncStatus();
   renderDashboard();
   liveCheckDraft();
