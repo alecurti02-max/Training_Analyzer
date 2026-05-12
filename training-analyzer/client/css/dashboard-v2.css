@@ -19,41 +19,43 @@
   content: none !important;
 }
 
-/* ============ Background page: editorial, "carta da magazine" ============ */
-/* 3 layer:
-   (1) hatched diagonal lines (45deg, hairline) — pattern paper/letterpress
-   (2) 2 soft radial highlights caldi (rosato + ambra) — luce ambientale
-   (3) crema base
-   + grain SVG sopra (5-6% opacity) per analog feel.
-   Tutto fixed-attachment cosi' scrollare lascia il pattern fermo. */
+/* ============ Background page: editorial, "stampa serigrafica" ============ */
+/* 4 layer:
+   (1) scanlines orizzontali sottili (1px ogni 4px) — feeling print/scanner
+   (2) dot grid 22px (subtle) — Linear-style modern editorial
+   (3) 2 soft radial highlights caldi — luce ambientale
+   (4) crema base
+   + grain SVG sopra (6% opacity) per analog. Tutto fixed-attachment. */
 :root[data-active-page="dashboard"] body {
   background:
     repeating-linear-gradient(
-      135deg,
-      rgba(74, 50, 30, 0.025) 0,
-      rgba(74, 50, 30, 0.025) 1px,
+      0deg,
+      rgba(74, 50, 30, 0.022) 0,
+      rgba(74, 50, 30, 0.022) 1px,
       transparent 1px,
-      transparent 7px
+      transparent 4px
     ),
-    radial-gradient(ellipse 70% 50% at 15% 5%, rgba(225, 29, 44, 0.07), transparent 55%),
+    radial-gradient(circle at 1px 1px, rgba(74, 50, 30, 0.05) 1px, transparent 1.5px),
+    radial-gradient(ellipse 70% 50% at 15% 5%, rgba(225, 29, 44, 0.06), transparent 55%),
     radial-gradient(ellipse 60% 50% at 95% 95%, rgba(194, 161, 50, 0.09), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(47, 143, 110, 0.04), transparent 60%),
     var(--v2-bg) !important;
+  background-size: auto, 22px 22px, auto, auto, auto !important;
   background-attachment: fixed !important;
 }
 :root[data-active-page="dashboard"][data-theme="dark"] body {
   background:
     repeating-linear-gradient(
-      135deg,
-      rgba(237, 231, 220, 0.025) 0,
-      rgba(237, 231, 220, 0.025) 1px,
+      0deg,
+      rgba(237, 231, 220, 0.022) 0,
+      rgba(237, 231, 220, 0.022) 1px,
       transparent 1px,
-      transparent 7px
+      transparent 4px
     ),
+    radial-gradient(circle at 1px 1px, rgba(237, 231, 220, 0.05) 1px, transparent 1.5px),
     radial-gradient(ellipse 70% 50% at 15% 5%, rgba(225, 29, 44, 0.12), transparent 55%),
     radial-gradient(ellipse 60% 50% at 95% 95%, rgba(219, 160, 108, 0.08), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(79, 184, 147, 0.06), transparent 60%),
     var(--v2-bg) !important;
+  background-size: auto, 22px 22px, auto, auto, auto !important;
   background-attachment: fixed !important;
 }
 :root[data-active-page="dashboard"] body::before {
