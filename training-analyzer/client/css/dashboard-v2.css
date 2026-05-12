@@ -390,3 +390,55 @@
   font-size: var(--v2-fs-meta);
   color: var(--v2-text-muted);
 }
+
+/* ============ Stagger fade-in al primo paint ============ */
+@keyframes v2-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header esce per primo, poi stats, poi le card della dash-layout. */
+#page-dashboard.active .dash-header {
+  animation: v2-fade-up 320ms var(--v2-ease) both;
+}
+#page-dashboard.active #dash-stats > .card {
+  animation: v2-fade-up 320ms var(--v2-ease) both;
+}
+#page-dashboard.active #dash-stats > .card:nth-child(1) { animation-delay: 60ms; }
+#page-dashboard.active #dash-stats > .card:nth-child(2) { animation-delay: 110ms; }
+#page-dashboard.active #dash-stats > .card:nth-child(3) { animation-delay: 160ms; }
+#page-dashboard.active #dash-stats > .card:nth-child(4) { animation-delay: 210ms; }
+
+#page-dashboard.active .dash-layout .card {
+  animation: v2-fade-up 320ms var(--v2-ease) both;
+}
+#page-dashboard.active .dash-col-main > .card:nth-child(1) { animation-delay: 240ms; }
+#page-dashboard.active .dash-col-main > .card:nth-child(2) { animation-delay: 290ms; }
+#page-dashboard.active .dash-col-main > .card:nth-child(3) { animation-delay: 340ms; }
+#page-dashboard.active .dash-col-side > .card:nth-child(1) { animation-delay: 260ms; }
+#page-dashboard.active .dash-col-side > .card:nth-child(2) { animation-delay: 310ms; }
+#page-dashboard.active .dash-col-side > .card:nth-child(3) { animation-delay: 360ms; }
+
+/* Disabilita le animazioni se l'utente preferisce reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  #page-dashboard.active .dash-header,
+  #page-dashboard.active #dash-stats > .card,
+  #page-dashboard.active .dash-layout .card {
+    animation: none;
+  }
+}
+
+/* ============ Responsive: dash-layout collassa a singola colonna su mobile ============ */
+@media (max-width: 900px) {
+  #page-dashboard .dash-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--v2-s-4);
+  }
+}
