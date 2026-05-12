@@ -96,11 +96,11 @@
 #page-dashboard .dash-title {
   font-family: var(--v2-font-display);
   font-style: italic;
-  font-weight: 500;
+  font-weight: 400;
   font-size: var(--v2-fs-page-title);
-  font-variation-settings: 'opsz' 96;
+  font-variation-settings: normal;
   letter-spacing: -0.015em;
-  line-height: 1;
+  line-height: 0.95;
   color: var(--v2-text-display, #2D1A1D);
   margin: 0;
   text-transform: none;
@@ -293,14 +293,15 @@
 #page-dashboard .card-title {
   font-family: var(--v2-font-display);
   font-style: italic;
-  font-weight: 500;
+  font-weight: 400;
   font-size: var(--v2-fs-title-card);
-  font-variation-settings: 'opsz' 48;
+  font-variation-settings: normal;
   letter-spacing: 0;
   text-transform: none;
   color: var(--v2-text-display, #2D1A1D);
   display: block;
   margin: 0 0 var(--v2-s-4);
+  line-height: 1.05;
 }
 #page-dashboard .card-title::before {
   content: none;
@@ -460,9 +461,9 @@
 #page-dashboard .empty-state p:first-child {
   font-family: var(--v2-font-display);
   font-style: italic;
-  font-weight: 500;
-  font-size: 20px;
-  font-variation-settings: 'opsz' 48;
+  font-weight: 400;
+  font-size: 22px;
+  font-variation-settings: normal;
   color: var(--v2-text-display, #2D1A1D);
   margin-bottom: var(--v2-s-1);
 }
@@ -536,9 +537,9 @@
 :root[data-active-page="dashboard"] .nav-brand {
   font-family: var(--v2-font-display) !important;
   font-style: italic !important;
-  font-weight: 600 !important;
-  font-size: 1.25rem !important;
-  font-variation-settings: 'opsz' 48 !important;
+  font-weight: 400 !important;
+  font-size: 1.35rem !important;
+  font-variation-settings: normal !important;
   text-transform: none !important;
   letter-spacing: -0.005em !important;
   color: var(--v2-text-display, #3D1F22) !important;
