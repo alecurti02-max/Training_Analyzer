@@ -13,10 +13,42 @@
  * - Niente glow ambient, niente striped overlay, niente skew, niente UPPERCASE
  * ============================================================================ */
 
-/* ============ Spegne il vecchio header generato da data-eyebrow/data-title ============ */
+/* ============ Page header generic v2 — riformatta i pseudo-element data-eyebrow/data-title ============ */
+/* Per Dashboard: e' presente <header class="dash-header"> markup, quindi spegniamo
+   i pseudo del .page legacy. Per le altre 8 pagine: lasciamo i pseudo attivi ma li
+   ristilizziamo in chiave editorial v2 (Big Shoulders 900 no-skew + mono micro eyebrow). */
+
+/* Dashboard: spento (markup esplicito gia' c'e') */
 #page-dashboard.page::before,
 #page-dashboard.page::after {
   content: none !important;
+}
+
+/* Altre pagine: stilizza eyebrow + title come Dashboard markup */
+.page:not(#page-dashboard):not([data-active-page]).active::before { /* placeholder, prossima regola valida */ }
+
+:root[data-active-page] .page.active:not(#page-dashboard)::before {
+  font-family: var(--v2-font-mono) !important;
+  font-size: var(--v2-fs-eyebrow) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--v2-text-muted) !important;
+  margin: var(--v2-s-5) 0 var(--v2-s-2) !important;
+}
+:root[data-active-page] .page.active:not(#page-dashboard)::after {
+  font-family: var(--v2-font-display) !important;
+  font-size: clamp(56px, 8vw, 88px) !important;
+  font-weight: 900 !important;
+  font-style: normal !important;
+  text-transform: none !important;
+  letter-spacing: -0.02em !important;
+  line-height: 0.92 !important;
+  color: var(--v2-text-display, #1A1815) !important;
+  margin: 0 0 var(--v2-s-6) !important;
+  transform: none !important;
+  padding-bottom: var(--v2-s-4) !important;
+  border-bottom: 1px solid var(--v2-rule) !important;
 }
 
 /* ============ Background page: editorial, "stampa serigrafica" ============ */
@@ -26,7 +58,7 @@
    (3) 2 soft radial highlights caldi — luce ambientale
    (4) crema base
    + grain SVG sopra (6% opacity) per analog. Tutto fixed-attachment. */
-:root[data-active-page="dashboard"] body {
+:root[data-active-page] body {
   background:
     repeating-linear-gradient(
       0deg,
@@ -42,7 +74,7 @@
   background-size: auto, 22px 22px, auto, auto, auto !important;
   background-attachment: fixed !important;
 }
-:root[data-active-page="dashboard"][data-theme="dark"] body {
+:root[data-active-page][data-theme="dark"] body {
   background:
     repeating-linear-gradient(
       0deg,
@@ -58,11 +90,11 @@
   background-size: auto, 22px 22px, auto, auto, auto !important;
   background-attachment: fixed !important;
 }
-:root[data-active-page="dashboard"] body::before {
+:root[data-active-page] body::before {
   /* Spegne le stripes legacy (le nostre stanno nel background body sopra). */
   display: none !important;
 }
-:root[data-active-page="dashboard"] body::after {
+:root[data-active-page] body::after {
   /* Grain noise overlay — texture analog magazine paper. */
   content: "" !important;
   position: fixed !important;
@@ -74,7 +106,7 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' seed='5'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") !important;
   background-size: 200px !important;
 }
-:root[data-active-page="dashboard"][data-theme="dark"] body::after {
+:root[data-active-page][data-theme="dark"] body::after {
   mix-blend-mode: overlay !important;
   opacity: 0.08 !important;
 }
@@ -286,8 +318,8 @@
   #page-dashboard .streak-num { font-size: 44px !important; }
 }
 
-/* ============ Card chrome (heatmap, weekly chart, radar, recent, recovery, streak) ============ */
-#page-dashboard .card {
+/* ============ Card chrome — globale (tutte le .page sotto data-active-page) ============ */
+:root[data-active-page] .page.active .card {
   background: var(--v2-bg-elev);
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-r-md);
@@ -298,7 +330,7 @@
               border-color var(--v2-dur-base) var(--v2-ease),
               transform var(--v2-dur-base) var(--v2-ease);
 }
-#page-dashboard .card:hover {
+:root[data-active-page] .page.active .card:hover {
   box-shadow: var(--v2-shadow-hover);
   border-color: var(--v2-border-strong);
   transform: none;
@@ -569,14 +601,14 @@
 
 /* ============ Nav-bar scoped al mood editorial (solo quando dashboard attiva) ============ */
 /* La nav vive fuori da #page-dashboard quindi targettiamo via :root[data-active-page]. */
-:root[data-active-page="dashboard"] .nav {
+:root[data-active-page] .nav {
   background: var(--v2-bg-elev);
   border-bottom: 1px solid var(--v2-rule);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
-:root[data-active-page="dashboard"] .nav-brand {
+:root[data-active-page] .nav-brand {
   font-family: var(--v2-font-display) !important;
   font-style: normal !important;
   font-weight: 900 !important;
@@ -586,13 +618,13 @@
   letter-spacing: -0.02em !important;
   color: var(--v2-text-display, #1A1815) !important;
 }
-:root[data-active-page="dashboard"] .nav-brand::after {
+:root[data-active-page] .nav-brand::after {
   background: var(--v2-accent) !important;
   width: 5px !important;
   height: 5px !important;
 }
 
-:root[data-active-page="dashboard"] .nav-btn {
+:root[data-active-page] .nav-btn {
   font-family: var(--v2-font-display) !important;
   font-size: 13px !important;
   font-weight: 600 !important;
@@ -610,25 +642,25 @@
   transition: color 160ms var(--v2-ease), background-image 220ms var(--v2-ease);
 }
 /* Hover = highlighter giallo "sotto" il testo (mood Sherwood) */
-:root[data-active-page="dashboard"] .nav-btn:hover {
+:root[data-active-page] .nav-btn:hover {
   color: var(--v2-text-display, #1A1815) !important;
   background-color: transparent !important;
   background-image: linear-gradient(transparent 58%, var(--v2-highlight) 58%, var(--v2-highlight) 90%, transparent 90%) !important;
 }
 /* Active = highlighter pieno + text dark. background-color:transparent
    batte il legacy 'background: var(--race)' shortcut che imposta background-color rosso. */
-:root[data-active-page="dashboard"] .nav-btn.active {
+:root[data-active-page] .nav-btn.active {
   background-color: transparent !important;
   background-image: linear-gradient(transparent 58%, var(--v2-highlight) 58%, var(--v2-highlight) 90%, transparent 90%) !important;
   color: var(--v2-text-display, #1A1815) !important;
   font-weight: 700 !important;
   box-shadow: none !important;
 }
-:root[data-active-page="dashboard"] .nav-btn.active::after {
+:root[data-active-page] .nav-btn.active::after {
   display: none !important;
 }
 
-:root[data-active-page="dashboard"] .sync-indicator {
+:root[data-active-page] .sync-indicator {
   font-family: var(--v2-font-mono) !important;
   font-size: 10px !important;
   letter-spacing: 0.04em !important;
@@ -639,16 +671,16 @@
   padding: 3px 8px !important;
   border-radius: 999px !important;
 }
-:root[data-active-page="dashboard"] .sync-indicator.sync-ok {
+:root[data-active-page] .sync-indicator.sync-ok {
   color: var(--v2-sport-running) !important;
   border-color: var(--v2-sport-running);
 }
 
-:root[data-active-page="dashboard"] .nav-avatar {
+:root[data-active-page] .nav-avatar {
   border-color: var(--v2-border-strong) !important;
 }
 
-:root[data-active-page="dashboard"] .nav-user {
+:root[data-active-page] .nav-user {
   font-family: var(--v2-font-body) !important;
   font-size: 12px !important;
   color: var(--v2-text-muted) !important;

@@ -264,7 +264,7 @@
 /* Active solo quando l'utente naviga sulla Dashboard. js/ui.js::showPage()
    setta document.documentElement.dataset.activePage = page. Quando l'utente
    lascia Dashboard, l'attributo cambia e tornano i token Pista Sport originali. */
-:root[data-active-page="dashboard"] {
+:root[data-active-page] {
   /* Type stacks */
   --v2-font-display: 'Big Shoulders Display', 'Oswald', 'Arial Narrow', sans-serif;
   --v2-font-num: 'Fraunces', ui-serif, Georgia, serif;
@@ -349,7 +349,7 @@
   --bg-glow-electric: transparent;
 }
 
-:root[data-active-page="dashboard"][data-theme="dark"] {
+:root[data-active-page][data-theme="dark"] {
   --v2-bg: #0F0D0A;
   --v2-bg-elev: #18150F;
   --v2-bg-sunk: #08070A;
