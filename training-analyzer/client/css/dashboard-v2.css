@@ -95,20 +95,29 @@
 
 #page-dashboard .dash-title {
   font-family: var(--v2-font-display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: var(--v2-fs-page-title);
+  font-style: normal;
+  font-weight: 900;
+  font-size: clamp(56px, 8vw, 88px);
   font-variation-settings: normal;
-  letter-spacing: -0.015em;
-  line-height: 0.95;
-  color: var(--v2-text-display, #2D1A1D);
+  letter-spacing: -0.02em;
+  line-height: 0.92;
+  color: var(--v2-text-display, #1A1815);
   margin: 0;
   text-transform: none;
   transform: none;
 }
-#page-dashboard .dash-title .accent-word {
-  color: var(--v2-accent);
-  font-style: italic;
+/* Highlighter effect su parola accent (mood Sherwood news) — bg giallo fluo
+   che parte da metà del testo, padding inline per dare aria. */
+#page-dashboard .dash-title .accent-word,
+#page-dashboard .dash-title-hl {
+  background-image: linear-gradient(transparent 0%, transparent 12%, var(--v2-highlight) 12%, var(--v2-highlight) 92%, transparent 92%);
+  padding: 0 0.12em;
+  margin: 0 -0.04em;
+  display: inline;
+  color: var(--v2-text-display, #1A1815);
+  font-style: normal;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 @media (max-width: 640px) {
@@ -292,16 +301,16 @@
 
 #page-dashboard .card-title {
   font-family: var(--v2-font-display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: var(--v2-fs-title-card);
+  font-style: normal;
+  font-weight: 800;
+  font-size: 26px;
   font-variation-settings: normal;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   text-transform: none;
-  color: var(--v2-text-display, #2D1A1D);
+  color: var(--v2-text-display, #1A1815);
   display: block;
   margin: 0 0 var(--v2-s-4);
-  line-height: 1.05;
+  line-height: 1;
 }
 #page-dashboard .card-title::before {
   content: none;
@@ -460,11 +469,11 @@
 }
 #page-dashboard .empty-state p:first-child {
   font-family: var(--v2-font-display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 22px;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 26px;
   font-variation-settings: normal;
-  color: var(--v2-text-display, #2D1A1D);
+  color: var(--v2-text-display, #1A1815);
   margin-bottom: var(--v2-s-1);
 }
 #page-dashboard .empty-state p:last-child {
@@ -536,13 +545,13 @@
 
 :root[data-active-page="dashboard"] .nav-brand {
   font-family: var(--v2-font-display) !important;
-  font-style: italic !important;
-  font-weight: 400 !important;
-  font-size: 1.35rem !important;
+  font-style: normal !important;
+  font-weight: 900 !important;
+  font-size: 1.5rem !important;
   font-variation-settings: normal !important;
   text-transform: none !important;
-  letter-spacing: -0.005em !important;
-  color: var(--v2-text-display, #3D1F22) !important;
+  letter-spacing: -0.02em !important;
+  color: var(--v2-text-display, #1A1815) !important;
 }
 :root[data-active-page="dashboard"] .nav-brand::after {
   background: var(--v2-accent) !important;
