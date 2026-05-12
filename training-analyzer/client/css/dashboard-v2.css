@@ -19,43 +19,62 @@
   content: none !important;
 }
 
-/* ============ Background page: editorial, leggermente "vissuto" ============ */
-/* Crema base + 2 soft radial highlights (caldi, opacita' bassissima) + grain SVG
-   leggero. Non un campo piatto, non i 3 glow loud del Pista Sport. */
+/* ============ Background page: editorial, "carta da magazine" ============ */
+/* 3 layer:
+   (1) hatched diagonal lines (45deg, hairline) — pattern paper/letterpress
+   (2) 2 soft radial highlights caldi (rosato + ambra) — luce ambientale
+   (3) crema base
+   + grain SVG sopra (5-6% opacity) per analog feel.
+   Tutto fixed-attachment cosi' scrollare lascia il pattern fermo. */
 :root[data-active-page="dashboard"] body {
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(225, 29, 44, 0.04), transparent 60%),
-    radial-gradient(ellipse 70% 40% at 100% 100%, rgba(194, 161, 50, 0.05), transparent 60%),
-    var(--v2-bg);
-  background-attachment: fixed;
+    repeating-linear-gradient(
+      135deg,
+      rgba(74, 50, 30, 0.025) 0,
+      rgba(74, 50, 30, 0.025) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    radial-gradient(ellipse 70% 50% at 15% 5%, rgba(225, 29, 44, 0.07), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 95% 95%, rgba(194, 161, 50, 0.09), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(47, 143, 110, 0.04), transparent 60%),
+    var(--v2-bg) !important;
+  background-attachment: fixed !important;
 }
 :root[data-active-page="dashboard"][data-theme="dark"] body {
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(225, 29, 44, 0.08), transparent 60%),
-    radial-gradient(ellipse 70% 40% at 100% 100%, rgba(219, 160, 108, 0.06), transparent 60%),
-    var(--v2-bg);
-  background-attachment: fixed;
+    repeating-linear-gradient(
+      135deg,
+      rgba(237, 231, 220, 0.025) 0,
+      rgba(237, 231, 220, 0.025) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    radial-gradient(ellipse 70% 50% at 15% 5%, rgba(225, 29, 44, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 95% 95%, rgba(219, 160, 108, 0.08), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(79, 184, 147, 0.06), transparent 60%),
+    var(--v2-bg) !important;
+  background-attachment: fixed !important;
 }
 :root[data-active-page="dashboard"] body::before {
-  /* Spegne le stripes legacy. */
+  /* Spegne le stripes legacy (le nostre stanno nel background body sopra). */
   display: none !important;
 }
 :root[data-active-page="dashboard"] body::after {
-  /* Sostituisce il noise SVG legacy con un grain piu' tenue (3% opacity).
-     Texture analog editorial, non distrazione visiva. */
+  /* Grain noise overlay — texture analog magazine paper. */
   content: "" !important;
   position: fixed !important;
   inset: 0 !important;
   pointer-events: none !important;
   z-index: 0 !important;
-  opacity: 0.035 !important;
+  opacity: 0.06 !important;
   mix-blend-mode: multiply !important;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") !important;
-  background-size: 160px !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' seed='5'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") !important;
+  background-size: 200px !important;
 }
 :root[data-active-page="dashboard"][data-theme="dark"] body::after {
   mix-blend-mode: overlay !important;
-  opacity: 0.05 !important;
+  opacity: 0.08 !important;
 }
 
 /* ============ Page header ============ */
@@ -82,10 +101,14 @@
   font-variation-settings: 'opsz' 144, 'SOFT' 50;
   letter-spacing: -0.02em;
   line-height: 1;
-  color: var(--v2-text);
+  color: var(--v2-text-display, #2D1A1D);
   margin: 0;
   text-transform: none;
   transform: none;
+}
+#page-dashboard .dash-title .accent-word {
+  color: var(--v2-accent);
+  font-style: italic;
 }
 
 @media (max-width: 640px) {
@@ -147,7 +170,10 @@
   content: none !important;
 }
 
-/* Stat value: Fraunces serif, tabular nums, no italic, no skew. */
+/* Stat value: Fraunces serif, tabular nums, no italic, no skew.
+   Color NON e' forzato: lascia che gli inline style in Dashboard.jsx
+   (var(--accent), var(--green), var(--blue), var(--yellow)) restino visibili
+   — sono gia' aliassati ai token sport desaturati v2 in tokens.css. */
 #page-dashboard #dash-stats .stat-value {
   font-family: var(--v2-font-display) !important;
   font-style: normal !important;
@@ -157,10 +183,9 @@
   font-variant-numeric: tabular-nums !important;
   letter-spacing: -0.01em !important;
   line-height: 1 !important;
-  color: var(--v2-text) !important;
   transform: none !important;
   background: none !important;
-  -webkit-text-fill-color: var(--v2-text) !important;
+  -webkit-text-fill-color: currentColor !important;
   text-shadow: none !important;
 }
 
@@ -210,11 +235,14 @@
   font-variant-numeric: tabular-nums !important;
   letter-spacing: -0.02em !important;
   line-height: 1 !important;
-  color: var(--v2-text) !important;
   transform: none !important;
   background: none !important;
-  -webkit-text-fill-color: var(--v2-text) !important;
+  -webkit-text-fill-color: currentColor !important;
   text-shadow: none !important;
+}
+/* Current streak in rosso accent (momentum), record in giallo oliva (inline). */
+#page-dashboard .streak-display > div:first-child .streak-num {
+  color: var(--v2-accent) !important;
 }
 
 #page-dashboard .streak-label {
@@ -270,7 +298,7 @@
   font-variation-settings: 'opsz' 144, 'SOFT' 50;
   letter-spacing: -0.005em;
   text-transform: none;
-  color: var(--v2-text);
+  color: var(--v2-text-display, #2D1A1D);
   display: block;
   margin: 0 0 var(--v2-s-4);
 }

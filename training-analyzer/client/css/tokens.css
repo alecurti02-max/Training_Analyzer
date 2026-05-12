@@ -270,16 +270,17 @@
   --v2-font-body: 'Manrope', system-ui, sans-serif;
   --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Palette light (crema + nero caldo) */
+  /* Palette light (crema + nero caldo + burgundy ink editoriale) */
   --v2-bg: #FAF7F2;
-  --v2-bg-elev: #FFFFFF;
+  --v2-bg-elev: #FFFAF3;
   --v2-bg-sunk: #F2EDE3;
-  --v2-text: #1A1815;
+  --v2-text: #2A2018;        /* warm dark, not pure black */
+  --v2-text-display: #3D1F22; /* burgundy ink per headings/titoli Fraunces */
   --v2-text-muted: #6B6557;
   --v2-text-faint: #94907F;
   --v2-border: #E5DFD2;
   --v2-border-strong: #C9C2B0;
-  --v2-rule: rgba(26, 24, 21, 0.08);
+  --v2-rule: rgba(42, 32, 24, 0.10);
 
   /* Accent (rosso intatto) */
   --v2-accent: #E11D2C;
@@ -349,6 +350,7 @@
   --v2-bg-elev: #18150F;
   --v2-bg-sunk: #08070A;
   --v2-text: #EDE7DC;
+  --v2-text-display: #F5DDD8;  /* leggermente rosato/avorio per headings dark */
   --v2-text-muted: #A09887;
   --v2-text-faint: #6E6757;
   --v2-border: #2A2520;
