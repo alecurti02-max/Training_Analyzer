@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400..900&family=Saira+Condensed:wght@400;500;600;700;800;900&family=Fraunces:ital,opsz,wght,SOFT@0,144,400..700,30..100;1,144,400..600,30..100&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @font-face {
   font-family: 'BasementGrotesque';
@@ -258,6 +258,116 @@
   --red: var(--danger);
   --fuchsia: var(--race);
   --blue: var(--cyan);
+}
+
+/* ============ EDITORIAL V2 — Dashboard pilot (scoped via :root[data-active-page]) ============ */
+/* Active solo quando l'utente naviga sulla Dashboard. js/ui.js::showPage()
+   setta document.documentElement.dataset.activePage = page. Quando l'utente
+   lascia Dashboard, l'attributo cambia e tornano i token Pista Sport originali. */
+:root[data-active-page] {
+  /* Type stacks */
+  --v2-font-display: 'Big Shoulders Display', 'Oswald', 'Arial Narrow', sans-serif;
+  --v2-font-num: 'Fraunces', ui-serif, Georgia, serif;
+  --v2-font-body: 'Manrope', system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Highlighter giallo fluo (mood Sherwood news) */
+  --v2-highlight: #E5F23B;
+
+  /* Palette light (crema + nero caldo + burgundy ink editoriale) */
+  --v2-bg: #FAF7F2;
+  --v2-bg-elev: #FFFAF3;
+  --v2-bg-sunk: #F2EDE3;
+  --v2-text: #2A2018;        /* warm dark, not pure black */
+  --v2-text-display: #3D1F22; /* burgundy ink per headings/titoli Fraunces */
+  --v2-text-muted: #6B6557;
+  --v2-text-faint: #94907F;
+  --v2-border: #E5DFD2;
+  --v2-border-strong: #C9C2B0;
+  --v2-rule: rgba(42, 32, 24, 0.10);
+
+  /* Accent (rosso intatto) */
+  --v2-accent: #E11D2C;
+  --v2-accent-soft: rgba(225, 29, 44, 0.08);
+
+  /* Sport accent desaturati -30% */
+  --v2-sport-running: #2F8F6E;
+  --v2-sport-cycling: #4A9CB0;
+  --v2-sport-karting: #C28049;
+
+  /* Spacing 4-based */
+  --v2-s-1: 4px; --v2-s-2: 8px; --v2-s-3: 12px;
+  --v2-s-4: 16px; --v2-s-5: 24px; --v2-s-6: 32px; --v2-s-7: 48px;
+
+  /* Radius */
+  --v2-r-xs: 2px; --v2-r-sm: 4px; --v2-r-md: 6px; --v2-r-lg: 8px;
+
+  /* Type ramp */
+  --v2-fs-eyebrow: 11px;
+  --v2-fs-meta: 12px;
+  --v2-fs-body: 14px;
+  --v2-fs-num-md: 38px;
+  --v2-fs-num-lg: 56px;
+  --v2-fs-title-card: 22px;
+  --v2-fs-page-title: 48px;
+
+  /* Shadow (parche) */
+  --v2-shadow-hover: 0 1px 2px rgba(26,24,21,0.06), 0 8px 24px -16px rgba(26,24,21,0.18);
+
+  /* Motion */
+  --v2-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --v2-dur-base: 220ms;
+
+  /* Alias delle var globali ai token v2. Serve a:
+     (a) Chart.js che legge da document.documentElement;
+     (b) inline style in Dashboard.jsx (var(--green) etc);
+     (c) componenti che leggono --text/--bg via CSS. */
+  --text: var(--v2-text);
+  --text2: var(--v2-text-muted);
+  --bg: var(--v2-bg);
+  --bg2: var(--v2-bg-elev);
+  --bg3: var(--v2-bg-sunk);
+  --border: var(--v2-border);
+  --border-strong: var(--v2-border-strong);
+  --accent: var(--v2-accent);
+  --race: var(--v2-accent);
+  --race-deep: #A8101E;
+  --green: var(--v2-sport-running);
+  --cyan: var(--v2-sport-cycling);
+  --orange: var(--v2-sport-karting);
+  --yellow: #C2A132;
+  --pulse: var(--v2-accent);
+  --aqua: var(--v2-sport-cycling);
+  --volt: var(--v2-sport-running);
+  --solar: var(--v2-sport-karting);
+  --light-green: #4FB893;
+  --blue: var(--v2-sport-cycling);
+  /* glow/grain spenti sul Dashboard */
+  --pulse-glow: transparent;
+  --bg-glow-warm: transparent;
+  --bg-glow-cool: transparent;
+  --bg-glow-electric: transparent;
+}
+
+:root[data-active-page][data-theme="dark"] {
+  --v2-bg: #0F0D0A;
+  --v2-bg-elev: #18150F;
+  --v2-bg-sunk: #08070A;
+  --v2-text: #EDE7DC;
+  --v2-text-display: #F5DDD8;  /* leggermente rosato/avorio per headings dark */
+  --v2-text-muted: #A09887;
+  --v2-text-faint: #6E6757;
+  --v2-border: #2A2520;
+  --v2-border-strong: #3D362D;
+  --v2-rule: rgba(237, 231, 220, 0.10);
+  --v2-accent-soft: rgba(225, 29, 44, 0.14);
+  --v2-sport-running: #4FB893;
+  --v2-sport-cycling: #6BB8CC;
+  --v2-sport-karting: #DBA06C;
+  --v2-shadow-hover: 0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -16px rgba(0,0,0,0.6);
+  --race-deep: #B3162A;
+  --light-green: #6EE7B7;
+  --v2-highlight: #E5F23B;
 }
 
 /* ============ Keyframes ============ */

@@ -1,4 +1,5 @@
 @import url('./tokens.css');
+@import url('./dashboard-v2.css');
 
 /* ============================================================================
    STYLE.CSS — TABLE OF CONTENTS
@@ -1375,5 +1376,49 @@ input:focus,select:focus,textarea:focus{
   color:var(--race);
   margin-bottom:6px;
   display:block;
+}
+
+/* ============ Theme toggle (globale, visibile in nav su tutte le pagine) ============ */
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--text2);
+  position: relative;
+  transition: color 160ms ease, border-color 160ms ease, transform 160ms ease;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.theme-toggle:active { transform: scale(0.94); }
+.theme-toggle .theme-icon {
+  position: absolute;
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+}
+/* Mostra l'icona del tema A CUI SI PASSA al click.
+   In dark mode mostra il sole (= passa a light), in light la luna. */
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+:root[data-theme="light"] .theme-toggle .icon-sun {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
+}
+:root[data-theme="light"] .theme-toggle .icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
 }
 
