@@ -207,6 +207,11 @@ function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl = document.getElementById('page-'+page);
   if (pageEl) pageEl.classList.add('active');
+  // Esponi la pagina corrente come attributo su <html> cosi' i token CSS scoped
+  // (es. :root[data-active-page="dashboard"] in tokens.css) si attivano solo
+  // quando la pagina rispettiva e' visibile. Usato anche da Chart.js che legge
+  // le custom properties via getComputedStyle(document.documentElement).
+  document.documentElement.dataset.activePage = page;
   document.querySelectorAll('.nav-btn').forEach(b=>{
     b.classList.remove('active');
     if(b.textContent===pageMap[page]) b.classList.add('active');
