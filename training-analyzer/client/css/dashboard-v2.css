@@ -191,3 +191,202 @@
   }
   #page-dashboard .streak-num { font-size: 44px !important; }
 }
+
+/* ============ Card chrome (heatmap, weekly chart, radar, recent, recovery, streak) ============ */
+#page-dashboard .card {
+  background: var(--v2-bg-elev);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-r-md);
+  padding: var(--v2-s-5);
+  margin-bottom: var(--v2-s-4);
+  box-shadow: none;
+  transition: box-shadow var(--v2-dur-base) var(--v2-ease),
+              border-color var(--v2-dur-base) var(--v2-ease),
+              transform var(--v2-dur-base) var(--v2-ease);
+}
+#page-dashboard .card:hover {
+  box-shadow: var(--v2-shadow-hover);
+  border-color: var(--v2-border-strong);
+  transform: none;
+}
+
+#page-dashboard .card-title {
+  font-family: var(--v2-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: var(--v2-fs-title-card);
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  color: var(--v2-text);
+  display: block;
+  margin: 0 0 var(--v2-s-4);
+}
+#page-dashboard .card-title::before {
+  content: none;
+}
+
+/* Clickable card hover (es. radar "Profilo Atletico") */
+#page-dashboard .clickable-card {
+  cursor: pointer;
+}
+#page-dashboard .clickable-card:hover {
+  border-color: var(--v2-accent);
+  transform: none;
+}
+#page-dashboard .clickable-card .card-title span {
+  font-family: var(--v2-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--v2-text-muted);
+  font-weight: 500;
+}
+
+/* ============ Heatmap legend & chart containers ============ */
+#page-dashboard .heatmap-legend {
+  font-family: var(--v2-font-mono);
+  font-size: 10px;
+  color: var(--v2-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  margin-top: var(--v2-s-3);
+}
+#page-dashboard .heatmap-container,
+#page-dashboard .chart-container {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+}
+
+/* ============ Recovery list ============ */
+#page-dashboard .muscle-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--v2-s-3);
+  padding: var(--v2-s-3) 0;
+  border-bottom: 1px solid var(--v2-rule);
+  font-family: var(--v2-font-body);
+  font-size: var(--v2-fs-body);
+  color: var(--v2-text);
+}
+#page-dashboard .muscle-item:last-child { border-bottom: none; }
+#page-dashboard .muscle-item > span:first-child {
+  color: var(--v2-text);
+  font-weight: 500;
+}
+
+#page-dashboard .muscle-bar-bg {
+  width: 120px;
+  height: 3px !important;
+  background: var(--v2-bg-sunk) !important;
+  border-radius: 999px;
+  overflow: hidden;
+}
+#page-dashboard .muscle-bar-fill {
+  height: 100% !important;
+  border-radius: 999px;
+  filter: saturate(0.7);
+  transition: width 360ms var(--v2-ease);
+}
+
+#page-dashboard .advice-box {
+  background: var(--v2-accent-soft);
+  border: none;
+  border-left: 2px solid var(--v2-accent);
+  border-radius: 0;
+  padding: var(--v2-s-3) var(--v2-s-4);
+  font-family: var(--v2-font-body);
+  font-size: var(--v2-fs-meta);
+  color: var(--v2-text);
+  line-height: 1.5;
+  margin-bottom: var(--v2-s-3);
+}
+
+/* ============ Recent workouts list ============ */
+#page-dashboard .workout-item {
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  align-items: center;
+  gap: var(--v2-s-4) !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--v2-rule) !important;
+  border-left: none !important;
+  border-radius: 0 !important;
+  padding: var(--v2-s-3) 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  transition: background var(--v2-dur-base) var(--v2-ease);
+}
+#page-dashboard .workout-item:last-child {
+  border-bottom: none !important;
+}
+#page-dashboard .workout-item::before,
+#page-dashboard .workout-item::after {
+  content: none !important;
+}
+#page-dashboard .workout-item:hover {
+  background: var(--v2-bg-sunk) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+#page-dashboard .workout-item .score-sm {
+  font-family: var(--v2-font-display) !important;
+  font-style: normal !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums !important;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+}
+#page-dashboard .workout-item .workout-info h4 {
+  font-family: var(--v2-font-body);
+  font-weight: 600;
+  font-size: var(--v2-fs-body);
+  color: var(--v2-text);
+  margin: 0 0 2px;
+}
+#page-dashboard .workout-item .workout-info p {
+  font-family: var(--v2-font-body);
+  font-size: var(--v2-fs-meta);
+  color: var(--v2-text-muted);
+  margin: 0;
+}
+#page-dashboard .workout-item .workout-type-badge {
+  font-family: var(--v2-font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--v2-r-xs);
+  margin-left: var(--v2-s-2);
+  vertical-align: middle;
+}
+
+/* Empty state (no recent workouts) */
+#page-dashboard .empty-state {
+  text-align: center;
+  padding: var(--v2-s-5) 0;
+  color: var(--v2-text-muted);
+}
+#page-dashboard .empty-state p:first-child {
+  font-family: var(--v2-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--v2-text);
+  margin-bottom: var(--v2-s-1);
+}
+#page-dashboard .empty-state p:last-child {
+  font-family: var(--v2-font-body);
+  font-size: var(--v2-fs-meta);
+  color: var(--v2-text-muted);
+}
