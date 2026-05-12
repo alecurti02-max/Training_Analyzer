@@ -62,3 +62,132 @@
   #page-dashboard .dash-title { font-size: 36px; }
   #page-dashboard .dash-header { margin: var(--v2-s-4) 0 var(--v2-s-5); }
 }
+
+/* ============ Stats row (4 cards: workouts/score/km/tonnellaggio) ============ */
+#page-dashboard #dash-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: var(--v2-s-3);
+  margin-bottom: var(--v2-s-6);
+}
+
+@media (max-width: 900px) {
+  #page-dashboard #dash-stats { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 480px) {
+  #page-dashboard #dash-stats { grid-template-columns: 1fr !important; }
+}
+
+/* Override del card hero gigante (gradient rosso + striped + skew 6deg) */
+#page-dashboard #dash-stats > .card {
+  background: var(--v2-bg-elev) !important;
+  border: 1px solid var(--v2-border) !important;
+  border-left: 1px solid var(--v2-border) !important;
+  border-radius: var(--v2-r-md) !important;
+  padding: var(--v2-s-5) !important;
+  box-shadow: none !important;
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+#page-dashboard #dash-stats > .card::before,
+#page-dashboard #dash-stats > .card::after {
+  content: none !important;
+}
+#page-dashboard #dash-stats > .card:hover {
+  border-color: var(--v2-border-strong) !important;
+  box-shadow: var(--v2-shadow-hover);
+}
+#page-dashboard #dash-stats > .card:first-child {
+  background: var(--v2-bg-elev) !important;
+}
+
+#page-dashboard #dash-stats .stat-box {
+  text-align: left !important;
+  padding: 0 !important;
+}
+
+/* Stat value: Fraunces serif, tabular nums, no italic, no skew. */
+#page-dashboard #dash-stats .stat-value {
+  font-family: var(--v2-font-display) !important;
+  font-style: normal !important;
+  font-weight: 600 !important;
+  font-size: var(--v2-fs-num-md) !important;
+  font-variation-settings: 'opsz' 144 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1 !important;
+  color: var(--v2-text) !important;
+  transform: none !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--v2-text) !important;
+  text-shadow: none !important;
+}
+
+/* Stat label sotto il numero: micro mono uppercase con tracking ridotto. */
+#page-dashboard #dash-stats .stat-label {
+  font-family: var(--v2-font-mono) !important;
+  text-transform: uppercase !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  color: var(--v2-text-muted) !important;
+  margin-top: var(--v2-s-2) !important;
+}
+
+@media (max-width: 640px) {
+  #page-dashboard #dash-stats > .card { padding: var(--v2-s-4) !important; }
+  #page-dashboard #dash-stats .stat-value { font-size: 30px !important; }
+}
+
+/* ============ Streak (current + record) ============ */
+#page-dashboard .streak-display {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+  gap: var(--v2-s-5);
+  padding: var(--v2-s-3) 0;
+}
+#page-dashboard .streak-display > *:nth-child(2) {
+  width: 1px;
+  height: 56px;
+  background: var(--v2-rule);
+  justify-self: center;
+}
+
+#page-dashboard .streak-num {
+  font-family: var(--v2-font-display) !important;
+  font-style: normal !important;
+  font-weight: 600 !important;
+  font-size: var(--v2-fs-num-lg) !important;
+  font-variation-settings: 'opsz' 144 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1 !important;
+  color: var(--v2-text) !important;
+  transform: none !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--v2-text) !important;
+  text-shadow: none !important;
+}
+
+#page-dashboard .streak-label {
+  font-family: var(--v2-font-mono) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em !important;
+  color: var(--v2-text-muted) !important;
+  margin-top: var(--v2-s-2);
+}
+
+@media (max-width: 640px) {
+  #page-dashboard .streak-display {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1px 1fr;
+    gap: var(--v2-s-3);
+  }
+  #page-dashboard .streak-display > *:nth-child(2) {
+    width: 100%;
+    height: 1px;
+  }
+  #page-dashboard .streak-num { font-size: 44px !important; }
+}
