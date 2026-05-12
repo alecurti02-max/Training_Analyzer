@@ -1,0 +1,64 @@
+/* ============================================================================
+ * DASHBOARD V2 — Editorial Sport (pilot)
+ * ----------------------------------------------------------------------------
+ * Tutti i selettori sono scoped sotto #page-dashboard.page per non leakare
+ * sulle altre pagine. I token v2 vivono in tokens.css sotto :root[data-active-page="dashboard"]
+ * e aliasano automaticamente --text, --bg, --green, ecc. al palette editoriale.
+ *
+ * Mood: Tracksmith / Wahoo / sport magazine italiano premium.
+ * - Fraunces italic per titoli + serif tabular-nums per numeri
+ * - Crema #FAF7F2 (light) / nero caldo #0F0D0A (dark)
+ * - Rosso #E11D2C intatto come accent puntuale
+ * - Hairline borders al posto di shadow drammatiche
+ * - Niente glow ambient, niente striped overlay, niente skew, niente UPPERCASE
+ * ============================================================================ */
+
+/* ============ Spegne il vecchio header generato da data-eyebrow/data-title ============ */
+#page-dashboard.page::before,
+#page-dashboard.page::after {
+  content: none !important;
+}
+
+/* ============ Background page (cancella i radial gradient ambient su body) ============ */
+:root[data-active-page="dashboard"] body {
+  background: var(--v2-bg);
+}
+:root[data-active-page="dashboard"] body::before,
+:root[data-active-page="dashboard"] body::after {
+  display: none;
+}
+
+/* ============ Page header ============ */
+#page-dashboard .dash-header {
+  margin: var(--v2-s-5) 0 var(--v2-s-6);
+  padding-bottom: var(--v2-s-4);
+  border-bottom: 1px solid var(--v2-rule);
+}
+
+#page-dashboard .dash-eyebrow {
+  font-family: var(--v2-font-mono);
+  font-size: var(--v2-fs-eyebrow);
+  color: var(--v2-text-muted);
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--v2-s-2);
+  text-transform: none;
+}
+
+#page-dashboard .dash-title {
+  font-family: var(--v2-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--v2-fs-page-title);
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--v2-text);
+  margin: 0;
+  text-transform: none;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  #page-dashboard .dash-title { font-size: 36px; }
+  #page-dashboard .dash-header { margin: var(--v2-s-4) 0 var(--v2-s-5); }
+}
