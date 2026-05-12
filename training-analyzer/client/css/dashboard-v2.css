@@ -96,10 +96,10 @@
 #page-dashboard .dash-title {
   font-family: var(--v2-font-display);
   font-style: italic;
-  font-weight: 400;
+  font-weight: 500;
   font-size: var(--v2-fs-page-title);
-  font-variation-settings: 'opsz' 144, 'SOFT' 50;
-  letter-spacing: -0.02em;
+  font-variation-settings: 'opsz' 96;
+  letter-spacing: -0.015em;
   line-height: 1;
   color: var(--v2-text-display, #2D1A1D);
   margin: 0;
@@ -175,7 +175,7 @@
    (var(--accent), var(--green), var(--blue), var(--yellow)) restino visibili
    — sono gia' aliassati ai token sport desaturati v2 in tokens.css. */
 #page-dashboard #dash-stats .stat-value {
-  font-family: var(--v2-font-display) !important;
+  font-family: var(--v2-font-num) !important;
   font-style: normal !important;
   font-weight: 600 !important;
   font-size: var(--v2-fs-num-md) !important;
@@ -227,7 +227,7 @@
 }
 
 #page-dashboard .streak-num {
-  font-family: var(--v2-font-display) !important;
+  font-family: var(--v2-font-num) !important;
   font-style: normal !important;
   font-weight: 600 !important;
   font-size: var(--v2-fs-num-lg) !important;
@@ -295,8 +295,8 @@
   font-style: italic;
   font-weight: 500;
   font-size: var(--v2-fs-title-card);
-  font-variation-settings: 'opsz' 144, 'SOFT' 50;
-  letter-spacing: -0.005em;
+  font-variation-settings: 'opsz' 48;
+  letter-spacing: 0;
   text-transform: none;
   color: var(--v2-text-display, #2D1A1D);
   display: block;
@@ -430,7 +430,7 @@
   font-family: var(--v2-font-body);
   font-weight: 600;
   font-size: var(--v2-fs-body);
-  color: var(--v2-text);
+  color: var(--v2-text-display, #2D1A1D);
   margin: 0 0 2px;
 }
 #page-dashboard .workout-item .workout-info p {
@@ -461,8 +461,9 @@
   font-family: var(--v2-font-display);
   font-style: italic;
   font-weight: 500;
-  font-size: 18px;
-  color: var(--v2-text);
+  font-size: 20px;
+  font-variation-settings: 'opsz' 48;
+  color: var(--v2-text-display, #2D1A1D);
   margin-bottom: var(--v2-s-1);
 }
 #page-dashboard .empty-state p:last-child {
@@ -535,12 +536,12 @@
 :root[data-active-page="dashboard"] .nav-brand {
   font-family: var(--v2-font-display) !important;
   font-style: italic !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   font-size: 1.25rem !important;
-  font-variation-settings: 'opsz' 144, 'SOFT' 50 !important;
+  font-variation-settings: 'opsz' 48 !important;
   text-transform: none !important;
-  letter-spacing: -0.01em !important;
-  color: var(--v2-text) !important;
+  letter-spacing: -0.005em !important;
+  color: var(--v2-text-display, #3D1F22) !important;
 }
 :root[data-active-page="dashboard"] .nav-brand::after {
   background: var(--v2-accent) !important;
