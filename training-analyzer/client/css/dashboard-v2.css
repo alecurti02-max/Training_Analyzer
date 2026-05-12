@@ -180,9 +180,8 @@
 }
 
 /* Stat value: Fraunces serif, tabular nums, no italic, no skew.
-   Color NON e' forzato: lascia che gli inline style in Dashboard.jsx
-   (var(--accent), var(--green), var(--blue), var(--yellow)) restino visibili
-   — sono gia' aliassati ai token sport desaturati v2 in tokens.css. */
+   Tutti i 4 numeri in burgundy ink (--v2-text-display) per armonia palette.
+   La differenziazione tra metriche viene dalla label sotto, non dal colore. */
 #page-dashboard #dash-stats .stat-value {
   font-family: var(--v2-font-num) !important;
   font-style: normal !important;
@@ -194,7 +193,8 @@
   line-height: 1 !important;
   transform: none !important;
   background: none !important;
-  -webkit-text-fill-color: currentColor !important;
+  color: var(--v2-text-display, #1A1815) !important;
+  -webkit-text-fill-color: var(--v2-text-display, #1A1815) !important;
   text-shadow: none !important;
 }
 
@@ -235,6 +235,8 @@
   border-right: 1px solid var(--v2-rule);
 }
 
+/* Streak: 2 numeri identici in burgundy ink. Simmetria visiva pulita,
+   coerenza con la palette dei stat numbers. */
 #page-dashboard .streak-num {
   font-family: var(--v2-font-num) !important;
   font-style: normal !important;
@@ -246,12 +248,13 @@
   line-height: 1 !important;
   transform: none !important;
   background: none !important;
-  -webkit-text-fill-color: currentColor !important;
+  color: var(--v2-text-display, #1A1815) !important;
+  -webkit-text-fill-color: var(--v2-text-display, #1A1815) !important;
   text-shadow: none !important;
 }
-/* Current streak in rosso accent (momentum), record in giallo oliva (inline). */
-#page-dashboard .streak-display > div:first-child .streak-num {
-  color: var(--v2-accent) !important;
+#page-dashboard .streak-display > div:first-child .streak-num,
+#page-dashboard .streak-display > div:last-child .streak-num {
+  color: var(--v2-text-display, #1A1815) !important;
 }
 
 #page-dashboard .streak-label {
@@ -299,18 +302,20 @@
   transform: none;
 }
 
+/* Card titles tornano a "label/heading" Manrope sobrio uppercase tiny:
+   non competono col page title H1, ma restano leggibili come sezione. */
 #page-dashboard .card-title {
-  font-family: var(--v2-font-display);
+  font-family: var(--v2-font-body);
   font-style: normal;
-  font-weight: 800;
-  font-size: 26px;
+  font-weight: 700;
+  font-size: 13px;
   font-variation-settings: normal;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  color: var(--v2-text-display, #1A1815);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v2-text-muted);
   display: block;
   margin: 0 0 var(--v2-s-4);
-  line-height: 1;
+  line-height: 1.2;
 }
 #page-dashboard .card-title::before {
   content: none;
@@ -377,12 +382,12 @@
 }
 #page-dashboard .muscle-item:last-child { border-bottom: none; }
 #page-dashboard .muscle-item > span:first-child {
-  font-family: var(--v2-font-display);
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: -0.005em;
+  font-family: var(--v2-font-body);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0;
   color: var(--v2-text-display, #1A1815);
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 #page-dashboard .muscle-bar-bg {
@@ -454,10 +459,10 @@
   font-size: 13px;
 }
 #page-dashboard .workout-item .workout-info h4 {
-  font-family: var(--v2-font-display);
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -0.005em;
+  font-family: var(--v2-font-body);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0;
   color: var(--v2-text-display, #1A1815);
   margin: 0 0 2px;
   display: inline;
@@ -494,10 +499,10 @@
   color: var(--v2-text-muted);
 }
 #page-dashboard .empty-state p:first-child {
-  font-family: var(--v2-font-display);
+  font-family: var(--v2-font-body);
   font-style: normal;
-  font-weight: 800;
-  font-size: 26px;
+  font-weight: 600;
+  font-size: 16px;
   font-variation-settings: normal;
   color: var(--v2-text-display, #1A1815);
   margin-bottom: var(--v2-s-1);
@@ -587,16 +592,17 @@
 
 :root[data-active-page="dashboard"] .nav-btn {
   font-family: var(--v2-font-display) !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
   text-transform: uppercase !important;
   letter-spacing: -0.005em !important;
   color: var(--v2-text-muted) !important;
-  background-image: linear-gradient(transparent 64%, transparent 64%) !important;
+  background-color: transparent !important;
+  background-image: linear-gradient(transparent 58%, transparent 58%) !important;
   background-size: 100% 100%;
   background-repeat: no-repeat;
   border-radius: 0 !important;
-  padding: var(--v2-s-2) var(--v2-s-3) !important;
+  padding: 6px 10px !important;
   box-shadow: none !important;
   position: relative;
   transition: color 160ms var(--v2-ease), background-image 220ms var(--v2-ease);
@@ -604,17 +610,20 @@
 /* Hover = highlighter giallo "sotto" il testo (mood Sherwood) */
 :root[data-active-page="dashboard"] .nav-btn:hover {
   color: var(--v2-text-display, #1A1815) !important;
-  background-image: linear-gradient(transparent 64%, var(--v2-highlight) 64%, var(--v2-highlight) 92%, transparent 92%) !important;
+  background-color: transparent !important;
+  background-image: linear-gradient(transparent 58%, var(--v2-highlight) 58%, var(--v2-highlight) 90%, transparent 90%) !important;
 }
-/* Active = highlighter pieno + text dark */
+/* Active = highlighter pieno + text dark. background-color:transparent
+   batte il legacy 'background: var(--race)' shortcut che imposta background-color rosso. */
 :root[data-active-page="dashboard"] .nav-btn.active {
-  background-image: linear-gradient(transparent 64%, var(--v2-highlight) 64%, var(--v2-highlight) 92%, transparent 92%) !important;
+  background-color: transparent !important;
+  background-image: linear-gradient(transparent 58%, var(--v2-highlight) 58%, var(--v2-highlight) 90%, transparent 90%) !important;
   color: var(--v2-text-display, #1A1815) !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   box-shadow: none !important;
 }
 :root[data-active-page="dashboard"] .nav-btn.active::after {
-  display: none !important;  /* via il vecchio underline rosso, ora c'e' l'highlighter */
+  display: none !important;
 }
 
 :root[data-active-page="dashboard"] .sync-indicator {
