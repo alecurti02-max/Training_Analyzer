@@ -599,10 +599,10 @@
   }
 }
 
-/* ============ Dark mode: forza testo SCURO quando e' sopra l'highlight giallo ============ */
-/* Il giallo fluo --v2-highlight #E5F23B e' chiaro in entrambi i modi, quindi il
-   testo deve restare scuro #1A1815 anche in dark. Senza questo override, in
-   dark il --v2-text-display = avorio chiaro -> illeggibile su giallo. */
+/* ============ Dark mode: contrasti corretti su highlight giallo ============ */
+/* (a) Testo SCURO su elementi con highlight giallo permanent/hover.
+       Il giallo fluo #E5F23B e' chiaro in entrambi i modi -> testo deve restare
+       scuro per essere leggibile. */
 :root[data-active-page][data-theme="dark"] .dash-title-hl,
 :root[data-active-page][data-theme="dark"] .nav-btn:hover,
 :root[data-active-page][data-theme="dark"] .nav-btn.active,
@@ -610,6 +610,12 @@
 :root[data-active-page][data-theme="dark"] .clickable-card:hover .card-title {
   color: #1A1815 !important;
   -webkit-text-fill-color: #1A1815 !important;
+}
+/* (b) Tab nav-btn INATTIVI (senza highlight) in dark mode: avorio chiaro
+       per stagliarsi sul bg nero. Il default --v2-text-muted #A09887 era poco
+       leggibile su nav-bg scuro. */
+:root[data-active-page][data-theme="dark"] .nav-btn:not(:hover):not(.active) {
+  color: var(--v2-text) !important;
 }
 
 /* ============ Nav-bar scoped al mood editorial (solo quando dashboard attiva) ============ */
