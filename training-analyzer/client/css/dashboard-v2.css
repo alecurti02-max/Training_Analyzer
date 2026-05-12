@@ -599,6 +599,19 @@
   }
 }
 
+/* ============ Dark mode: forza testo SCURO quando e' sopra l'highlight giallo ============ */
+/* Il giallo fluo --v2-highlight #E5F23B e' chiaro in entrambi i modi, quindi il
+   testo deve restare scuro #1A1815 anche in dark. Senza questo override, in
+   dark il --v2-text-display = avorio chiaro -> illeggibile su giallo. */
+:root[data-active-page][data-theme="dark"] .dash-title-hl,
+:root[data-active-page][data-theme="dark"] .nav-btn:hover,
+:root[data-active-page][data-theme="dark"] .nav-btn.active,
+:root[data-active-page][data-theme="dark"] .workout-item:hover .workout-info h4,
+:root[data-active-page][data-theme="dark"] .clickable-card:hover .card-title {
+  color: #1A1815 !important;
+  -webkit-text-fill-color: #1A1815 !important;
+}
+
 /* ============ Nav-bar scoped al mood editorial (solo quando dashboard attiva) ============ */
 /* La nav vive fuori da #page-dashboard quindi targettiamo via :root[data-active-page]. */
 :root[data-active-page] .nav {
