@@ -1,6 +1,19 @@
 const { Op, fn, col, literal } = require('sequelize');
 const { User, Workout, Follow, sequelize } = require('../models');
 
+// Dialect-aware JSONB numeric extraction. Postgres has `(data->>'k')::float`,
+// SQLite has the JSON1 `json_extract(data, '$.k')`. Whitelist of allowed fields
+// guards against accidental injection if a future caller passes a variable.
+const ALLOWED_JSONB_NUM_FIELDS = new Set(['distance', '_tonnage']);
+function jsonbNum(field) {
+  if (!ALLOWED_JSONB_NUM_FIELDS.has(field)) {
+    throw new Error(`jsonbNum: field "${field}" not in allowlist`);
+  }
+  return sequelize.getDialect() === 'postgres'
+    ? literal(`("data"->>'${field}')::float`)
+    : literal(`CAST(json_extract("data", '$.${field}') AS REAL)`);
+}
+
 async function search(req, res, next) {
   try {
     const q = req.query.q;
@@ -72,20 +85,20 @@ async function computeStats(uid) {
       Workout.count({
         where: { userId: uid, date: { [Op.gte]: weekStr } },
       }),
-      Workout.findAll({
+      Workout.findOne({
         where: { userId: uid, type: 'running', date: { [Op.gte]: weekStr } },
-        attributes: ['data'],
+        attributes: [[fn('SUM', jsonbNum('distance')), 'total']],
         raw: true,
       }),
-      Workout.findAll({
+      Workout.findOne({
         where: { userId: uid, type: 'gym', date: { [Op.gte]: weekStr } },
-        attributes: ['data'],
+        attributes: [[fn('SUM', jsonbNum('_tonnage')), 'total']],
         raw: true,
       }),
     ]);
 
-  const weekKm = weekKmResult.reduce((sum, w) => sum + (w.data?.distance || 0), 0);
-  const weekTonnage = weekTonnageResult.reduce((sum, w) => sum + (w.data?._tonnage || 0), 0);
+  const weekKm = parseFloat(weekKmResult?.total) || 0;
+  const weekTonnage = parseFloat(weekTonnageResult?.total) || 0;
   const avgScore = avgScoreResult?.avg ? parseFloat(parseFloat(avgScoreResult.avg).toFixed(1)) : null;
 
   return { totalWorkouts, avgScore, weekWorkouts, weekKm, weekTonnage };

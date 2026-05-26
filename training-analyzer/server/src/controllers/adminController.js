@@ -81,39 +81,36 @@ async function listUsers(req, res, next) {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const offset = (page - 1) * limit;
 
-    const { rows, count } = await User.findAndCountAll({
-      attributes: [
-        'uid',
-        'email',
-        'firstName',
-        'lastName',
-        'displayName',
-        'provider',
-        'role',
-        'photoURL',
-        'createdAt',
-      ],
-      order: [['createdAt', 'DESC']],
-      limit,
-      offset,
-    });
-
-    const uids = rows.map((u) => u.uid);
-    const workoutCounts = uids.length
-      ? await Workout.findAll({
-          attributes: ['userId', [fn('COUNT', col('id')), 'count']],
-          where: { userId: { [Op.in]: uids } },
-          group: ['userId'],
-          raw: true,
-        })
-      : [];
-    const countByUser = Object.fromEntries(
-      workoutCounts.map((w) => [w.userId, parseInt(w.count, 10)])
-    );
+    // Single LEFT JOIN + GROUP BY avoids the previous 1+1 round-trip.
+    // User.count() runs in parallel for the total (findAndCountAll + group:
+    // returns per-group counts, not a global total).
+    const [count, rows] = await Promise.all([
+      User.count(),
+      User.findAll({
+        attributes: [
+          'uid',
+          'email',
+          'firstName',
+          'lastName',
+          'displayName',
+          'provider',
+          'role',
+          'photoURL',
+          'createdAt',
+          [fn('COUNT', col('workouts.id')), 'workoutCount'],
+        ],
+        include: [{ model: Workout, as: 'workouts', attributes: [], required: false }],
+        group: ['User.uid'],
+        subQuery: false,
+        order: [['createdAt', 'DESC']],
+        limit,
+        offset,
+      }),
+    ]);
 
     const users = rows.map((u) => {
       const json = u.toJSON();
-      json.workoutCount = countByUser[u.uid] || 0;
+      json.workoutCount = parseInt(json.workoutCount, 10) || 0;
       return json;
     });
 

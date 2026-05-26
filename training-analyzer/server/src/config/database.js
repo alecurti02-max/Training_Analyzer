@@ -14,10 +14,15 @@ const dialect = isSqlite ? 'sqlite' : 'postgres';
 // - ssl required (Neon enforces sslmode=require)
 // - connectionTimeoutMillis 10s to absorb Neon compute cold starts (~300-500ms + network)
 // - keepAlive to keep sockets healthy through Neon's proxy layer
+// - statement_timeout aborts a single runaway query after 30s instead of
+//   pinning the connection until TCP gives up (pool max=5, easy DoS otherwise)
+// - idle_in_transaction_session_timeout guards against leaked transactions
 const productionDialectOptions = {
   ssl: { require: true, rejectUnauthorized: false },
   connectionTimeoutMillis: 10000,
   keepAlive: true,
+  statement_timeout: 30000,
+  idle_in_transaction_session_timeout: 60000,
 };
 
 // Pool tuned for Neon: Neon kills idle connections after ~5 min, so we release

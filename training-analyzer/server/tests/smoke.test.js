@@ -11,7 +11,7 @@ const assert = require('node:assert/strict');
 const request = require('supertest');
 
 const app = require('../src/app');
-const { sequelize } = require('../src/models');
+const { sequelize, User } = require('../src/models');
 
 const creds = {
   email: 'smoke@daemon.fit',
@@ -186,4 +186,94 @@ test('DELETE /api/workouts/:id removes the workout', async () => {
     .get(`/api/workouts/${workoutId}`)
     .set('Authorization', `Bearer ${fresh}`);
   assert.equal(after.status, 404);
+});
+
+// --- Audit SQL 2026-05-26: regression tests for HIGH fixes ---
+
+async function loginFresh() {
+  const res = await request(app).post('/api/auth/login').send({
+    email: creds.email,
+    password: creds.password,
+  });
+  return res.body.accessToken;
+}
+
+test('POST /api/profile/coach-summary without auth returns 401', async () => {
+  const res = await request(app).post('/api/profile/coach-summary');
+  assert.equal(res.status, 401);
+});
+
+test('POST /api/profile/coach-summary returns 503 when ANTHROPIC_API_KEY is missing (gating H1)', async () => {
+  // tests/setup.js does NOT set ANTHROPIC_API_KEY, so requireAiEnabled should
+  // short-circuit with 503/ai_not_configured before reaching the controller.
+  const tok = await loginFresh();
+  const res = await request(app)
+    .post('/api/profile/coach-summary')
+    .set('Authorization', `Bearer ${tok}`);
+  assert.equal(res.status, 503);
+  assert.equal(res.body.error.code, 'ai_not_configured');
+});
+
+test('GET /api/users/me/profile aggregates weekKm + weekTonnage via SQL (H2)', async () => {
+  const tok = await loginFresh();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const run = await request(app)
+    .post('/api/workouts')
+    .set('Authorization', `Bearer ${tok}`)
+    .send({
+      type: 'running',
+      date: today,
+      data: { distance: 5, duration: 30, scores: { overall: 7 } },
+    });
+  assert.equal(run.status, 201);
+
+  const gym = await request(app)
+    .post('/api/workouts')
+    .set('Authorization', `Bearer ${tok}`)
+    .send({
+      type: 'gym',
+      date: today,
+      data: {
+        duration: 60,
+        _tonnage: 480,
+        exercises: [{ name: 'Squat', muscle: 'Gambe', sets: [{ reps: 8, weight: 60 }] }],
+        scores: { overall: 8 },
+      },
+    });
+  assert.equal(gym.status, 201);
+
+  const res = await request(app)
+    .get('/api/users/me/profile')
+    .set('Authorization', `Bearer ${tok}`);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.stats.weekKm, 5, 'weekKm sums data->>distance from running');
+  assert.equal(res.body.stats.weekTonnage, 480, 'weekTonnage sums data->>_tonnage from gym');
+  assert.ok(res.body.stats.weekWorkouts >= 2, 'weekWorkouts counts both rows');
+});
+
+test('GET /api/admin/users returns 403 for non-admin user', async () => {
+  const tok = await loginFresh();
+  const res = await request(app)
+    .get('/api/admin/users')
+    .set('Authorization', `Bearer ${tok}`);
+  assert.equal(res.status, 403);
+  assert.equal(res.body.error.code, 'not_admin');
+});
+
+test('GET /api/admin/users returns users with workoutCount from JOIN (H3)', async () => {
+  // Elevate the smoke user to admin via direct DB update (no admin-creation route).
+  await User.update({ role: 'admin' }, { where: { email: creds.email } });
+  const tok = await loginFresh();
+
+  const res = await request(app)
+    .get('/api/admin/users')
+    .set('Authorization', `Bearer ${tok}`);
+  assert.equal(res.status, 200);
+  assert.ok(Array.isArray(res.body.users), 'users is an array');
+  const u = res.body.users.find((x) => x.email === creds.email);
+  assert.ok(u, 'smoke user is in the response');
+  assert.equal(typeof u.workoutCount, 'number', 'workoutCount is numeric (parsed from JOIN COUNT)');
+  assert.ok(u.workoutCount >= 2, `workoutCount reflects the 2 workouts created earlier (got ${u.workoutCount})`);
+  assert.equal(typeof res.body.total, 'number', 'total comes from the parallel User.count()');
 });

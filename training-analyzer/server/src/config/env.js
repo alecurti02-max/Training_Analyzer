@@ -2,8 +2,12 @@ const path = require('path');
 // Carica .env dalla root del progetto con override:true: in dev sovrascrive eventuali
 // var d'ambiente shell che possano collidere (es. ANTHROPIC_API_KEY iniettata dall'IDE).
 // In produzione il file non esiste, quindi non ha effetto e vincono le env del provider.
-require('dotenv').config({ path: path.resolve(__dirname, '../../../.env'), override: true });
-require('dotenv').config();
+// In test (NODE_ENV=test) saltiamo dotenv: i test impostano le proprie variabili
+// in tests/setup.js e devono essere ermetici rispetto al .env locale.
+if (process.env.NODE_ENV !== 'test') {
+  require('dotenv').config({ path: path.resolve(__dirname, '../../../.env'), override: true });
+  require('dotenv').config();
+}
 
 const required = [
   'DATABASE_URL',
