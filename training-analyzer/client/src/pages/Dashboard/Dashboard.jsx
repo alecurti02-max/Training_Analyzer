@@ -12,7 +12,7 @@
 // keeps working.
 
 import { render } from 'preact';
-import { calculateStreak, getRecoveryStatus } from '../../../js/scoring.js';
+import { calculateStreak, getRecoveryStatus } from '@/scoring';
 import { todayStr, daysBetween } from '@/lib/utils.js';
 import { WorkoutItem } from '@/components/WorkoutItem/WorkoutItem.jsx';
 

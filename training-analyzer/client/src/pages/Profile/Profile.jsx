@@ -6,7 +6,7 @@
 // #athletic-detail-cards). The radar Chart.js stays imperative in ui.js.
 
 import { render } from 'preact';
-import { getFitnessAssessment } from '../../../js/scoring.js';
+import { getFitnessAssessment } from '@/scoring';
 import { todayStr, daysBetween, scoreColor } from '@/lib/utils.js';
 
 // Detail row inside the fitness card (label + progress bar + value).
