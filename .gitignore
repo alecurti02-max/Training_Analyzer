@@ -5,3 +5,9 @@ node_modules/
 firebase-service-account.json
 training-analyzer/server/node_modules/
 training-analyzer/.env
+
+# Local DB dumps, data backups, and sample import files (not source)
+*.dump
+*.gpx
+training_analyzer_backup_*.json
+dati esempio apple health/

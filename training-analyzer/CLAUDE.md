@@ -38,8 +38,7 @@ training-analyzer/
 │   │   │                       live session (945-1640), bulk wiring
 │   │   ├── api.js              159 LOC — fetch wrapper (versione legacy)
 │   │   ├── auth.js             155 LOC — login/logout legacy
-│   │   ├── scoring.js          905 LOC — business logic (calculateStreak,
-│   │   │                       getRecoveryStatus, getFitnessAssessment, scoreWorkout)
+│   │   ├── scoring.js          shim 4 righe → re-export di src/scoring/scoring.ts
 │   │   ├── sports.js           112 LOC — SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES
 │   │   ├── charts.js           486 LOC — Chart.js wrappers (heatmap, weekly, radar, ...)
 │   │   ├── pdfExport.js        670 LOC — Export PDF profilo
@@ -53,9 +52,14 @@ training-analyzer/
 │       ├── main.jsx            Bootstrap + bridge globalThis.Preact.<page>
 │       ├── App.jsx             Passthrough (?preact=1 mostra banner)
 │       ├── lib/
-│       │   ├── api.js          137 LOC — fetch wrapper modernizzato (signals)
+│       │   ├── api.ts          169 LOC — fetch wrapper modernizzato (signals, TS)
 │       │   ├── utils.js        57 LOC — uid, todayStr, formatDate, paceToSeconds, ...
 │       │   └── __tests__/utils.test.js   12 vitest unit
+│       ├── scoring/            business logic TS (migrata da js/scoring.js)
+│       │   ├── scoring.ts      1065 LOC — scoreWorkout, getAdvice, getRecoveryStatus,
+│       │   │                   calculateStreak, getFitnessAssessment, bodyComposition
+│       │   └── __tests__/      scoring.test.ts (21) + scoring.characterization (snapshot)
+│       ├── types/              workout/exercise/user/ai/api — discriminated unions (TS)
 │       ├── store/
 │       │   └── user.js         38 LOC — signal currentUser + login/logout
 │       ├── components/         Riusabili: Toast, Modal, WorkoutItem
@@ -195,7 +199,8 @@ docker-compose up --build
   forward-compat.
 - **Wizard draft**: `localStorage.wizDraft_<uid>`. Idem.
 - **Scoring user-visible**: ogni workout in storico mostra `score`. Prima di toccare
-  `scoring.js`, fai snapshot fixture di 20 workout reali e confronta output.
+  `src/scoring/scoring.ts` o i call-site di save/score, confronta l'output con
+  `src/scoring/__tests__/scoring.characterization.test.ts` (snapshot degli score).
 - **Domain `daemon.fit` NON registrato**, rebrand codebase deferred. Memoria
   `project_product_name`.
 
@@ -218,6 +223,7 @@ docker-compose up --build
 - Non rimuovere `runMigrations()` da `server/src/index.js`.
 - Non scrivere prompt AI fuori da `server/src/services/prompts/`.
 - Non aggiungere `let` globali in `src/`. Usa signals in `store/`.
-- Non aggiungere TypeScript senza discussione (deferred).
+- TS è adottato in `src/` (scoring, api, types). Nuovo codice `src/` può essere TS;
+  il legacy `js/` resta JS — niente migrazione TS di massa senza discussione.
 - Non eliminare js/ui.js finche' Train non e' migrato.
 - Non toccare le migration Sequelize esistenti — sempre add forward.
