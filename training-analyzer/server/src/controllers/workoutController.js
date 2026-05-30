@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const multer = require('multer');
 const { Workout } = require('../models');
 const { parseWorkoutFile } = require('../services/workoutImporter');
+const { validateWorkoutData } = require('../validation/workoutData');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -49,6 +50,11 @@ async function create(req, res, next) {
       return res.status(400).json({ error: { message: 'type and date are required' } });
     }
 
+    const valid = validateWorkoutData(type, data || {});
+    if (!valid.ok) {
+      return res.status(400).json({ error: { message: 'Invalid workout data', issues: valid.issues } });
+    }
+
     const workout = await Workout.create({
       userId: req.user.uid,
       type,
@@ -68,6 +74,17 @@ async function bulkCreate(req, res, next) {
     const { workouts } = req.body;
     if (!Array.isArray(workouts) || !workouts.length) {
       return res.status(400).json({ error: { message: 'workouts array is required' } });
+    }
+
+    for (let i = 0; i < workouts.length; i += 1) {
+      const w = workouts[i];
+      if (!w || typeof w !== 'object') {
+        return res.status(400).json({ error: { message: `workouts[${i}] must be an object` } });
+      }
+      const valid = validateWorkoutData(w.type, w.data || {});
+      if (!valid.ok) {
+        return res.status(400).json({ error: { message: `Invalid data in workouts[${i}]`, issues: valid.issues } });
+      }
     }
 
     const records = workouts.map((w) => ({
@@ -98,6 +115,10 @@ async function update(req, res, next) {
     if (date) updates.date = date;
     if (data) {
       updates.data = { ...workout.data, ...data };
+      const valid = validateWorkoutData(updates.type || workout.type, updates.data);
+      if (!valid.ok) {
+        return res.status(400).json({ error: { message: 'Invalid workout data', issues: valid.issues } });
+      }
       updates.score = data.scores?.overall ?? workout.score;
     }
 
@@ -126,8 +147,24 @@ async function importFile(req, res, next) {
   try {
     if (!req.file) return res.status(400).json({ error: { message: 'No file uploaded' } });
     const { records } = parseWorkoutFile(req.file, req.user.uid);
-    const created = await Workout.bulkCreate(records);
-    res.status(201).json({ imported: created.length });
+
+    // Importers are lenient: keep the valid rows, skip + report the rest, rather
+    // than failing the whole file on one malformed record.
+    const toCreate = [];
+    const skipped = [];
+    records.forEach((r, i) => {
+      if (!r.date) { skipped.push({ row: i, reason: 'missing date' }); return; }
+      const valid = validateWorkoutData(r.type, r.data || {});
+      if (!valid.ok) { skipped.push({ row: i, issues: valid.issues }); return; }
+      toCreate.push(r);
+    });
+
+    const created = toCreate.length ? await Workout.bulkCreate(toCreate) : [];
+    res.status(201).json({
+      imported: created.length,
+      skipped: skipped.length,
+      ...(skipped.length ? { skippedDetails: skipped.slice(0, 20) } : {}),
+    });
   } catch (err) {
     if (err.status === 400) return res.status(400).json({ error: { message: err.message } });
     next(err);
