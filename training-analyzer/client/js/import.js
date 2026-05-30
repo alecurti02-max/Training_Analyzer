@@ -4,19 +4,12 @@
 
 import { api } from './api.js';
 import { scoreWorkout, getAdvice } from './scoring.js';
+import { uid, todayStr, secondsToPace, formatDate } from '../src/lib/utils.js';
+import { toast } from '../src/lib/toast.js';
 
 // ==================== LOCAL HELPERS ====================
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function _wrapForAPI(workout) { const { type, date, ...rest } = workout; return { type, date, data: rest }; }
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function secondsToPace(s) { if(!s||s<=0)return'--'; const m=Math.floor(s/60),sec=Math.round(s%60); return m+':'+String(sec).padStart(2,'0'); }
-function formatDate(d) { return new Date(d).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}); }
-function toast(msg, type='') {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg; t.className = 'toast show' + (type ? ' ' + type : '');
-  setTimeout(() => t.className = 'toast', 3000);
-}
+// uid, todayStr, secondsToPace, formatDate from src/lib/utils.js; toast from src/lib/toast.js (top).
 
 // ==================== GPX IMPORT ====================
 export function handleGPXFiles(files, callbacks) {

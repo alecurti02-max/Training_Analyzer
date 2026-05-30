@@ -9,6 +9,7 @@
 
 import { api } from './api.js';
 import { destroyChart, storeChart, getChartTheme } from './charts.js';
+import { todayStr, formatDate } from '../src/lib/utils.js';
 
 // ---------- FIELD CONFIG (single source of truth) ----------
 export const FIELDS = [
@@ -87,8 +88,7 @@ export function setCaches({ weights, settings }) {
 }
 
 // ---------- HELPERS ----------
-function todayStr() { return new Date().toISOString().slice(0, 10); }
-function formatDate(d) { return new Date(d).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }); }
+// todayStr, formatDate from src/lib/utils.js (top).
 function fieldByKey(k) { return FIELDS.find((f) => f.key === k); }
 function fieldsInTab(tab) { return FIELDS.filter((f) => f.chart === tab); }
 function filterByRange(rows, rangeKey) {

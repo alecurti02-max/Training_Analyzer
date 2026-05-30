@@ -3,18 +3,10 @@
 // All Firebase refs replaced with API calls.
 
 import { api } from './api.js';
+import { toast } from '../src/lib/toast.js';
 
 // ==================== LOCAL HELPERS ====================
-function toast(msg, type='') {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg; t.className = 'toast show' + (type ? ' ' + type : '');
-  setTimeout(() => t.className = 'toast', 3000);
-}
-
-function formatDate(d) { return new Date(d).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}); }
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function daysBetween(d1,d2) { return Math.abs(Math.floor((new Date(d1)-new Date(d2))/86400000)); }
+// toast from src/lib/toast.js. timeAgo stays local below (friends-specific formatting).
 
 export function timeAgo(isoStr) {
   const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;

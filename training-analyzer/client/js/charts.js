@@ -1,15 +1,13 @@
 // ==================== CHARTS MODULE ====================
 // All chart/visualization functions. Chart.js accessed via window.Chart (CDN).
 
+import { todayStr, daysBetween, formatDate, getWeekStart, secondsToPace } from '../src/lib/utils.js';
+
 // Module-scoped chart instances
 const charts = {};
 
 // ==================== LOCAL HELPERS ====================
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function daysBetween(d1,d2) { return Math.abs(Math.floor((new Date(d1)-new Date(d2))/86400000)); }
-function formatDate(d) { return new Date(d).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}); }
-function getWeekStart(d) { const dt=new Date(d),day=dt.getDay(),diff=dt.getDate()-day+(day===0?-6:1); return new Date(dt.setDate(diff)).toISOString().slice(0,10); }
-function secondsToPace(s) { if(!s||s<=0)return'--'; const m=Math.floor(s/60),sec=Math.round(s%60); return m+':'+String(sec).padStart(2,'0'); }
+// todayStr, daysBetween, formatDate, getWeekStart, secondsToPace from src/lib/utils.js.
 
 // ==================== CORE HELPERS ====================
 export function destroyChart(key) {
