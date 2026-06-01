@@ -13,6 +13,7 @@ const { summariseSplits } = require('../src/services/ai/splitsSummary');
 const { slimWorkout, slimHistoryEntry } = require('../src/services/ai/slimmers');
 const { pickFieldsFromSpec } = require('../src/utils/crud');
 const { parseWorkoutFile } = require('../src/services/workoutImporter');
+const { validateWorkoutData } = require('../src/validation/workoutData');
 
 // ── safeNum / safeNumber ──
 test('safeNum returns null for invalid', () => {
@@ -213,4 +214,51 @@ test('parseWorkoutFile parses CSV grouped by date', () => {
 test('parseWorkoutFile throws on unsupported format', () => {
   const file = { originalname: 'foo.xlsx', buffer: Buffer.from('') };
   assert.throws(() => parseWorkoutFile(file, 'u'), /Unsupported file format/);
+});
+
+// ── validateWorkoutData (workouts.data JSONB guard) ──
+// Permissive by design: accepts real historical shapes (incl. string weights),
+// rejects only gross corruption (wrong containers, bad user-visible score).
+test('validateWorkoutData accepts a typical gym payload', () => {
+  const r = validateWorkoutData('gym', {
+    exercises: [{ name: 'Squat', muscle: 'Gambe', sets: [{ reps: 5, weight: 100 }] }],
+    scores: { overall: 8.4 },
+  });
+  assert.equal(r.ok, true);
+});
+test('validateWorkoutData accepts string weights (real-data quirk)', () => {
+  assert.equal(validateWorkoutData('gym', { exercises: [{ sets: [{ reps: 8, weight: '20' }] }] }).ok, true);
+});
+test('validateWorkoutData accepts unilateral sets and drops', () => {
+  const r = validateWorkoutData('gym', {
+    exercises: [{ isUnilateral: true, sets: [{ repsLeft: 10, weightLeft: 15, weightRight: 14, drops: [{ reps: 5, weight: 10 }] }] }],
+  });
+  assert.equal(r.ok, true);
+});
+test('validateWorkoutData accepts running/karting/generic + empty data', () => {
+  assert.equal(validateWorkoutData('running', { distance: 10, avghr: 150, scores: { overall: 7.6 } }).ok, true);
+  assert.equal(validateWorkoutData('karting', { bestLap: 50, avgLap: 52, track: 'Vairano' }).ok, true);
+  assert.equal(validateWorkoutData('yoga', { duration: 45, rpe: 4 }).ok, true);
+  assert.equal(validateWorkoutData('gym', {}).ok, true);
+  assert.equal(validateWorkoutData('gym', { scores: { overall: null } }).ok, true);
+});
+test('validateWorkoutData rejects non-object data', () => {
+  assert.equal(validateWorkoutData('gym', null).ok, false);
+  assert.equal(validateWorkoutData('gym', []).ok, false);
+  assert.equal(validateWorkoutData('gym', 'x').ok, false);
+});
+test('validateWorkoutData rejects wrong container shapes', () => {
+  assert.equal(validateWorkoutData('gym', { exercises: 'nope' }).ok, false);
+  assert.equal(validateWorkoutData('gym', { exercises: [{ sets: 'nope' }] }).ok, false);
+});
+test('validateWorkoutData rejects an out-of-range or non-numeric overall score', () => {
+  assert.equal(validateWorkoutData('gym', { scores: { overall: 99 } }).ok, false);
+  assert.equal(validateWorkoutData('gym', { scores: { overall: 'high' } }).ok, false);
+  assert.equal(validateWorkoutData('gym', { scores: { overall: NaN } }).ok, false);
+});
+test('validateWorkoutData returns issue paths on failure', () => {
+  const r = validateWorkoutData('gym', { scores: { overall: 99 } });
+  assert.equal(r.ok, false);
+  assert.ok(Array.isArray(r.issues) && r.issues.length >= 1);
+  assert.ok(r.issues[0].path.includes('scores'));
 });

@@ -46,10 +46,6 @@ function fmt(v, unit = '', dash = '—') {
   return unit ? `${v} ${unit}` : String(v);
 }
 
-function daysBetween(a, b) {
-  return Math.abs(Math.floor((new Date(a) - new Date(b)) / 86400000));
-}
-
 // Returns last value of `field` in measurements, plus delta vs first available value.
 function latestAndDelta(measurements, field) {
   const sorted = [...(measurements || [])]

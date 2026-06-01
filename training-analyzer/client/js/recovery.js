@@ -3,12 +3,13 @@
 // con upsert su (userId, date). Confronto vs target da Settings.
 
 import { api } from './api.js';
+import { todayStr } from '../src/lib/utils.js';
 
 let _nutrition = []; // sorted asc by date
 let _sleep = [];     // sorted asc by date
 let _settings = {};
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+// todayStr from src/lib/utils.js (top).
 function fmtDateShort(d) { return new Date(d).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }); }
 function toastMsg(msg, type = '') {
   if (window.__tsToast) window.__tsToast(msg, type);

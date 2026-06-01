@@ -14,6 +14,8 @@ import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, ex
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
 import { renderAdmin, setupAdminGating } from './admin.js';
 import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
+import { uid, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate, getWeekStart, daysBetween } from '../src/lib/utils.js';
+import { toast } from '../src/lib/toast.js';
 
 // ==================== GLOBAL STATE ====================
 let currentUser = null;
@@ -46,28 +48,8 @@ let liveSelectedType = '';
 let historyFilter = 'all';
 
 // ==================== HELPERS ====================
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-function toast(msg, type='') {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg; t.className = 'toast show' + (type ? ' ' + type : '');
-  setTimeout(() => t.className = 'toast', 3000);
-}
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function scoreColor(s) {
-  if (s >= 10) return 'var(--fuchsia-bright)';
-  if (s >= 9) return 'var(--fuchsia)';
-  if (s >= 8) return 'var(--green)';
-  if (s >= 7) return 'var(--light-green)';
-  if (s >= 6) return 'var(--yellow)';
-  if (s >= 4) return 'var(--orange)';
-  return 'var(--red)';
-}
-function paceToSeconds(p) { if(!p)return 0; const parts=String(p).split(':'); return parts.length===2?parseInt(parts[0])*60+parseInt(parts[1]):parseFloat(p)*60; }
-function secondsToPace(s) { if(!s||s<=0)return'--'; let m=Math.floor(s/60),sec=Math.round(s%60); if(sec===60){m+=1;sec=0;} return m+':'+String(sec).padStart(2,'0'); }
-function formatDate(d) { return new Date(d).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'}); }
-function getWeekStart(d) { const dt=new Date(d),day=dt.getDay(),diff=dt.getDate()-day+(day===0?-6:1); return new Date(dt.setDate(diff)).toISOString().slice(0,10); }
-function daysBetween(d1,d2) { return Math.abs(Math.floor((new Date(d1)-new Date(d2))/86400000)); }
+// uid, toast, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate,
+// getWeekStart, daysBetween are imported from src/lib/{utils,toast}.js (top of file).
 
 // ==================== DEFAULT EXERCISES ====================
 function getDefaultExercises() {

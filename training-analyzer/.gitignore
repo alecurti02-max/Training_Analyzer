@@ -8,3 +8,6 @@ server/uploads/
 # Vite build output (Fase 1+)
 client/dist/
 
+# Vite/Vitest transient config transpiles (left behind only on hard-kill)
+*.timestamp-*.mjs
+
