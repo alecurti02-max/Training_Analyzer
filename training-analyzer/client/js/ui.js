@@ -204,7 +204,9 @@ function showPage(page) {
   if(page==='body') { renderWeightPage(); populateSettingsUI(); }
   if(page==='recovery') { renderRecoveryPage({ settings: settingsCache, toast }); }
   if(page==='profile') { renderProfile(); renderFriendsPageLocal(); }
-  if(page==='train') { initLogWizard(); initLivePage(); }
+  if(page==='train') {
+    if (!mountTrainPreactIfEnabled()) { initLogWizard(); initLivePage(); }
+  }
   if(page==='setup') {
     renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect();
     populateSettingsUI(); renderSportsManager(); renderNotifications();
@@ -216,6 +218,47 @@ function showPage(page) {
     try { savedTab = localStorage.getItem('ta_tab_' + page); } catch(e) {}
     showTab(page, savedTab || PAGE_DEFAULT_TAB[page]);
   }
+}
+
+// ==================== TRAIN (Preact, flag-gated) ====================
+// When localStorage.ta_train_preact === '1', the Train page is rendered by the
+// Preact tree (src/pages/Train) instead of the legacy wizard/live functions. The
+// legacy #page-train markup is hidden (not removed) so flipping the flag off
+// restores the vanilla path with no reload. Returns true if it took over.
+function trainPreactEnabled() {
+  try { return localStorage.getItem('ta_train_preact') === '1'; } catch (e) { return false; }
+}
+function mountTrainPreactIfEnabled() {
+  if (!trainPreactEnabled() || !globalThis.Preact?.train) return false;
+  const pageEl = document.getElementById('page-train');
+  if (!pageEl) return false;
+  // Hide the legacy tab/markup children, mount Preact into a dedicated host.
+  let host = document.getElementById('train-preact-host');
+  if (!host) {
+    Array.from(pageEl.children).forEach((c) => { c.style.display = 'none'; });
+    host = document.createElement('div');
+    host.id = 'train-preact-host';
+    pageEl.appendChild(host);
+  }
+  globalThis.Preact.train.mount({
+    host,
+    data: {
+      workouts: workoutsCache,
+      settings: settingsCache,
+      exercises: exercisesCache || getDefaultExercises(),
+    },
+    bridge: {
+      saveWorkout,
+      getDefaultExercises,
+      // Mirror the legacy post-save: push to cache, toast, go to dashboard.
+      onSaved: (workout, message) => {
+        workoutsCache.push(workout);
+        if (message) toast(message, 'success');
+        showPage('dashboard');
+      },
+    },
+  });
+  return true;
 }
 
 function showTab(group, tab) {
