@@ -11,6 +11,7 @@ import {
 } from './pages/Profile/Profile.jsx';
 import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setup.jsx';
 import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
+import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 
 const root = document.getElementById('app');
 if (root) render(<App />, root);
@@ -38,4 +39,10 @@ globalThis.Preact.setup = {
 globalThis.Preact.body = {
   mountBmiBanner,
   unmount: unmountBody,
+};
+// Train (wizard + live) — behind the ta_train_preact flag in ui.js. Unlike the
+// snapshot pages above, Train owns its own interactive state once mounted.
+globalThis.Preact.train = {
+  mount: mountTrain,
+  unmount: unmountTrain,
 };
