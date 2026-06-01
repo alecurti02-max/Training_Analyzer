@@ -3,10 +3,13 @@
 PWA full-stack per tracciare allenamenti multi-sport (gym, running, karting, altri),
 analizzare progressi con AI, condividere con amici. Deploy Render + Neon Postgres.
 
-> **Stato refactor**: 8 fasi su 9 completate (Fase 7 Train migration deferred).
-> Vedi `docs/refactor-roadmap.md` per dettaglio. Strangler fig: il vecchio
-> `client/js/ui.js` convive con i nuovi componenti Preact; le pagine migrate
-> usano Preact, il wizard log + live session restano vanilla per ora.
+> **Stato refactor**: tutte le pagine principali su Preact. Il **Train (wizard +
+> live)** è ora in `src/pages/Train/` ed è **il default per tutti**; il codice
+> legacy in `ui.js` (wizard + live) resta come fallback dark-launched, attivabile
+> col kill-switch `localStorage.ta_train_preact='0'`. Strangler fig: il vecchio
+> `client/js/ui.js` convive ancora coi componenti Preact e fa da orchestratore.
+> Cancellare il blocco Train legacy da ui.js è il prossimo passo, dopo che il
+> nuovo ha girato in prod senza regressioni.
 
 ## Stack
 
@@ -121,9 +124,11 @@ handling (workout-item, hist-filter, ecc.) continua via global delegation in ui.
 
 ### Pagine NON ancora migrate a Preact
 
-- **Train (wizard log + live session)** — linee ui.js 285-944 (wizard) +
-  945-1640 (live). State complesso + draft localStorage + timer real-time.
-  Migrazione deferred a quando si tocca per una nuova feature.
+- **Train (wizard log + live session)** — MIGRATO a Preact in `src/pages/Train/`
+  (default-on; kill-switch `ta_train_preact='0'`). Logica pura verificata in
+  `src/pages/Train/logic/` (setModel, buildWorkout, liveTimer) + test. Il codice
+  legacy in `ui.js` (~285-944 wizard, ~945-1640 live) è ancora presente come
+  fallback — da rimuovere quando il nuovo è confermato stabile in prod.
 - **Exercise Library** (Setup tab) — linee ~2580-2770. CRUD esercizi con filtri.
 - **Friends** wrapper in ui.js — delega a js/friends.js già modulare.
 - **Progress, Body (oltre BMI), Recovery, Admin** — delegano già a moduli esterni
