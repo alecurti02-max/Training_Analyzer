@@ -31,6 +31,13 @@
 }
 :root[data-skin="carbon"] .btn-primary:active{ box-shadow:0 0 0 var(--accent-dark) !important; }
 
+/* Tab / sport-pill attivi: ombra rossa hardcoded → glow teal */
+:root[data-skin="carbon"] .bm-tab.active,
+:root[data-skin="carbon"] .tab.active,
+:root[data-skin="carbon"] .tab-btn.active{
+  box-shadow:0 2px 0 var(--accent-dark),0 6px 14px -4px var(--pulse-glow) !important;
+}
+
 /* Testo scuro su pill/active teal (contrasto AA) — esclude la nav (v2 = underline) */
 :root[data-skin="carbon"] .bm-tab.active,
 :root[data-skin="carbon"] .tab.active,

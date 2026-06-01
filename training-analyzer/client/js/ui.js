@@ -2047,9 +2047,10 @@ function showWorkoutDetail(id) {
   // Render HR chart if data exists
   const hrCanvas=document.getElementById('modal-hr-chart');
   if(hrCanvas&&w.hrSeries?.length){
+    const _hr=getComputedStyle(document.documentElement).getPropertyValue('--redline').trim()||'#FF2D46';
     new Chart(hrCanvas,{type:'line',data:{
       labels:w.hrSeries.map(p=>{const m=Math.floor(p.t/60);return m+'\'';} ),
-      datasets:[{data:w.hrSeries.map(p=>p.hr),borderColor:'#DC2626',backgroundColor:'rgba(220,38,38,.1)',fill:true,
+      datasets:[{data:w.hrSeries.map(p=>p.hr),borderColor:_hr,backgroundColor:_hr+'1A',fill:true,
         borderWidth:1.5,pointRadius:0,tension:.3}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#B0B4BE'}},
@@ -2493,6 +2494,7 @@ function renderAthleticDetail() {
     const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
     const textColor = isLight ? '#0E1014' : '#F4F5F8';
     const gridColor = isLight ? 'rgba(14,16,20,0.10)' : 'rgba(244,245,248,0.10)';
+    const _accRadar = getComputedStyle(document.documentElement).getPropertyValue('--pulse').trim() || '#00E5CE';
     storeChart('radarDetail', new Chart(canvasCtx, {
       type: 'radar',
       data: {
@@ -2500,10 +2502,10 @@ function renderAthleticDetail() {
         datasets: [{
           label: 'Profilo',
           data: radarValues.map((v) => Math.round(v * 10) / 10),
-          backgroundColor: 'rgba(225,29,44,0.15)',
-          borderColor: '#E11D2C',
-          pointBackgroundColor: '#E11D2C',
-          pointBorderColor: '#fff',
+          backgroundColor: _accRadar + '26',
+          borderColor: _accRadar,
+          pointBackgroundColor: _accRadar,
+          pointBorderColor: isLight ? '#fff' : '#0A0C0E',
           borderWidth: 2,
         }],
       },

@@ -18,7 +18,7 @@ export function App() {
         right: 12,
         padding: '8px 14px',
         borderRadius: 999,
-        background: 'var(--race, #E11D2C)',
+        background: 'var(--race, #00E5CE)',
         color: 'white',
         fontFamily: 'system-ui, sans-serif',
         fontSize: 13,
