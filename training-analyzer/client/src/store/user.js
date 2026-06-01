@@ -4,7 +4,7 @@
 // Don't mutate currentUser directly outside this module. Use login/logout/setUser.
 
 import { signal } from '@preact/signals';
-import { api, setTokens, clearTokens } from '@/lib/api.js';
+import { api, setTokens, clearTokens } from '@/lib/api';
 
 export const currentUser = signal(null);
 
