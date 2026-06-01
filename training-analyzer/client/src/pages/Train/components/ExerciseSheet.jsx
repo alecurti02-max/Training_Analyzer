@@ -23,7 +23,7 @@ export function ExerciseSheet({ open, exercises, onPick, onClose }) {
           type="text" class="bottom-sheet-search" placeholder="Cerca esercizio..."
           value={q} onInput={(e) => setQ(e.target.value)} autoFocus
         />
-        <div id="exercise-sheet-list">
+        <div class="exercise-sheet-list">
           {filtered.map((e) => (
             <div
               key={e.name} class="bs-exercise-item"

@@ -205,7 +205,10 @@ function showPage(page) {
   if(page==='recovery') { renderRecoveryPage({ settings: settingsCache, toast }); }
   if(page==='profile') { renderProfile(); renderFriendsPageLocal(); }
   if(page==='train') {
-    if (!mountTrainPreactIfEnabled()) { initLogWizard(); initLivePage(); }
+    // When the Preact Train takes over, it fully owns the page — return early so
+    // the PAGE_DEFAULT_TAB restore below doesn't re-show the hidden legacy markup.
+    if (mountTrainPreactIfEnabled()) return;
+    initLogWizard(); initLivePage();
   }
   if(page==='setup') {
     renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect();
@@ -232,14 +235,16 @@ function mountTrainPreactIfEnabled() {
   if (!trainPreactEnabled() || !globalThis.Preact?.train) return false;
   const pageEl = document.getElementById('page-train');
   if (!pageEl) return false;
-  // Hide the legacy tab/markup children, mount Preact into a dedicated host.
+  // Mount Preact into a dedicated host and hide every OTHER child of #page-train
+  // (the legacy tabs/wizard/live markup). Done on every visit — idempotent — because
+  // showTab() may have re-shown the legacy containers since the last mount.
   let host = document.getElementById('train-preact-host');
   if (!host) {
-    Array.from(pageEl.children).forEach((c) => { c.style.display = 'none'; });
     host = document.createElement('div');
     host.id = 'train-preact-host';
     pageEl.appendChild(host);
   }
+  Array.from(pageEl.children).forEach((c) => { c.style.display = c === host ? '' : 'none'; });
   globalThis.Preact.train.mount({
     host,
     data: {
