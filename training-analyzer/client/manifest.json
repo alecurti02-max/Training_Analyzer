@@ -4,8 +4,8 @@
   "description": "Traccia allenamenti, analizza progressi, confrontati con amici",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#16181D",
-  "theme_color": "#E11D2C",
+  "background_color": "#0A0C0E",
+  "theme_color": "#00B6A2",
   "icons": [
     { "src": "logo_ta.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
   ]
