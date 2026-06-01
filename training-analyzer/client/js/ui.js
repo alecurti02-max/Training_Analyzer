@@ -223,13 +223,14 @@ function showPage(page) {
   }
 }
 
-// ==================== TRAIN (Preact, flag-gated) ====================
-// When localStorage.ta_train_preact === '1', the Train page is rendered by the
-// Preact tree (src/pages/Train) instead of the legacy wizard/live functions. The
-// legacy #page-train markup is hidden (not removed) so flipping the flag off
-// restores the vanilla path with no reload. Returns true if it took over.
+// ==================== TRAIN (Preact, default-on) ====================
+// The Train page is rendered by the Preact tree (src/pages/Train) by default.
+// The legacy wizard/live functions remain in this file as a dark-launched
+// fallback: set localStorage.ta_train_preact = '0' (kill-switch) to restore the
+// vanilla path with no reload. The legacy #page-train markup is hidden (not
+// removed) so the switch works both ways. Returns true if Preact took over.
 function trainPreactEnabled() {
-  try { return localStorage.getItem('ta_train_preact') === '1'; } catch (e) { return false; }
+  try { return localStorage.getItem('ta_train_preact') !== '0' && !!globalThis.Preact?.train; } catch (e) { return !!globalThis.Preact?.train; }
 }
 function mountTrainPreactIfEnabled() {
   if (!trainPreactEnabled() || !globalThis.Preact?.train) return false;
