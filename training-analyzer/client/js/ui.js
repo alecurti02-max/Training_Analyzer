@@ -1697,6 +1697,52 @@ function renderDashboard() {
   renderHeatmap(workouts);
   renderWeeklyChart(workouts);
   renderRadarChart(workouts);
+  updateTelemetryTicker();
+}
+
+// Telemetry ticker (skin Carbon): nastro dati live sotto la nav, agganciato
+// alle cache reali. Aggiornato a ogni render della Dashboard.
+function updateTelemetryTicker() {
+  const track = document.getElementById('app-ticker-track');
+  if (!track) return;
+  const now = todayStr();
+  const l7 = workoutsCache.filter(w => daysBetween(now, w.date) <= 7);
+  const l30 = workoutsCache.filter(w => daysBetween(now, w.date) <= 30);
+  const seg = [];
+  if (!workoutsCache.length) {
+    seg.push('<b>●</b> Telemetria', 'Registra il primo allenamento per attivare i dati live');
+  } else {
+    const streak = calculateStreak(workoutsCache).current;
+    const goal = settingsCache?.weekgoal || 4;
+    const weekKm = Math.round(l7.filter(w => w.type === 'running').reduce((s, w) => s + (w.distance || 0), 0) * 10) / 10;
+    const weekT = Math.round(l7.filter(w => w.type === 'gym').reduce((s, w) => s + (w._tonnage || 0), 0) / 1000 * 10) / 10;
+    const scored = l30.filter(w => w.scores?.overall);
+    const avg30 = scored.length ? scored.reduce((s, w) => s + w.scores.overall, 0) / scored.length : 0;
+    const last = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    seg.push('<b>●</b> Live');
+    seg.push(`Streak <b>${streak} gg</b>`);
+    seg.push(`Settimana <b>${l7.length}/${goal}</b>`);
+    if (avg30) seg.push(`Score 30gg <b>${avg30.toFixed(1)}</b>`);
+    if (weekKm) seg.push(`Corsa 7gg <b>${weekKm} km</b>`);
+    if (weekT) seg.push(`Tonnellaggio 7gg <b>${weekT} t</b>`);
+    if (last) {
+      const tn = SPORT_TEMPLATES[last.type]?.name || last.type;
+      let d = '';
+      if (last.type === 'running' && last.distance) d = `${last.distance} km`;
+      else if (last.type === 'gym' && last._tonnage) d = `${Math.round(last._tonnage / 1000 * 10) / 10} t`;
+      else if (last.avghr) d = `FC ${last.avghr}`;
+      const sc = last.scores?.overall != null ? ` · <b>${last.scores.overall.toFixed(1)}</b>` : '';
+      seg.push(`Ultimo · ${tn}${d ? ' · ' + d : ''}${sc}`);
+    }
+    seg.push(`Totale <b>${workoutsCache.length}</b>`);
+    if (settingsCache?.maxhr) seg.push(`<span class="rl">▲ Redline ${settingsCache.maxhr} bpm</span>`);
+  }
+  const one = '<span class="seq">&nbsp;' + seg.join(' &nbsp;·&nbsp; ') + ' &nbsp;·&nbsp;&nbsp;</span>';
+  track.innerHTML = one + one;
+  requestAnimationFrame(() => {
+    const w = track.scrollWidth / 2;
+    if (w > 0) track.style.animationDuration = Math.max(24, Math.round(w / 55)) + 's';
+  });
 }
 
 function workoutItemHTML(w) {

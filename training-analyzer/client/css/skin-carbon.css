@@ -78,3 +78,26 @@
 
 /* --- Nav brand mono-tick e logo radius coerenti col cockpit --- */
 :root[data-skin="carbon"] .nav-avatar{ box-shadow:0 0 12px -4px var(--pulse-glow); }
+
+/* --- Telemetry ticker: nastro dati live sotto la nav (solo skin Carbon) --- */
+.app-ticker{ display:none; }
+:root[data-skin="carbon"] .app-ticker{
+  display:block; position:relative; overflow:hidden; white-space:nowrap;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--bg2) 82%, transparent);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+}
+:root[data-skin="carbon"] .app-ticker::before,
+:root[data-skin="carbon"] .app-ticker::after{ content:""; position:absolute; top:0; bottom:0; width:64px; z-index:1; pointer-events:none; }
+:root[data-skin="carbon"] .app-ticker::before{ left:0; background:linear-gradient(90deg, var(--bg), transparent); }
+:root[data-skin="carbon"] .app-ticker::after{ right:0; background:linear-gradient(270deg, var(--bg), transparent); }
+:root[data-skin="carbon"] .app-ticker-track{
+  display:inline-block; padding:6px 0; font-family:var(--font-mono);
+  font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text2);
+  animation:app-ticker-scroll 60s linear infinite; will-change:transform;
+}
+:root[data-skin="carbon"] .app-ticker-track b{ color:var(--accent); font-weight:600; }
+:root[data-skin="carbon"] .app-ticker-track .rl{ color:var(--redline); }
+:root[data-skin="carbon"] .app-ticker:hover .app-ticker-track{ animation-play-state:paused; }
+@keyframes app-ticker-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+@media (prefers-reduced-motion: reduce){ :root[data-skin="carbon"] .app-ticker{ display:none; } }
