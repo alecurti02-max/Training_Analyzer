@@ -1697,6 +1697,52 @@ function renderDashboard() {
   renderHeatmap(workouts);
   renderWeeklyChart(workouts);
   renderRadarChart(workouts);
+  updateTelemetryTicker();
+}
+
+// Telemetry ticker (skin Carbon): nastro dati live sotto la nav, agganciato
+// alle cache reali. Aggiornato a ogni render della Dashboard.
+function updateTelemetryTicker() {
+  const track = document.getElementById('app-ticker-track');
+  if (!track) return;
+  const now = todayStr();
+  const l7 = workoutsCache.filter(w => daysBetween(now, w.date) <= 7);
+  const l30 = workoutsCache.filter(w => daysBetween(now, w.date) <= 30);
+  const seg = [];
+  if (!workoutsCache.length) {
+    seg.push('<b>●</b> Telemetria', 'Registra il primo allenamento per attivare i dati live');
+  } else {
+    const streak = calculateStreak(workoutsCache).current;
+    const goal = settingsCache?.weekgoal || 4;
+    const weekKm = Math.round(l7.filter(w => w.type === 'running').reduce((s, w) => s + (w.distance || 0), 0) * 10) / 10;
+    const weekT = Math.round(l7.filter(w => w.type === 'gym').reduce((s, w) => s + (w._tonnage || 0), 0) / 1000 * 10) / 10;
+    const scored = l30.filter(w => w.scores?.overall);
+    const avg30 = scored.length ? scored.reduce((s, w) => s + w.scores.overall, 0) / scored.length : 0;
+    const last = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    seg.push('<b>●</b> Live');
+    seg.push(`Streak <b>${streak} gg</b>`);
+    seg.push(`Settimana <b>${l7.length}/${goal}</b>`);
+    if (avg30) seg.push(`Score 30gg <b>${avg30.toFixed(1)}</b>`);
+    if (weekKm) seg.push(`Corsa 7gg <b>${weekKm} km</b>`);
+    if (weekT) seg.push(`Tonnellaggio 7gg <b>${weekT} t</b>`);
+    if (last) {
+      const tn = SPORT_TEMPLATES[last.type]?.name || last.type;
+      let d = '';
+      if (last.type === 'running' && last.distance) d = `${last.distance} km`;
+      else if (last.type === 'gym' && last._tonnage) d = `${Math.round(last._tonnage / 1000 * 10) / 10} t`;
+      else if (last.avghr) d = `FC ${last.avghr}`;
+      const sc = last.scores?.overall != null ? ` · <b>${last.scores.overall.toFixed(1)}</b>` : '';
+      seg.push(`Ultimo · ${tn}${d ? ' · ' + d : ''}${sc}`);
+    }
+    seg.push(`Totale <b>${workoutsCache.length}</b>`);
+    if (settingsCache?.maxhr) seg.push(`<span class="rl">▲ Redline ${settingsCache.maxhr} bpm</span>`);
+  }
+  const one = '<span class="seq">&nbsp;' + seg.join(' &nbsp;·&nbsp; ') + ' &nbsp;·&nbsp;&nbsp;</span>';
+  track.innerHTML = one + one;
+  requestAnimationFrame(() => {
+    const w = track.scrollWidth / 2;
+    if (w > 0) track.style.animationDuration = Math.max(24, Math.round(w / 55)) + 's';
+  });
 }
 
 function workoutItemHTML(w) {
@@ -2047,9 +2093,10 @@ function showWorkoutDetail(id) {
   // Render HR chart if data exists
   const hrCanvas=document.getElementById('modal-hr-chart');
   if(hrCanvas&&w.hrSeries?.length){
+    const _hr=getComputedStyle(document.documentElement).getPropertyValue('--redline').trim()||'#FF2D46';
     new Chart(hrCanvas,{type:'line',data:{
       labels:w.hrSeries.map(p=>{const m=Math.floor(p.t/60);return m+'\'';} ),
-      datasets:[{data:w.hrSeries.map(p=>p.hr),borderColor:'#DC2626',backgroundColor:'rgba(220,38,38,.1)',fill:true,
+      datasets:[{data:w.hrSeries.map(p=>p.hr),borderColor:_hr,backgroundColor:_hr+'1A',fill:true,
         borderWidth:1.5,pointRadius:0,tension:.3}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{display:true,ticks:{maxTicksLimit:8,font:{size:10},color:'#B0B4BE'}},
@@ -2493,6 +2540,7 @@ function renderAthleticDetail() {
     const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
     const textColor = isLight ? '#0E1014' : '#F4F5F8';
     const gridColor = isLight ? 'rgba(14,16,20,0.10)' : 'rgba(244,245,248,0.10)';
+    const _accRadar = getComputedStyle(document.documentElement).getPropertyValue('--pulse').trim() || '#00E5CE';
     storeChart('radarDetail', new Chart(canvasCtx, {
       type: 'radar',
       data: {
@@ -2500,10 +2548,10 @@ function renderAthleticDetail() {
         datasets: [{
           label: 'Profilo',
           data: radarValues.map((v) => Math.round(v * 10) / 10),
-          backgroundColor: 'rgba(225,29,44,0.15)',
-          borderColor: '#E11D2C',
-          pointBackgroundColor: '#E11D2C',
-          pointBorderColor: '#fff',
+          backgroundColor: _accRadar + '26',
+          borderColor: _accRadar,
+          pointBackgroundColor: _accRadar,
+          pointBorderColor: isLight ? '#fff' : '#0A0C0E',
           borderWidth: 2,
         }],
       },

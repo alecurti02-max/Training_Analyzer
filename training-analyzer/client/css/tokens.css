@@ -377,3 +377,103 @@
   0%, 100% { box-shadow: 0 6px 0 var(--pulse-deep), 0 20px 40px -8px var(--pulse-glow), 0 0 0 0 var(--pulse-glow), inset 0 1px 0 rgba(255,255,255,0.22); }
   50%      { box-shadow: 0 6px 0 var(--pulse-deep), 0 20px 40px -8px var(--pulse-glow), 0 0 0 14px transparent, inset 0 1px 0 rgba(255,255,255,0.22); }
 }
+
+/* ============================================================================
+   CARBON COCKPIT — skin token layer  (switch: html[data-skin="carbon"])
+   ----------------------------------------------------------------------------
+   Default-on; escape hatch: localStorage.ta_skin='pista' (rimette Pista/Editorial).
+   Strategia: ri-mappa SIA gli alias legacy (--accent/--race/--green…) SIA i token
+   --v2-* (l'app live è Editorial-v2, tutta token-driven) ai valori Carbon → l'intera
+   app diventa dark+teal "gratis". Mossa chiave: --race (era il *fill* del brand in
+   ~54 punti) → TEAL; il rosso vive solo in --redline (danger/live).
+   Specificità: i blocchi [data-theme] sono (0,3,0) per battere il blocco v2 dark
+   (:root[data-active-page][data-theme="dark"], 0,3,0) che sta più in alto nel file.
+   ============================================================================ */
+:root[data-skin="carbon"]{
+  /* sorgente Carbon */
+  --cc-carbon-0:#0A0C0E; --cc-carbon-1:#0F1316; --cc-carbon-2:#161B20; --cc-carbon-3:#1E252B; --cc-sink:#06080A;
+  --cc-ink-0:#EAF2F1; --cc-ink-1:#9AADAB; --cc-ink-2:#5C6B69;
+  --cc-teal:#00E5CE; --cc-teal-deep:#00A593; --cc-mint:#5FF3DF;
+  --cc-cyan:#38BDF8; --cc-amber:#FFC53D; --cc-redline:#FF2D46; --cc-redline-deep:#C81E33;
+  --cc-on-teal:#04201D; --teal-glow:rgba(0,229,206,.45);
+
+  /* fonts (display industriale + mono telemetria) */
+  --font-heading:'Big Shoulders Display','Saira Condensed','Arial Narrow',sans-serif;
+  --font-display:var(--font-heading);
+
+  /* surfaces / text */
+  --bg:#0A0C0E; --bg2:#0F1316; --bg3:#161B20;
+  --text:#EAF2F1; --text2:#9AADAB;
+  --border:rgba(234,242,241,.10); --border-strong:rgba(234,242,241,.22);
+  --card-shadow:0 1px 0 rgba(0,229,206,.05),0 18px 44px -22px rgba(0,0,0,.9);
+  --shadow-lg:0 2px 0 rgba(0,229,206,.08),0 36px 80px -28px rgba(0,0,0,.95);
+  --nav-bg:rgba(10,12,14,.8); --overlay:rgba(0,0,0,.62);
+
+  /* brand → teal ; redline = unico rosso */
+  --race:#00E5CE; --race-deep:#00A593; --accent:#00E5CE; --accent-dark:#00A593;
+  --accent-light:rgba(0,229,206,.16); --accent-bg:rgba(0,229,206,.08); --accent-bg2:rgba(0,229,206,.18);
+  --pulse:#00E5CE; --pulse-deep:#00A593; --pulse-glow:rgba(0,229,206,.5);
+  --redline:#FF2D46; --danger:#FF2D46; --red:#FF2D46; --crimson:#FF2D46;
+  --green:#34E0A1; --light-green:#7FF7E6; --cyan:#38BDF8; --blue:#38BDF8; --aqua:#38BDF8; --volt:#34E0A1;
+  --orange:#FFC53D; --solar:#FFC53D; --yellow:#FFC53D; --amber:#FFC53D;
+  --plasma:#00E5CE; --fuchsia:#00E5CE; --fuchsia-bright:#5FF3DF;
+  --bg-glow-warm:rgba(0,229,206,.16); --bg-glow-cool:rgba(56,189,248,.10); --bg-glow-electric:rgba(0,229,206,.08);
+  --grain-blend:overlay;
+
+  /* --v2-* → Carbon (l'app live è Editorial-v2: ridipinge nav, card, header) */
+  --v2-bg:#0A0C0E; --v2-bg-elev:#0F1316; --v2-bg-sunk:#06080A;
+  --v2-text:#EAF2F1; --v2-text-display:#EAF2F1; --v2-text-muted:#9AADAB; --v2-text-faint:#5C6B69;
+  --v2-border:rgba(234,242,241,.10); --v2-border-strong:rgba(234,242,241,.22); --v2-rule:rgba(234,242,241,.08);
+  --v2-accent:#00E5CE; --v2-accent-soft:rgba(0,229,206,.10);
+  --v2-sport-running:#34E0A1; --v2-sport-cycling:#38BDF8; --v2-sport-karting:#FFC53D;
+  --v2-highlight:#00E5CE;
+  --v2-shadow-hover:0 1px 2px rgba(0,0,0,.5),0 14px 34px -18px rgba(0,0,0,.7);
+  --v2-font-display:'Big Shoulders Display','Arial Narrow',sans-serif;
+  --v2-font-num:'Big Shoulders Display','Arial Narrow',sans-serif;
+  --v2-font-body:'Manrope',system-ui,sans-serif;
+  --v2-font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+/* re-afferma i token che il blocco v2-dark (0,3,0) sovrascrive */
+:root[data-skin="carbon"][data-theme="dark"]{
+  --v2-bg:#0A0C0E; --v2-bg-elev:#0F1316; --v2-bg-sunk:#06080A;
+  --v2-text:#EAF2F1; --v2-text-display:#EAF2F1; --v2-text-muted:#9AADAB; --v2-text-faint:#5C6B69;
+  --v2-border:rgba(234,242,241,.10); --v2-border-strong:rgba(234,242,241,.22); --v2-rule:rgba(234,242,241,.08);
+  --v2-accent-soft:rgba(0,229,206,.10);
+  --v2-sport-running:#34E0A1; --v2-sport-cycling:#38BDF8; --v2-sport-karting:#FFC53D;
+  --v2-highlight:#00E5CE;
+  --v2-shadow-hover:0 1px 2px rgba(0,0,0,.5),0 14px 34px -18px rgba(0,0,0,.7);
+  --race-deep:#00A593; --light-green:#7FF7E6;
+}
+
+/* tema chiaro Carbon (secondario): teal più profondo, testo scuro su teal */
+:root[data-skin="carbon"][data-theme="light"]{
+  --cc-carbon-0:#E8EDEC; --cc-carbon-1:#FFFFFF; --cc-carbon-2:#F3F7F6; --cc-carbon-3:#E9EFEE; --cc-sink:#DDE4E3;
+  --cc-ink-0:#08130F; --cc-ink-1:#42534F; --cc-ink-2:#7C8B87;
+  --cc-teal:#00B6A2; --cc-teal-deep:#007E70; --cc-mint:#13C9AE; --cc-on-teal:#FFFFFF;
+  --teal-glow:rgba(0,182,162,.3);
+
+  --bg:#E8EDEC; --bg2:#FFFFFF; --bg3:#F3F7F6;
+  --text:#08130F; --text2:#42534F;
+  --border:rgba(8,19,15,.10); --border-strong:rgba(8,19,15,.24);
+  --card-shadow:0 1px 0 rgba(0,150,135,.05),0 16px 36px -22px rgba(8,19,15,.4);
+  --shadow-lg:0 2px 0 rgba(0,150,135,.08),0 30px 64px -26px rgba(8,19,15,.5);
+  --nav-bg:rgba(232,237,236,.82); --overlay:rgba(8,19,15,.42);
+
+  --race:#00B6A2; --race-deep:#007E70; --accent:#00B6A2; --accent-dark:#007E70;
+  --accent-light:rgba(0,182,162,.16); --accent-bg:rgba(0,182,162,.10); --accent-bg2:rgba(0,182,162,.20);
+  --pulse:#00B6A2; --pulse-deep:#007E70; --pulse-glow:rgba(0,182,162,.4);
+  --redline:#E11D3A; --danger:#E11D3A; --red:#E11D3A; --crimson:#E11D3A;
+  --green:#15A06E; --light-green:#13C9AE; --cyan:#0E8FD6; --blue:#0E8FD6; --aqua:#0E8FD6; --volt:#15A06E;
+  --orange:#C98800; --solar:#C98800; --yellow:#C98800; --amber:#C98800;
+  --plasma:#00B6A2; --fuchsia:#00B6A2; --fuchsia-bright:#13C9AE;
+  --bg-glow-warm:rgba(0,182,162,.12); --bg-glow-cool:rgba(14,143,214,.08); --bg-glow-electric:rgba(0,182,162,.06);
+  --grain-blend:multiply;
+
+  --v2-bg:#E8EDEC; --v2-bg-elev:#FFFFFF; --v2-bg-sunk:#DDE4E3;
+  --v2-text:#08130F; --v2-text-display:#08130F; --v2-text-muted:#42534F; --v2-text-faint:#7C8B87;
+  --v2-border:rgba(8,19,15,.12); --v2-border-strong:rgba(8,19,15,.24); --v2-rule:rgba(8,19,15,.08);
+  --v2-accent:#00B6A2; --v2-accent-soft:rgba(0,182,162,.10);
+  --v2-sport-running:#15A06E; --v2-sport-cycling:#0E8FD6; --v2-sport-karting:#C98800;
+  --v2-highlight:#00B6A2;
+}

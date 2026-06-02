@@ -64,7 +64,7 @@ export function getBodyFatTint(bodyFat, gender, age) {
   if (bodyFat <= t.fit) return { color: '#34D399', label: 'In forma', tone: 'green' };
   if (bodyFat <= t.med) return { color: '#FFD60A', label: 'Nella media', tone: 'yellow' };
   if (bodyFat <= t.acc) return { color: '#FB923C', label: 'Accettabile', tone: 'yellow' };
-  return { color: '#E11D2C', label: 'Sopra la soglia', tone: 'red' };
+  return { color: '#FF2D46', label: 'Sopra la soglia', tone: 'red' };
 }
 
 // ==================== VISCERAL FAT TINT ====================
@@ -73,7 +73,7 @@ function getVisceralTint(visceralFat) {
   if (visceralFat <= 9)  return { color: '#10B981', label: 'Sano', opacity: 0.25 + visceralFat * 0.04 };
   if (visceralFat <= 12) return { color: '#FFD60A', label: 'Borderline', opacity: 0.55 };
   if (visceralFat <= 14) return { color: '#FB923C', label: 'Elevato', opacity: 0.75 };
-  return { color: '#E11D2C', label: 'Critico', opacity: 0.9 };
+  return { color: '#FF2D46', label: 'Critico', opacity: 0.9 };
 }
 
 // ==================== WHTR TINT ====================
@@ -83,7 +83,7 @@ function getWhtrTint(whtr) {
   if (whtr <= 0.50) return { color: '#10B981', label: 'Sano' };
   if (whtr <= 0.55) return { color: '#FFD60A', label: 'Borderline' };
   if (whtr <= 0.60) return { color: '#FB923C', label: 'Elevato' };
-  return { color: '#E11D2C', label: 'Critico' };
+  return { color: '#FF2D46', label: 'Critico' };
 }
 
 // ==================== SVG SILHOUETTE ====================

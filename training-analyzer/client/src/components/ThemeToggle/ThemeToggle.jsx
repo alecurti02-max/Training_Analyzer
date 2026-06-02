@@ -7,10 +7,12 @@
 import { signal, effect } from '@preact/signals';
 
 const STORAGE_KEY = 'ta_theme';
-const systemPrefersDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+// dark-first (skin Carbon): solo una preferenza OS esplicitamente "light" sceglie light,
+// altrimenti dark. Deve combaciare con lo script anti-FOUC in index.html.
+const systemPrefersLight = () => window.matchMedia('(prefers-color-scheme: light)').matches;
 
 const initialTheme = localStorage.getItem(STORAGE_KEY)
-  || (systemPrefersDark() ? 'dark' : 'light');
+  || (systemPrefersLight() ? 'light' : 'dark');
 
 export const themeSignal = signal(initialTheme);
 

@@ -113,8 +113,8 @@ function renderSignupsChart(signupsDaily) {
       datasets: [{
         label: 'Nuovi utenti',
         data,
-        borderColor: 'rgba(225,29,44,1)',
-        backgroundColor: 'rgba(225,29,44,0.15)',
+        borderColor: theme.pulse,
+        backgroundColor: theme.pulseAlpha15,
         fill: true,
         tension: 0.3,
         pointRadius: 3,
@@ -134,7 +134,7 @@ function renderSignupsChart(signupsDaily) {
 }
 
 const SPORT_COLORS = [
-  'rgba(225,29,44,0.85)',   /* race */
+  'rgba(0,229,206,0.85)',   /* teal */
   'rgba(34,211,238,0.85)',  /* cyan */
   'rgba(16,185,129,0.85)',  /* green */
   'rgba(255,214,10,0.85)',  /* yellow */
@@ -197,7 +197,7 @@ async function renderUsers(page) {
       : (u.displayName || '—');
     const isAdmin = u.role === 'admin';
     const badge = isAdmin
-      ? '<span style="background:rgba(225,29,44,0.15);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">ADMIN</span>'
+      ? '<span style="background:rgba(0,229,206,0.15);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700">ADMIN</span>'
       : '';
     const provIcon = u.provider === 'google' ? 'Google' : 'Email';
     return `<tr>

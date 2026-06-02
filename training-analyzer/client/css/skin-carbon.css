@@ -1,0 +1,103 @@
+/* ============================================================================
+ * SKIN CARBON — override mirati per i valori HARDCODED che il remap dei token
+ * non raggiunge. Tutto sotto :root[data-skin="carbon"]; importato DOPO
+ * style.css + dashboard-v2.css così vince in cascata. Reversibile (ta_skin='pista').
+ * I colori restano guidati dai token (var(--pulse)/var(--accent)) dove possibile,
+ * così il tema light Carbon funziona senza duplicare regole.
+ * ========================================================================== */
+
+/* --- Sfondo: glow teal carbon al posto dei radial rosso/oro editoriali --- */
+:root[data-skin="carbon"] body,
+:root[data-skin="carbon"][data-active-page] body{
+  background:
+    radial-gradient(ellipse 120% 90% at 50% -10%, var(--bg-glow-warm) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 60% at 95% 105%, var(--bg-glow-cool) 0%, transparent 60%),
+    var(--bg) !important;
+  background-attachment:fixed !important;
+}
+:root[data-skin="carbon"][data-active-page] body::after{ mix-blend-mode:overlay !important; opacity:.07 !important; }
+/* striping diagonale legacy → teal tenue (visibile solo dove v2 non lo spegne, es. login) */
+:root[data-skin="carbon"] body::before{
+  background-image:repeating-linear-gradient(115deg,transparent 0 80px,rgba(0,229,206,.03) 80px 81px,transparent 81px 160px) !important;
+}
+
+/* --- Bottone primario: glow rosso hardcoded → teal; testo scuro su teal --- */
+:root[data-skin="carbon"] .btn-primary{
+  color:var(--cc-on-teal) !important;
+  box-shadow:0 2px 0 var(--accent-dark),0 8px 22px -6px var(--pulse-glow) !important;
+}
+:root[data-skin="carbon"] .btn-primary:hover{
+  box-shadow:0 4px 0 var(--accent-dark),0 14px 30px -8px var(--pulse-glow) !important;
+}
+:root[data-skin="carbon"] .btn-primary:active{ box-shadow:0 0 0 var(--accent-dark) !important; }
+
+/* Tab / sport-pill attivi: ombra rossa hardcoded → glow teal */
+:root[data-skin="carbon"] .bm-tab.active,
+:root[data-skin="carbon"] .tab.active,
+:root[data-skin="carbon"] .tab-btn.active{
+  box-shadow:0 2px 0 var(--accent-dark),0 6px 14px -4px var(--pulse-glow) !important;
+}
+
+/* Testo scuro su pill/active teal (contrasto AA) — esclude la nav (v2 = underline) */
+:root[data-skin="carbon"] .bm-tab.active,
+:root[data-skin="carbon"] .tab.active,
+:root[data-skin="carbon"] .tab-btn.active,
+:root[data-skin="carbon"] .filter-btn.active,
+:root[data-skin="carbon"] .lib-filter-btn.active,
+:root[data-skin="carbon"] .btn-follow:not(.following),
+:root[data-skin="carbon"] .btn-fatto,
+:root[data-skin="carbon"] .live-fab{
+  color:var(--cc-on-teal) !important;
+}
+
+/* --- Analisi AI: gradienti viola #8a5cff → teal/mint --- */
+:root[data-skin="carbon"] .ana-card-ai::before,
+:root[data-skin="carbon"] .ana-badge,
+:root[data-skin="carbon"] .ana-cta{
+  background:linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--cc-mint))) !important;
+}
+:root[data-skin="carbon"] .ana-badge,
+:root[data-skin="carbon"] .ana-cta{ color:var(--cc-on-teal) !important; }
+
+/* --- Profilo: ombra rossa hardcoded sull'avatar → teal --- */
+:root[data-skin="carbon"] .profile-avatar-lg{
+  box-shadow:0 8px 24px -6px var(--pulse-glow) !important;
+}
+
+/* --- Live session: il cronometro è un momento "redline" --- */
+:root[data-skin="carbon"] .live-timer{ color:var(--redline) !important; }
+:root[data-skin="carbon"] .live-rest-time{ color:var(--text) !important; }
+
+/* --- Card glassy + hairline (rifinitura carbon su tutte le .card) --- */
+:root[data-skin="carbon"] .card{
+  background-image:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.004));
+}
+:root[data-skin="carbon"][data-theme="light"] .card{
+  background-image:linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,.2));
+}
+
+/* --- Nav brand mono-tick e logo radius coerenti col cockpit --- */
+:root[data-skin="carbon"] .nav-avatar{ box-shadow:0 0 12px -4px var(--pulse-glow); }
+
+/* --- Telemetry ticker: nastro dati live sotto la nav (solo skin Carbon) --- */
+.app-ticker{ display:none; }
+:root[data-skin="carbon"] .app-ticker{
+  display:block; position:relative; overflow:hidden; white-space:nowrap;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--bg2) 82%, transparent);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+}
+:root[data-skin="carbon"] .app-ticker::before,
+:root[data-skin="carbon"] .app-ticker::after{ content:""; position:absolute; top:0; bottom:0; width:64px; z-index:1; pointer-events:none; }
+:root[data-skin="carbon"] .app-ticker::before{ left:0; background:linear-gradient(90deg, var(--bg), transparent); }
+:root[data-skin="carbon"] .app-ticker::after{ right:0; background:linear-gradient(270deg, var(--bg), transparent); }
+:root[data-skin="carbon"] .app-ticker-track{
+  display:inline-block; padding:6px 0; font-family:var(--font-mono);
+  font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text2);
+  animation:app-ticker-scroll 60s linear infinite; will-change:transform;
+}
+:root[data-skin="carbon"] .app-ticker-track b{ color:var(--accent); font-weight:600; }
+:root[data-skin="carbon"] .app-ticker-track .rl{ color:var(--redline); }
+:root[data-skin="carbon"] .app-ticker:hover .app-ticker-track{ animation-play-state:paused; }
+@keyframes app-ticker-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+@media (prefers-reduced-motion: reduce){ :root[data-skin="carbon"] .app-ticker{ display:none; } }

@@ -9,7 +9,7 @@ import { calcTonnage, getRecoveryStatus, calculateStreak } from './scoring.js';
 
 // ---------- THEME (CSS var → RGB hex, jsPDF can't read CSS) ----------
 const COLORS = {
-  red: '#E11D2C',
+  red: '#00A593',
   green: '#10B981',
   yellow: '#FFD60A',
   orange: '#FB923C',
@@ -332,7 +332,7 @@ async function renderFitnessProfileSection(doc, ctx) {
       datasets: [{
         label: 'Profilo',
         data: values,
-        backgroundColor: 'rgba(225,29,44,0.20)',
+        backgroundColor: 'rgba(0,165,147,0.20)',
         borderColor: COLORS.red,
         borderWidth: 2,
         pointBackgroundColor: COLORS.red,
@@ -407,7 +407,7 @@ async function renderTrendChartsSection(doc, ctx) {
   const charts = [
     {
       title: 'Peso (kg)',
-      data: { labels: weights.map((w) => w.date.slice(5)), datasets: [{ label: 'kg', data: weights.map((w) => w.value), borderColor: COLORS.red, backgroundColor: 'rgba(225,29,44,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
+      data: { labels: weights.map((w) => w.date.slice(5)), datasets: [{ label: 'kg', data: weights.map((w) => w.value), borderColor: COLORS.red, backgroundColor: 'rgba(0,165,147,0.15)', tension: 0.3, fill: true, pointRadius: 2 }] },
       empty: !weights.length,
     },
     {
