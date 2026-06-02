@@ -17,7 +17,15 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
+        // 'sha256-…' = hash dello <script> inline anti-FOUC in client/index.html,
+        // che imposta data-theme + data-skin PRIMA del primo paint. Senza questo,
+        // la CSP blocca l'inline e lo skin "carbon" non si attiva (resta Pista/v2).
+        // AGGIORNARE questo hash se quel blocco <script> cambia anche di un byte.
+        scriptSrc: [
+          "'self'",
+          'https://cdnjs.cloudflare.com',
+          "'sha256-hxQEWGINfHZcWYsFSpM+nH8oRVvJkAb2DgPZ5QuA/fk='",
+        ],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'https://*.googleusercontent.com'],

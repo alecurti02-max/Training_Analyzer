@@ -13,6 +13,19 @@ import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setu
 import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
 import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 
+// Skin "carbon" — fallback difensivo. Normalmente lo imposta lo <script> inline
+// anti-FOUC in index.html (prima del paint, via hash CSP). Se quell'inline viene
+// bloccato dalla CSP, qui lo riapplichiamo da JS esterno (consentito da 'self'),
+// così lo skin si attiva comunque. Idempotente: non sovrascrive se già presente.
+try {
+  const de = document.documentElement;
+  if (!de.dataset.skin) {
+    let sk = null;
+    try { sk = localStorage.getItem('ta_skin'); } catch (e) { /* storage bloccato */ }
+    de.dataset.skin = sk || 'carbon';
+  }
+} catch (e) { /* no-op */ }
+
 const root = document.getElementById('app');
 if (root) render(<App />, root);
 
