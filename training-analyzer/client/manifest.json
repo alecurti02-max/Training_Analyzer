@@ -7,6 +7,6 @@
   "background_color": "#0A0C0E",
   "theme_color": "#00B6A2",
   "icons": [
-    { "src": "logo_ta.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
+    { "src": "logo_new.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
   ]
 }
