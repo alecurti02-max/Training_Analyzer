@@ -36,6 +36,13 @@ export function setTrainBridge(bridge) {
   Object.assign(trainBridge, bridge);
 }
 
+// Pre-compilazione del wizard da un allenamento PROGRAMMATO (PlannedWorkout).
+// La Dashboard "Prossima sessione → INIZIA ORA" chiama startFromPlan(plan) e poi
+// showPage('train'); il LogWizard reagisce al signal e inizializza tipo/muscoli.
+export const pendingPlan = signal(null);
+export function startFromPlan(plan) { pendingPlan.value = plan || null; }
+export function consumePendingPlan() { const p = pendingPlan.value; pendingPlan.value = null; return p; }
+
 // Active sports list, mirroring sports.js getUserActiveSports (gym + running always first).
 export function activeSportsFrom(settings) {
   const sports = ['gym', 'running'];
