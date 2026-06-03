@@ -18,7 +18,7 @@ import { WorkoutItem } from '@/components/WorkoutItem/WorkoutItem.jsx';
 import { buildCoaching } from './coaching.js';
 import { SPORT_TEMPLATES } from '../../../js/sports.js';
 import { plannedWorkouts, loadPlans, nextPlan } from '@/store/plans.js';
-import { startFromPlan } from '@/store/train.js';
+import { startLiveFromPlan, setRequestedTab } from '@/store/train.js';
 import { PlannerModal } from './PlannerModal.jsx';
 
 // ─────────────────────────────────────────────
@@ -116,7 +116,7 @@ function Hero({ workouts, settings, muscleGroups }) {
 // NextUp: "Prossima sessione". (Parte A: suggerimento a regole dal recupero.
 // Parte B aggancerà i PlannedWorkout: piano programmato → override del suggerimento.)
 // ─────────────────────────────────────────────
-function NextUp({ workouts, muscleGroups }) {
+function NextUp({ workouts, muscleGroups, exercises }) {
   const [planner, setPlanner] = useState(null); // null = chiusa; {} = nuova; plan = modifica
   const plans = plannedWorkouts.value;          // signal reattivo
   useEffect(() => { loadPlans(); }, []);
@@ -131,7 +131,7 @@ function NextUp({ workouts, muscleGroups }) {
     .slice(0, 2);
 
   const startTrain = (plan) => {
-    if (plan) startFromPlan(plan);
+    if (plan) { startLiveFromPlan(plan); setRequestedTab('live'); }
     if (typeof window.showPage === 'function') window.showPage('train');
   };
   const sportName = (t) => (SPORT_TEMPLATES[t] && SPORT_TEMPLATES[t].name) || t;
@@ -166,7 +166,8 @@ function NextUp({ workouts, muscleGroups }) {
       <button class="btn btn-primary cc-start" type="button"
         onClick={() => startTrain(planned || { type: 'gym', muscleGroups: suggested })}>Inizia ora ▸</button>
       {planner !== null && (
-        <PlannerModal muscleGroups={muscleGroups} plan={planner && planner.id ? planner : null} onClose={() => setPlanner(null)} />
+        <PlannerModal muscleGroups={muscleGroups} exercises={exercises} workouts={workouts}
+          plan={planner && planner.id ? planner : null} onClose={() => setPlanner(null)} />
       )}
     </div>
   );
@@ -297,10 +298,11 @@ function RecentList({ workouts }) {
 // ─────────────────────────────────────────────
 // Mount API
 // ─────────────────────────────────────────────
-export function mountDashboard({ workouts, settings, muscleGroups }) {
+export function mountDashboard({ workouts, settings, muscleGroups, exercises }) {
   const sorted = [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date));
   const s = settings || {};
   const mg = muscleGroups || [];
+  const exLib = exercises || [];
 
   const byId = (id) => document.getElementById(id);
   const elHeroMain = byId('dash-hero-main');
@@ -311,7 +313,7 @@ export function mountDashboard({ workouts, settings, muscleGroups }) {
   const elRecent = byId('dash-recent');
 
   if (elHeroMain) render(<Hero workouts={sorted} settings={s} muscleGroups={mg} />, elHeroMain);
-  if (elHeroNext) render(<NextUp workouts={sorted} muscleGroups={mg} />, elHeroNext);
+  if (elHeroNext) render(<NextUp workouts={sorted} muscleGroups={mg} exercises={exLib} />, elHeroNext);
   if (elStats) render(<StatsRow workouts={sorted} settings={s} />, elStats);
   if (elStreak) render(<StreakBox workouts={sorted} />, elStreak);
   if (elRecovery) render(<RecoveryList workouts={sorted} muscleGroups={mg} />, elRecovery);

@@ -43,6 +43,17 @@ export const pendingPlan = signal(null);
 export function startFromPlan(plan) { pendingPlan.value = plan || null; }
 export function consumePendingPlan() { const p = pendingPlan.value; pendingPlan.value = null; return p; }
 
+// Avvio della SESSIONE LIVE pre-compilata da un piano (con esercizi + serie).
+// La LiveSession auto-parte coi suoi esercizi; requestedTab apre il tab giusto.
+export const pendingLivePlan = signal(null);
+export function startLiveFromPlan(plan) { pendingLivePlan.value = plan || null; }
+export function consumePendingLivePlan() { const p = pendingLivePlan.value; pendingLivePlan.value = null; return p; }
+
+// TrainApp legge questo al mount per aprire 'manual' | 'live'.
+export const requestedTab = signal(null);
+export function setRequestedTab(tab) { requestedTab.value = tab || null; }
+export function consumeRequestedTab() { const t = requestedTab.value; requestedTab.value = null; return t; }
+
 // Active sports list, mirroring sports.js getUserActiveSports (gym + running always first).
 export function activeSportsFrom(settings) {
   const sports = ['gym', 'running'];

@@ -9,8 +9,8 @@ import { SPORT_TEMPLATES, FIELD_DEFS } from '../../../js/sports.js';
 import { todayStr, uid } from '@/lib/utils.js';
 import { toast } from '@/lib/toast.js';
 import { calcTonnage, scoreWorkout, getAdvice } from '@/scoring';
-import { trainData, trainBridge, activeSportsFrom, lastPerformance } from '@/store/train.js';
-import { initialSets } from './logic/setModel.js';
+import { trainData, trainBridge, activeSportsFrom, lastPerformance, pendingLivePlan, consumePendingLivePlan } from '@/store/train.js';
+import { initialSets, makeEmptySet } from './logic/setModel.js';
 import { buildGymWorkout, buildSportWorkout, attachScores } from './logic/buildWorkout.js';
 import {
   getElapsed, formatTime, togglePause, startSession, adjustResumedDraft,
@@ -24,6 +24,7 @@ function draftKey(uidStr) { return 'liveSession_' + (uidStr || 'anon'); }
 
 export function LiveSession({ userId }) {
   const data = trainData.value;
+  const lp = pendingLivePlan.value;
   const [screen, setScreen] = useState('start');     // start | active | finish
   const [session, setSession] = useState(null);
   const [selType, setSelType] = useState('');
@@ -82,6 +83,28 @@ export function LiveSession({ userId }) {
       if (raw) setResume(JSON.parse(raw));
     } catch (_) { /* ignore */ }
   }, [userId]);
+
+  // Auto-start della sessione LIVE da un piano programmato (Dashboard → "INIZIA ORA").
+  // Pre-popola gli esercizi/serie (editabili qui); i set ripartono con done:false.
+  useEffect(() => {
+    if (!lp) return;
+    const plan = consumePendingLivePlan();
+    if (!plan) return;
+    setResume(null);
+    const t = plan.type || 'gym';
+    const s = startSession(t, todayStr(), Date.now());
+    s.exercises = (plan.exercises || []).map((e) => ({
+      name: e.name,
+      muscle: e.muscle,
+      secondaryMuscles: Array.isArray(e.secondaryMuscles) ? e.secondaryMuscles.slice() : [],
+      weightMode: e.weightMode || 'total',
+      barbellWeight: e.barbellWeight || null,
+      isUnilateral: !!e.isUnilateral,
+      param: e.param || 'reps',
+      sets: (Array.isArray(e.sets) && e.sets.length ? e.sets : [makeEmptySet(e, { live: true })]).map((st) => ({ ...st, done: false })),
+    }));
+    setSelType(t); setSession(s); persist(s); setScreen('active'); setNow(Date.now());
+  }, [lp]);
 
   // ---- start ----
   function start() {

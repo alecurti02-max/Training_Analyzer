@@ -4,14 +4,16 @@
 // renders, so flipping the flag off restores the vanilla path instantly.
 
 import { render } from 'preact';
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { currentUser } from '@/store/user.js';
-import { setTrainData, setTrainBridge } from '@/store/train.js';
+import { setTrainData, setTrainBridge, requestedTab, consumeRequestedTab } from '@/store/train.js';
 import { LogWizard } from './LogWizard.jsx';
 import { LiveSession } from './LiveSession.jsx';
 
 function TrainApp() {
   const [tab, setTab] = useState('manual');
+  const rt = requestedTab.value;
+  useEffect(() => { if (rt) { setTab(rt); consumeRequestedTab(); } }, [rt]);
   const userId = currentUser.value?.uid || 'anon';
   return (
     <div>
