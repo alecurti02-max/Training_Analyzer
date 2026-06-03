@@ -90,6 +90,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/nutrition', require('./routes/nutrition'));
 app.use('/api/sleep', require('./routes/sleep'));
+app.use('/api/planned-workouts', require('./routes/plannedWorkouts'));
 
 // --- Health check ---
 app.get('/health', (_req, res) => {

@@ -8,7 +8,7 @@ import { SPORT_TEMPLATES, FIELD_DEFS, getDefaultMusclesForSport } from '../../..
 import { todayStr, uid } from '@/lib/utils.js';
 import { toast } from '@/lib/toast.js';
 import { calcTonnage, scoreWorkout, getAdvice } from '@/scoring';
-import { trainData, trainBridge, activeSportsFrom, lastPerformance } from '@/store/train.js';
+import { trainData, trainBridge, activeSportsFrom, lastPerformance, pendingPlan, consumePendingPlan } from '@/store/train.js';
 import { initialSets } from './logic/setModel.js';
 import { buildGymWorkout, buildSportWorkout, attachScores } from './logic/buildWorkout.js';
 import { ExerciseCard } from './components/GymSetEditor.jsx';
@@ -19,6 +19,7 @@ function draftKey(uidStr) { return 'wizDraft_' + (uidStr || 'anon'); }
 
 export function LogWizard({ userId }) {
   const data = trainData.value;
+  const pp = pendingPlan.value;
   const [step, setStep] = useState(1);
   const [type, setType] = useState('');
   const [exercises, setExercises] = useState([]);   // gym
@@ -43,6 +44,21 @@ export function LogWizard({ userId }) {
       if (raw) setResume(JSON.parse(raw));
     } catch (_) { /* ignore */ }
   }, [userId]);
+
+  // Pre-fill da allenamento PROGRAMMATO (Dashboard → "INIZIA ORA"). Ha precedenza
+  // sul draft: imposta tipo + muscoli + note e salta allo step 2.
+  useEffect(() => {
+    if (!pp) return;
+    const plan = consumePendingPlan();
+    if (!plan) return;
+    setResume(null);
+    setType(plan.type || 'gym');
+    setMuscles(Array.isArray(plan.muscleGroups) ? plan.muscleGroups : []);
+    setExercises([]);
+    setSportFields({});
+    setNotes(plan.note || '');
+    setStep(2);
+  }, [pp]);
 
   useEffect(() => {
     if (resume) return; // don't overwrite while resume modal is pending

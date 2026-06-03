@@ -55,3 +55,34 @@ export function scoreColor(s) {
 export function cx(...parts) {
   return parts.filter(Boolean).join(' ');
 }
+
+// Bucketizza i workout nelle ultime `n` settimane (ISO, lun→dom), dalla più
+// vecchia alla più recente. Per le sparkline della Dashboard. Ritorna
+// [{ sessions, score, km, tonnage }, ...] di lunghezza n.
+export function weeklyBuckets(workouts, n = 7) {
+  const today = new Date(todayStr());
+  const buckets = [];
+  const byWeek = new Map();
+  for (let i = n - 1; i >= 0; i--) {
+    const ref = new Date(today);
+    ref.setDate(ref.getDate() - i * 7);
+    const ws = getWeekStart(ref.toISOString().slice(0, 10));
+    const b = { ws, sessions: 0, scoreSum: 0, scoreCount: 0, km: 0, tonnage: 0 };
+    buckets.push(b);
+    byWeek.set(ws, b);
+  }
+  for (const w of workouts || []) {
+    const b = byWeek.get(getWeekStart(w.date));
+    if (!b) continue;
+    b.sessions++;
+    if (w.scores && w.scores.overall != null) { b.scoreSum += w.scores.overall; b.scoreCount++; }
+    if (w.type === 'running') b.km += w.distance || 0;
+    if (w.type === 'gym') b.tonnage += (w._tonnage || 0) / 1000;
+  }
+  return buckets.map((b) => ({
+    sessions: b.sessions,
+    score: b.scoreCount ? b.scoreSum / b.scoreCount : 0,
+    km: Math.round(b.km * 10) / 10,
+    tonnage: Math.round(b.tonnage * 10) / 10,
+  }));
+}
