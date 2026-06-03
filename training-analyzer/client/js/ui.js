@@ -1691,6 +1691,7 @@ function renderDashboard() {
       workouts: workoutsCache,
       settings: settingsCache,
       muscleGroups,
+      exercises: exercisesCache || [],
     });
   }
 
