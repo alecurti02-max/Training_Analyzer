@@ -16,6 +16,7 @@ import { renderAdmin, setupAdminGating } from './admin.js';
 import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
 import { uid, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate, getWeekStart, daysBetween } from '../src/lib/utils.js';
 import { toast } from '../src/lib/toast.js';
+import { syncFromLegacy } from '../src/lib/dataSync';
 
 // ==================== GLOBAL STATE ====================
 let currentUser = null;
@@ -281,6 +282,13 @@ function showTab(group, tab) {
 }
 
 function onDataChanged() {
+  // Fase 7a: mirror unidirezionale dei let-cache legacy nei signal store
+  // (src/store/*). Additivo — i lettori signal arriveranno nei PR successivi.
+  // Eseguito prima dell'early-return così i signal restano sempre in pari.
+  syncFromLegacy({
+    workouts: workoutsCache, settings: settingsCache, exercises: exercisesCache,
+    weights: weightsCache, following: followingCache, activeSports, muscleGroups,
+  });
   const activePage = document.querySelector('.page.active');
   if (!activePage) return;
   const id = activePage.id;
