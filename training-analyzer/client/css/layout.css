@@ -1,0 +1,73 @@
+/* ============================================================================
+   LAYOUT.CSS — primitive del layout kit (src/components/layout/).
+   Tutto token-driven: usa solo var(--...) per colori/spaziature, così lo skin
+   (Carbon/Pista) e il tema (dark/light) restano automatici. Nessun colore
+   hardcoded. Importato da style.css dopo i token.
+   ========================================================================= */
+
+/* --- PageShell ---------------------------------------------------------- */
+.lay-shell { display: flex; flex-direction: column; }
+
+/* Header generico di pagina, reso da PageShell quando si passano eyebrow/title.
+   Replica il look dello pseudo-header .page::before/::after (font display
+   skewato + eyebrow mono accent), così le pagine col kit sono coerenti con
+   quelle ancora legacy. */
+.lay-page-head {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 16px; flex-wrap: wrap; margin: 0 0 28px;
+}
+.lay-eyebrow {
+  font-family: var(--font-mono); font-size: .7rem; font-weight: 700;
+  letter-spacing: .22em; text-transform: uppercase; color: var(--accent);
+  margin: 0 0 6px;
+}
+.lay-title {
+  font-family: var(--font-display); font-size: clamp(2.4rem, 6vw, 3.6rem);
+  font-weight: 900; font-style: italic; text-transform: uppercase;
+  letter-spacing: -.03em; line-height: .9; color: var(--text);
+  margin: 0; transform: skewX(-3deg); transform-origin: left;
+}
+.lay-page-head-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 640px) {
+  .lay-title { font-size: 2rem; }
+  .lay-eyebrow { font-size: .62rem; letter-spacing: .18em; }
+}
+
+/* --- SectionDivider ----------------------------------------------------- */
+.lay-section {
+  font-family: var(--font-mono); font-size: .66rem; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--accent);
+  margin: 26px 2px 12px; display: flex; align-items: center; gap: 10px;
+}
+.lay-section::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 40%, transparent), transparent);
+}
+
+/* --- BentoGrid ---------------------------------------------------------- */
+.lay-bento { display: grid; gap: 14px; }
+.lay-bento .card { margin-bottom: 0; }
+.lay-bento-auto   { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.lay-bento-stats  { grid-template-columns: repeat(4, 1fr); }
+.lay-bento-triple { grid-template-columns: repeat(3, 1fr); }
+.lay-bento-split  { grid-template-columns: 1.6fr 1fr; }
+@media (max-width: 900px) {
+  .lay-bento-stats  { grid-template-columns: 1fr 1fr; }
+  .lay-bento-triple { grid-template-columns: 1fr; }
+  .lay-bento-split  { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .lay-bento-stats { grid-template-columns: 1fr; }
+}
+
+/* --- Toolbar / FilterBar / TabBar --------------------------------------- */
+.lay-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.lay-toolbar-left, .lay-toolbar-right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.lay-filterbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.lay-tabbar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+
+/* --- SectionHeader aside ------------------------------------------------ */
+.card-title-aside { font-size: .72rem; color: var(--text2); font-weight: 400; }

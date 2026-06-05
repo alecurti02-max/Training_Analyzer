@@ -110,36 +110,36 @@ d.dataset.skin=sk||'carbon';})();
     <div id="dash-hero-next"></div>
   </section>
   <div class="card-grid" id="dash-stats"></div>
-  <div class="dash-layout">
-    <div class="dash-col-main">
-      <div class="card">
-        <div class="card-title">Calendario Allenamenti</div>
-        <div class="heatmap-container"><canvas id="heatmap-canvas" class="heatmap-canvas"></canvas></div>
-        <div class="heatmap-legend">
-          <span>Meno</span>
-          <span style="background:var(--bg3)"></span>
-          <span style="background:color-mix(in srgb,var(--pulse) 25%,transparent)"></span>
-          <span style="background:color-mix(in srgb,var(--pulse) 50%,transparent)"></span>
-          <span style="background:color-mix(in srgb,var(--pulse) 75%,transparent)"></span>
-          <span style="background:var(--pulse)"></span>
-          <span>Pi&ugrave;</span>
-        </div>
-      </div>
-      <div class="card"><div class="card-title">Ultimi Allenamenti</div><div id="dash-recent"></div></div>
-      <div class="card"><div class="card-title">Volume Settimanale</div><div class="chart-container"><canvas id="chart-weekly"></canvas></div></div>
-    </div>
-    <div class="dash-col-side">
-      <div class="card">
-        <div class="card-title">Streak & Consistenza</div>
-        <div id="dash-streak" class="streak-display"></div>
-      </div>
-      <div class="card"><div class="card-title">Recovery Status</div><div id="dash-recovery"></div></div>
-      <div class="card clickable-card" data-page="athletic">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">Profilo Atletico <span style="font-size:.75rem;color:var(--text2);font-weight:400">Dettagli &#8594;</span></div>
-        <div class="chart-container" style="height:260px"><canvas id="chart-radar"></canvas></div>
-      </div>
+  <!-- ZONA: Prontezza & corpo (3-up) — riusa #dash-recovery, #dash-streak, #chart-radar -->
+  <div class="lay-section">Prontezza &amp; corpo</div>
+  <div class="lay-bento lay-bento-triple">
+    <div class="card cc-hud"><div class="card-title">Recovery Status</div><div id="dash-recovery"></div></div>
+    <div class="card cc-hud"><div class="card-title">Streak &amp; Consistenza</div><div id="dash-streak" class="streak-display"></div></div>
+    <div class="card cc-hud clickable-card" data-page="athletic">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">Profilo Atletico <span style="font-size:.75rem;color:var(--text2);font-weight:400">Dettagli &#8594;</span></div>
+      <div class="chart-container" style="height:260px"><canvas id="chart-radar"></canvas></div>
     </div>
   </div>
+
+  <!-- ZONA: Registro attività — heatmap + volume affiancati, poi ultimi a tutta larghezza -->
+  <div class="lay-section">Registro attivit&agrave;</div>
+  <div class="lay-bento lay-bento-split">
+    <div class="card cc-hud">
+      <div class="card-title">Calendario Allenamenti</div>
+      <div class="heatmap-container"><canvas id="heatmap-canvas" class="heatmap-canvas"></canvas></div>
+      <div class="heatmap-legend">
+        <span>Meno</span>
+        <span style="background:var(--bg3)"></span>
+        <span style="background:color-mix(in srgb,var(--pulse) 25%,transparent)"></span>
+        <span style="background:color-mix(in srgb,var(--pulse) 50%,transparent)"></span>
+        <span style="background:color-mix(in srgb,var(--pulse) 75%,transparent)"></span>
+        <span style="background:var(--pulse)"></span>
+        <span>Pi&ugrave;</span>
+      </div>
+    </div>
+    <div class="card cc-hud"><div class="card-title">Volume Settimanale</div><div class="chart-container"><canvas id="chart-weekly"></canvas></div></div>
+  </div>
+  <div class="card cc-hud"><div class="card-title">Ultimi Allenamenti</div><div id="dash-recent"></div></div>
 </div>
 
 <!-- TRAIN (Manuale + Live) -->
