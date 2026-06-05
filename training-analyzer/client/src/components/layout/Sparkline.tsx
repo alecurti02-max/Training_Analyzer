@@ -1,6 +1,12 @@
 // Sparkline: barre mini da una serie numerica. Usa la classe .cc-spark del
 // cockpit Carbon (token-driven). Estratta da Dashboard.jsx.
-export function Sparkline({ data = [], color = 'var(--accent)' }) {
+
+interface SparklineProps {
+  data?: number[];
+  color?: string;
+}
+
+export function Sparkline({ data = [], color = 'var(--accent)' }: SparklineProps) {
   const max = Math.max(1, ...data.map((v) => Number(v) || 0));
   return (
     <div class="cc-spark" aria-hidden="true">
