@@ -1,7 +1,15 @@
+import type { ComponentChildren } from 'preact';
+
 // Toolbar: riga "contenuto a sinistra / controlli a destra" ripetuta in
 // Storico, Setup, Corpo. FilterBar: gruppo di chip-filtro controllato che
-// emette i .filter-btn globali (così resta coerente con lo stile attuale).
-export function Toolbar({ left = null, right = null, children }) {
+// emette i .filter-btn globali.
+interface ToolbarProps {
+  left?: ComponentChildren;
+  right?: ComponentChildren;
+  children?: ComponentChildren;
+}
+
+export function Toolbar({ left = null, right = null, children }: ToolbarProps) {
   return (
     <div class="lay-toolbar">
       <div class="lay-toolbar-left">{left ?? children}</div>
@@ -10,7 +18,18 @@ export function Toolbar({ left = null, right = null, children }) {
   );
 }
 
-export function FilterBar({ options = [], value, onChange }) {
+interface FilterOption {
+  key: string;
+  label: string;
+}
+
+interface FilterBarProps {
+  options?: FilterOption[];
+  value: string;
+  onChange: (key: string) => void;
+}
+
+export function FilterBar({ options = [], value, onChange }: FilterBarProps) {
   return (
     <div class="lay-filterbar">
       {options.map((o) => (

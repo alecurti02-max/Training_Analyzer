@@ -32,15 +32,19 @@ function workoutDetail(w) {
   return parts.join(' · ');
 }
 
-export function WorkoutItem({ w, selectMode = false, selected = false }) {
+export function WorkoutItem({ w, selectMode = false, selected = false, onItemClick = null }) {
   const tmpl = SPORT_TEMPLATES[w.type];
   const typeName = tmpl?.name || w.type;
   const score = w.scores?.overall ?? '--';
   const scoreLabel = typeof score === 'number' ? score.toFixed(1) : score;
   const typeClass = tmpl ? `type-${w.type}` : 'type-custom';
   const itemClass = `workout-item${selected ? ' selected' : ''}`;
+  // onItemClick (es. History migrata): gestisce il click localmente e ferma la
+  // propagazione, così la delega globale di ui.js su [data-workout-id] non
+  // raddoppia. Senza onItemClick (es. Dashboard) resta la delega legacy.
+  const handleClick = onItemClick ? (e) => { e.stopPropagation(); onItemClick(w); } : undefined;
   return (
-    <div class={itemClass} data-workout-id={w.id}>
+    <div class={itemClass} data-workout-id={w.id} onClick={handleClick}>
       {selectMode && (
         <input
           type="checkbox"

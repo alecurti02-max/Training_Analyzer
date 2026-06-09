@@ -1,9 +1,21 @@
 import { useCountUp } from '@/lib/useCountUp.js';
-import { Sparkline } from './Sparkline.jsx';
+import { Sparkline } from './Sparkline';
 
 // StatTile: la "bento card" di telemetria (label mono + quadratino colore +
 // numero animato + delta opzionale + sparkline + tick HUD). Estratta da
 // Dashboard.jsx::StatCard. Riusa le classi cockpit (.cc-stat, .cc-hud...).
+interface StatTileProps {
+  label: string;
+  color?: string;
+  value: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+  goal?: number | null;
+  delta?: number | null;
+  series?: number[];
+}
+
 export function StatTile({
   label,
   color = 'var(--accent)',
@@ -14,7 +26,7 @@ export function StatTile({
   goal = null,
   delta = null,
   series = [],
-}) {
+}: StatTileProps) {
   const n = useCountUp(value, decimals);
   return (
     <div class="card cc-hud cc-stat">

@@ -1842,24 +1842,16 @@ async function deleteSelected() {
 }
 
 function renderHistory() {
-  // Fase 6a: filters + list rendered by Preact. Filter button clicks are
-  // handled below via delegation (filterHistory). Workout-item clicks reuse
-  // the global delegation set up at the bottom of this file.
-  if (globalThis.Preact?.history) {
-    globalThis.Preact.history.mount({
-      workouts: workoutsCache,
-      filter: historyFilter,
-      selectMode: _selectMode,
-      selectedIds: [..._selectedIds],
-    });
-  }
-  // Re-bind filter button delegation each render (Preact replaces nodes).
-  const filtersEl = document.getElementById('history-filters');
-  if (filtersEl) {
-    filtersEl.querySelectorAll('[data-hist-filter]').forEach((btn) => {
-      btn.addEventListener('click', function () { filterHistory(this.dataset.histFilter, this); });
-    });
-  }
+  // Storico migrato a pagina .tsx autonoma (HistoryPage): possiede markup,
+  // filtro/selezione e legge i workout dal signal store. Montata in un host
+  // dedicato; il markup legacy di #page-history viene nascosto (pattern Train).
+  if (!globalThis.Preact?.history) return;
+  const pageEl = document.getElementById('page-history');
+  if (!pageEl) return;
+  let host = document.getElementById('history-preact-host');
+  if (!host) { host = document.createElement('div'); host.id = 'history-preact-host'; pageEl.appendChild(host); }
+  Array.from(pageEl.children).forEach((c) => { c.style.display = c === host ? '' : 'none'; });
+  globalThis.Preact.history.mount({ host });
 }
 
 // ==================== WORKOUT DETAIL ====================
@@ -3027,6 +3019,18 @@ function initApp() {
 // Expose key functions on window for any remaining inline onclick handlers
 window.showPage = showPage;
 window.showWorkoutDetail = showWorkoutDetail;
+// Esposto per HistoryPage (.tsx): elimina N workout per id mantenendo in pari la
+// cache legacy (workoutsCache) + i signal store (via onDataChanged → mirror).
+window.deleteWorkoutsByIds = async (ids) => {
+  if (!Array.isArray(ids) || !ids.length) return;
+  let deleted = 0;
+  for (const id of ids) {
+    try { await api.del('/api/workouts/' + id); deleted++; } catch (e) { console.error('Delete error', id, e); }
+  }
+  workoutsCache = workoutsCache.filter((w) => !ids.includes(w.id));
+  toast(deleted + ' allenamenti eliminati', 'success');
+  onDataChanged();
+};
 window.filterHistory = filterHistory;
 window.selectWorkoutType = selectWorkoutType;
 window.wizGoStep = wizGoStep;
