@@ -1,7 +1,7 @@
 import { render } from 'preact';
 import { App } from './App.jsx';
 import { initThemeToggle } from './components/ThemeToggle/ThemeToggle.jsx';
-import { mountDashboard, unmountDashboard } from './pages/Dashboard/Dashboard.jsx';
+import { mountDashboard, unmountDashboard } from './pages/Dashboard/DashboardPage';
 import { mountHistory, unmountHistory } from './pages/History/HistoryPage';
 import {
   mountFitnessAssessment,

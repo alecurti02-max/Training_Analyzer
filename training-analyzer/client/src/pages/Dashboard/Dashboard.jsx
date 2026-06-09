@@ -68,7 +68,7 @@ function Sparkline({ data, color }) {
 // ─────────────────────────────────────────────
 // Hero: telemetria principale (score medio 30gg gigante + delta + coaching + sub-stat)
 // ─────────────────────────────────────────────
-function Hero({ workouts, settings, muscleGroups }) {
+export function Hero({ workouts, settings, muscleGroups }) {
   const now = todayStr();
   const avgOf = (arr) => {
     const s = arr.filter((w) => w.scores && w.scores.overall != null);
@@ -116,7 +116,7 @@ function Hero({ workouts, settings, muscleGroups }) {
 // NextUp: "Prossima sessione". (Parte A: suggerimento a regole dal recupero.
 // Parte B aggancerà i PlannedWorkout: piano programmato → override del suggerimento.)
 // ─────────────────────────────────────────────
-function NextUp({ workouts, muscleGroups, exercises }) {
+export function NextUp({ workouts, muscleGroups, exercises }) {
   const [planner, setPlanner] = useState(null); // null = chiusa; {} = nuova; plan = modifica
   const plans = plannedWorkouts.value;          // signal reattivo
   useEffect(() => { loadPlans(); }, []);
@@ -194,7 +194,7 @@ function StatCard({ label, color, value, decimals = 0, prefix = '', suffix = '',
   );
 }
 
-function StatsRow({ workouts, settings }) {
+export function StatsRow({ workouts, settings }) {
   const now = todayStr();
   const thisWeek = workouts.filter((w) => daysBetween(now, w.date) <= 7);
   const weekGoal = settings.weekgoal || 4;
@@ -226,7 +226,7 @@ function StatsRow({ workouts, settings }) {
 // ─────────────────────────────────────────────
 // Streak
 // ─────────────────────────────────────────────
-function StreakBox({ workouts }) {
+export function StreakBox({ workouts }) {
   const streak = calculateStreak(workouts);
   return (
     <>
@@ -245,7 +245,7 @@ function StreakBox({ workouts }) {
 // ─────────────────────────────────────────────
 // Recovery
 // ─────────────────────────────────────────────
-function RecoveryList({ workouts, muscleGroups }) {
+export function RecoveryList({ workouts, muscleGroups }) {
   const recovery = getRecoveryStatus(workouts, muscleGroups);
   const items = Object.entries(recovery.muscleRecovery)
     .filter(([_, info]) => info.pct < 100 && info.lastWorked);
@@ -283,7 +283,7 @@ function RecoveryList({ workouts, muscleGroups }) {
 // ─────────────────────────────────────────────
 // Recent workouts
 // ─────────────────────────────────────────────
-function RecentList({ workouts }) {
+export function RecentList({ workouts }) {
   if (!workouts.length) {
     return (
       <div class="empty-state">

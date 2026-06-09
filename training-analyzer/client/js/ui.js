@@ -1688,21 +1688,22 @@ async function liveSaveWorkout() {
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
+  if (!globalThis.Preact?.dashboard) return;
+  const pageEl = document.getElementById('page-dashboard');
+  if (!pageEl) return;
   const workouts = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  // Fase 5: i 4 contenitori dinamici (#dash-stats, #dash-streak, #dash-recovery,
-  // #dash-recent) sono ora renderizzati dal componente Preact in
-  // src/pages/Dashboard/Dashboard.jsx. Le chart legacy (heatmap, weekly, radar)
-  // restano gestite imperativamente da charts.js qui sotto, fino a Fase 6/8.
-  if (globalThis.Preact?.dashboard) {
-    globalThis.Preact.dashboard.mount({
-      workouts: workoutsCache,
-      settings: settingsCache,
-      muscleGroups,
-      exercises: exercisesCache || [],
-    });
+  // Dashboard migrata a route .tsx autonoma (DashboardPage): possiede tutto il
+  // markup, canvas inclusi. Il markup legacy di #page-dashboard viene rimosso
+  // una volta (evita id-canvas duplicati), poi si monta la pagina in un host.
+  let host = document.getElementById('dashboard-host');
+  if (!host) {
+    pageEl.innerHTML = '';
+    host = document.createElement('div');
+    host.id = 'dashboard-host';
+    pageEl.appendChild(host);
   }
-
+  globalThis.Preact.dashboard.mount({ host });
+  // I canvas ora vivono dentro DashboardPage: charts.js li trova dopo il mount.
   renderHeatmap(workouts);
   renderWeeklyChart(workouts);
   renderRadarChart(workouts);
