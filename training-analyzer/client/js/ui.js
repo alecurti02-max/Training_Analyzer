@@ -215,7 +215,23 @@ function showPage(page) {
     renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect();
     populateSettingsUI(); renderSportsManager(); renderNotifications();
   }
-  if(page==='admin') renderAdmin();
+  if(page==='admin') {
+    // Admin migrato a route .tsx (AdminPage, wrap): scheletro in Preact, dati
+    // popolati da admin.js::renderAdmin dopo il mount. Markup legacy rimosso una
+    // volta per evitare id duplicati.
+    if (globalThis.Preact?.admin) {
+      const adminPageEl = document.getElementById('page-admin');
+      let adminHost = document.getElementById('admin-host');
+      if (!adminHost && adminPageEl) {
+        adminPageEl.innerHTML = '';
+        adminHost = document.createElement('div');
+        adminHost.id = 'admin-host';
+        adminPageEl.appendChild(adminHost);
+      }
+      globalThis.Preact.admin.mount({ host: adminHost });
+    }
+    renderAdmin();
+  }
   // Restore last-active sub-tab (if any)
   if (PAGE_DEFAULT_TAB[page]) {
     let savedTab;
