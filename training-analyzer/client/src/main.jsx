@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { App } from './App.jsx';
 import { initThemeToggle } from './components/ThemeToggle/ThemeToggle.jsx';
 import { mountDashboard, unmountDashboard } from './pages/Dashboard/Dashboard.jsx';
-import { mountHistory, unmountHistory } from './pages/History/History.jsx';
+import { mountHistory, unmountHistory } from './pages/History/HistoryPage';
 import {
   mountFitnessAssessment,
   mountAthleticDetail,
