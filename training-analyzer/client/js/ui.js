@@ -203,7 +203,22 @@ function showPage(page) {
   if(page==='history') renderHistory();
   if(page==='progress') { renderProgress(); renderAthleticDetail(); }
   if(page==='body') { renderWeightPage(); populateSettingsUI(); }
-  if(page==='recovery') { renderRecoveryPage({ settings: settingsCache, toast }); }
+  if(page==='recovery') {
+    // Recupero migrato a route .tsx (RecoveryPage, wrap): scheletro in Preact,
+    // logica/dati da recovery.js dopo il mount. Markup legacy rimosso una volta.
+    if (globalThis.Preact?.recovery) {
+      const recPageEl = document.getElementById('page-recovery');
+      let recHost = document.getElementById('recovery-host');
+      if (!recHost && recPageEl) {
+        recPageEl.innerHTML = '';
+        recHost = document.createElement('div');
+        recHost.id = 'recovery-host';
+        recPageEl.appendChild(recHost);
+      }
+      globalThis.Preact.recovery.mount({ host: recHost });
+    }
+    renderRecoveryPage({ settings: settingsCache, toast });
+  }
   if(page==='profile') { renderProfile(); renderFriendsPageLocal(); }
   if(page==='train') {
     // When the Preact Train takes over, it fully owns the page — return early so

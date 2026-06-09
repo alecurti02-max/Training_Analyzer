@@ -13,6 +13,7 @@ import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setu
 import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
 import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 import { mountAdmin, unmountAdmin } from './pages/Admin/AdminPage';
+import { mountRecovery, unmountRecovery } from './pages/Recovery/RecoveryPage';
 
 // Skin "carbon" — fallback difensivo. Normalmente lo imposta lo <script> inline
 // anti-FOUC in index.html (prima del paint, via hash CSP). Se quell'inline viene
@@ -61,3 +62,4 @@ globalThis.Preact.train = {
   unmount: unmountTrain,
 };
 globalThis.Preact.admin = { mount: mountAdmin, unmount: unmountAdmin };
+globalThis.Preact.recovery = { mount: mountRecovery, unmount: unmountRecovery };
