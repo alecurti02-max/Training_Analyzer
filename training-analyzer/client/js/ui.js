@@ -17,6 +17,7 @@ import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
 import { uid, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate, getWeekStart, daysBetween } from '../src/lib/utils.js';
 import { toast } from '../src/lib/toast.js';
 import { syncFromLegacy } from '../src/lib/dataSync';
+import { initialSegment, syncUrl, initRouter } from '../src/lib/router';
 
 // ==================== GLOBAL STATE ====================
 let currentUser = null;
@@ -195,6 +196,9 @@ function showPage(page) {
   // quando la pagina rispettiva e' visibile. Usato anche da Chart.js che legge
   // le custom properties via getComputedStyle(document.documentElement).
   document.documentElement.dataset.activePage = page;
+  // Router: allinea l'URL al path canonico della pagina (pushState solo se
+  // cambia; i popstate arrivano già col path giusto → niente entry doppi).
+  syncUrl(page);
   document.querySelectorAll('.nav-btn').forEach(b=>{
     b.classList.remove('active');
     if(b.textContent===pageMap[page]) b.classList.add('active');
@@ -3141,13 +3145,19 @@ function initApp() {
   if(wizDateEl) wizDateEl.value = todayStr();
   const weightDateEl = document.getElementById('weight-date');
   if(weightDateEl) weightDateEl.value = todayStr();
-  // Default page e' Dashboard (index.html ha #page-dashboard.active hard-coded).
-  // Senza questo attributo, i token v2 scoped a :root[data-active-page] non si
-  // attivano al primo paint -> bug: refresh mostra stile legacy finche' l'utente
-  // non clicca una tab (showPage lo setta).
-  document.documentElement.dataset.activePage = 'dashboard';
+  // Router: deep-link iniziale + back/forward. Lo slug del path viene validato
+  // contro pageMap/PAGE_ALIAS; sconosciuto o '/' → dashboard (il default
+  // hard-coded di index.html, con dataset.activePage per i token v2 scoped).
+  initRouter(showPage);
+  const seg = initialSegment();
+  if (seg !== 'dashboard' && (pageMap[seg] || PAGE_ALIAS[seg])) {
+    showPage(seg);
+  } else {
+    document.documentElement.dataset.activePage = 'dashboard';
+    renderDashboard();
+    syncUrl('dashboard');
+  }
   updateSyncStatus();
-  renderDashboard();
   liveCheckDraft();
   // Persist wizard form fields on change
   ['wiz-date', 'wiz-notes', 'wiz-gym-duration', 'wiz-gym-rpe'].forEach(id => {
@@ -3427,6 +3437,11 @@ initAuth(
     setupAdminGating(user);
     showScreen('app');
     await loadAllData();
+    // Deep-link: se il router ha aperto una pagina diversa dalla dashboard,
+    // ri-renderizzala ora che i dati sono caricati (loadAllData/onDataChanged
+    // re-renderizza solo la pagina attiva "classica", e al boot le cache erano vuote).
+    const curPage = document.documentElement.dataset.activePage;
+    if (curPage && curPage !== 'dashboard') showPage(curPage);
   },
   () => {
     showScreen('login');
