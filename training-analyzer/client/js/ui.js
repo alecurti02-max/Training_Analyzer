@@ -201,8 +201,18 @@ function showPage(page) {
   });
   if(page==='dashboard') renderDashboard();
   if(page==='history') renderHistory();
-  if(page==='progress') { renderProgress(); renderAthleticDetail(); }
-  if(page==='body') { renderWeightPage(); populateSettingsUI(); }
+  if(page==='progress') {
+    // Progressi migrato a route .tsx (ProgressPage, wrap): scheletro in Preact
+    // (canvas inclusi), grafici/avatar/athletic popolati dal legacy dopo il mount.
+    mountPageHost('progress');
+    renderProgress(); renderAthleticDetail();
+  }
+  if(page==='body') {
+    // Corpo migrato a route .tsx (BodyPage, wrap). Dopo il primo mount il DOM è
+    // nuovo: riaggancia i listener diretti (weight-target/height, data-settings).
+    if (mountPageHost('body')) wireDirectInputListeners();
+    renderWeightPage(); populateSettingsUI();
+  }
   if(page==='recovery') {
     // Recupero migrato a route .tsx (RecoveryPage, wrap): scheletro in Preact,
     // logica/dati da recovery.js dopo il mount. Markup legacy rimosso una volta.
@@ -219,7 +229,11 @@ function showPage(page) {
     }
     renderRecoveryPage({ settings: settingsCache, toast });
   }
-  if(page==='profile') { renderProfile(); renderFriendsPageLocal(); }
+  if(page==='profile') {
+    // Profilo migrato a route .tsx (ProfilePage, wrap). Riaggancia friend-search.
+    if (mountPageHost('profile')) wireDirectInputListeners();
+    renderProfile(); renderFriendsPageLocal();
+  }
   if(page==='train') {
     // When the Preact Train takes over, it fully owns the page — return early so
     // the PAGE_DEFAULT_TAB restore below doesn't re-show the hidden legacy markup.
@@ -227,6 +241,9 @@ function showPage(page) {
     initLogWizard(); initLivePage();
   }
   if(page==='setup') {
+    // Setup migrato a route .tsx (SetupPage, wrap). Riaggancia drop zone, file
+    // input, lib-filter, lib-barbell, import-json e data-settings sul DOM nuovo.
+    if (mountPageHost('setup')) wireDirectInputListeners();
     renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect();
     populateSettingsUI(); renderSportsManager(); renderNotifications();
   }
@@ -252,6 +269,105 @@ function showPage(page) {
     let savedTab;
     try { savedTab = localStorage.getItem('ta_tab_' + page); } catch(e) {}
     showTab(page, savedTab || PAGE_DEFAULT_TAB[page]);
+  }
+}
+
+// Monta una pagina migrata a route .tsx nel suo host (#<page>-host), rimuovendo
+// il markup legacy di #page-<page> una volta (evita id duplicati). Ritorna true
+// se Preact ha preso la pagina; false (fallback legacy intatto) se il bundle
+// Preact non è caricato.
+function mountPageHost(page) {
+  const bridge = globalThis.Preact?.[page];
+  if (!bridge || typeof bridge.mount !== 'function') return false;
+  const pageEl = document.getElementById('page-' + page);
+  if (!pageEl) return false;
+  let host = document.getElementById(page + '-host');
+  if (!host) {
+    pageEl.innerHTML = '';
+    host = document.createElement('div');
+    host.id = page + '-host';
+    pageEl.appendChild(host);
+  }
+  bridge.mount({ host });
+  return true;
+}
+
+// ==================== DIRECT INPUT WIRING (ri-eseguibile) ====================
+// Listener DIRETTI (non delegati su document) su elementi dentro le pagine.
+// Storicamente cablati una volta al DOMContentLoaded sul markup statico di
+// index.html; le pagine migrate a Preact ricreano il proprio DOM al primo
+// mount, quindi questa funzione viene richiamata dopo ogni mount. Idempotente:
+// ogni elemento cablato viene marcato con data-ta-wired.
+function wireDirectInputListeners() {
+  const fresh = (id) => {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.taWired) return null;
+    el.dataset.taWired = '1';
+    return el;
+  };
+
+  // Import JSON file input (Setup → Export/Backup)
+  const importJsonInput = fresh('import-json');
+  if (importJsonInput) {
+    importJsonInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) window.importJSONBackup(e.target.files[0]);
+    });
+  }
+
+  // Settings auto-save on change (Setup → Profilo Atletico, Body → Misure)
+  document.querySelectorAll('[data-settings]').forEach(input => {
+    if (input.dataset.taWired) return;
+    input.dataset.taWired = '1';
+    input.addEventListener('change', () => saveSettings());
+  });
+
+  // Weight target and height inputs (save on change)
+  const weightTarget = fresh('weight-target');
+  if (weightTarget) weightTarget.addEventListener('change', () => saveWeightTarget());
+  const weightHeight = fresh('weight-height');
+  if (weightHeight) weightHeight.addEventListener('change', () => saveWeightHeight());
+
+  // Drag & Drop zones + click-to-open file picker (Setup → Import)
+  const dropFileMap = { 'gpx-drop': 'gpx-file', 'csv-drop': 'csv-file', 'health-drop': 'health-file', 'fit-drop': 'fit-file' };
+  Object.entries(dropFileMap).forEach(([dropId, fileId]) => {
+    const el = fresh(dropId); if (!el) return;
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+    el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+    el.addEventListener('drop', e => {
+      e.preventDefault(); el.classList.remove('dragover');
+      if (dropId === 'gpx-drop') window.handleGPXFiles(e.dataTransfer.files);
+      else if (dropId === 'csv-drop') window.handleCSVFile(e.dataTransfer.files[0]);
+      else if (dropId === 'health-drop') window.handleAppleHealthFile(e.dataTransfer.files[0]);
+      else if (dropId === 'fit-drop') window.handleFITFile(e.dataTransfer.files[0]);
+    });
+    el.addEventListener('click', () => document.getElementById(fileId)?.click());
+  });
+
+  // File inputs
+  const gpxInput = fresh('gpx-file');
+  if (gpxInput) gpxInput.addEventListener('change', (e) => window.handleGPXFiles(e.target.files));
+  const csvInput = fresh('csv-file');
+  if (csvInput) csvInput.addEventListener('change', (e) => window.handleCSVFile(e.target.files[0]));
+  const healthInput = fresh('health-file');
+  if (healthInput) healthInput.addEventListener('change', (e) => window.handleAppleHealthFile(e.target.files[0]));
+  const fitInput = fresh('fit-file');
+  if (fitInput) fitInput.addEventListener('change', (e) => window.handleFITFile(e.target.files[0]));
+
+  // Friend search input (Profilo → Amici)
+  const friendSearch = fresh('friend-search');
+  if (friendSearch) friendSearch.addEventListener('input', (e) => searchUsersAPI(e.target.value));
+
+  // Exercise library filter (Setup → Libreria)
+  const libFilter = fresh('lib-filter');
+  if (libFilter) libFilter.addEventListener('input', () => renderExerciseLibrary());
+
+  // Barbell custom weight toggle (Setup → Libreria)
+  const libBarbell = fresh('lib-barbell');
+  const libBarbellCustom = document.getElementById('lib-barbell-custom-group');
+  if (libBarbell && libBarbellCustom) {
+    libBarbell.addEventListener('change', () => {
+      libBarbellCustom.style.display = libBarbell.value === 'custom' ? '' : 'none';
+    });
   }
 }
 
@@ -3236,24 +3352,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (handler) handler();
   });
 
-  // Import JSON file input
-  const importJsonInput = document.getElementById('import-json');
-  if (importJsonInput) {
-    importJsonInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) window.importJSONBackup(e.target.files[0]);
-    });
-  }
-
-  // Settings auto-save on change
-  document.querySelectorAll('[data-settings]').forEach(input => {
-    input.addEventListener('change', () => saveSettings());
-  });
-
-  // Weight target and height inputs (save on change)
-  const weightTarget = document.getElementById('weight-target');
-  if (weightTarget) weightTarget.addEventListener('change', () => saveWeightTarget());
-  const weightHeight = document.getElementById('weight-height');
-  if (weightHeight) weightHeight.addEventListener('change', () => saveWeightHeight());
+  // Listener diretti su input/drop-zone (estratti in wireDirectInputListeners,
+  // ri-eseguita dopo il mount delle pagine Preact che ricreano il DOM).
+  wireDirectInputListeners();
 
   // Generic tab switcher (data-tab-group + data-tab)
   document.addEventListener('click', (e) => {
@@ -3296,41 +3397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Drag & Drop zones
-  ['gpx-drop','csv-drop','health-drop','fit-drop'].forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;
-    el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('dragover');});
-    el.addEventListener('dragleave',()=>el.classList.remove('dragover'));
-    el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('dragover');
-      if(id==='gpx-drop') window.handleGPXFiles(e.dataTransfer.files);
-      else if(id==='csv-drop') window.handleCSVFile(e.dataTransfer.files[0]);
-      else if(id==='health-drop') window.handleAppleHealthFile(e.dataTransfer.files[0]);
-      else if(id==='fit-drop') window.handleFITFile(e.dataTransfer.files[0]);
-    });
-  });
-
-  // File inputs (HTML IDs: gpx-file, csv-file, health-file, fit-file)
-  const gpxInput = document.getElementById('gpx-file') || document.getElementById('gpx-input');
-  if(gpxInput) gpxInput.addEventListener('change', (e) => window.handleGPXFiles(e.target.files));
-
-  const csvInput = document.getElementById('csv-file') || document.getElementById('csv-input');
-  if(csvInput) csvInput.addEventListener('change', (e) => window.handleCSVFile(e.target.files[0]));
-
-  const healthInput = document.getElementById('health-file') || document.getElementById('health-input');
-  if(healthInput) healthInput.addEventListener('change', (e) => window.handleAppleHealthFile(e.target.files[0]));
-
-  const fitInput = document.getElementById('fit-file') || document.getElementById('fit-input');
-  if(fitInput) fitInput.addEventListener('change', (e) => window.handleFITFile(e.target.files[0]));
-
-  const jsonInput = document.getElementById('json-input');
-  if(jsonInput) jsonInput.addEventListener('change', (e) => window.importJSONBackup(e.target.files[0]));
-
-  // Drop zones: click to open file picker
-  const dropFileMap = { 'gpx-drop': 'gpx-file', 'csv-drop': 'csv-file', 'health-drop': 'health-file', 'fit-drop': 'fit-file' };
-  Object.entries(dropFileMap).forEach(([dropId, fileId]) => {
-    const dropEl = document.getElementById(dropId);
-    if (dropEl) dropEl.addEventListener('click', () => document.getElementById(fileId)?.click());
-  });
+  // (Drop zone, file input: in wireDirectInputListeners.)
 
   // Close search results on click outside
   document.addEventListener('click', e => {
@@ -3341,22 +3408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Friend search input
-  const friendSearch = document.getElementById('friend-search');
-  if(friendSearch) friendSearch.addEventListener('input', (e) => searchUsersAPI(e.target.value));
-
-  // Exercise library filter
-  const libFilter = document.getElementById('lib-filter');
-  if(libFilter) libFilter.addEventListener('input', () => renderExerciseLibrary());
-
-  // Exercise library weight options: always shown (kg also valid for duration/distance/calories)
-  const libBarbell = document.getElementById('lib-barbell');
-  const libBarbellCustom = document.getElementById('lib-barbell-custom-group');
-  if (libBarbell && libBarbellCustom) {
-    libBarbell.addEventListener('change', () => {
-      libBarbellCustom.style.display = libBarbell.value === 'custom' ? '' : 'none';
-    });
-  }
+  // (Friend search, lib-filter, lib-barbell: in wireDirectInputListeners.)
 
   // Exercise search in sheet
   const exSearch = document.getElementById('exercise-search');
