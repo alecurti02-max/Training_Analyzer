@@ -156,28 +156,33 @@ function showScreen(name) {
   if (name === 'app') initApp();
 }
 
-const pageMap = {dashboard:'Dashboard',train:'Allenamento',history:'Storico',progress:'Progressi',body:'Corpo',recovery:'Recupero',profile:'Profilo',setup:'Setup',admin:'Admin'};
+// N1/N2: niente più pagine Progressi (→ Dashboard·Analisi + Profilo·Atletica)
+// e Recupero (→ tab di Corpo). Ordine = nav per frequenza d'uso (N3).
+const pageMap = {dashboard:'Dashboard',train:'Allenamento',history:'Storico',body:'Corpo',profile:'Profilo',setup:'Setup',admin:'Admin'};
 
 // Old slugs → new page + tab (for backward compat with internal data-page="X" links and bookmarks)
 const PAGE_ALIAS = {
-  log:      { page: 'train',    tab: 'manual' },
-  live:     { page: 'train',    tab: 'live' },
-  athletic: { page: 'progress', tab: 'athletic' },
-  weight:   { page: 'body',     tab: 'quicklog' },
-  library:  { page: 'setup',    tab: 'library' },
-  import:   { page: 'setup',    tab: 'import' },
-  settings: { page: 'setup',    tab: 'settings' },
-  friends:  { page: 'profile',  tab: 'friends' },
+  log:      { page: 'train',     tab: 'manual' },
+  live:     { page: 'train',     tab: 'live' },
+  athletic: { page: 'profile',   tab: 'athletic' },   // N2: era progress
+  weight:   { page: 'body',      tab: 'quicklog' },
+  library:  { page: 'setup',     tab: 'library' },
+  import:   { page: 'setup',     tab: 'import' },
+  settings: { page: 'setup',     tab: 'settings' },
+  friends:  { page: 'profile',   tab: 'friends' },
+  analisi:  { page: 'dashboard', tab: 'analisi' },
+  // Pagine rimosse → destinazioni nuove (vecchi URL/bookmark continuano a funzionare)
+  progress: { page: 'dashboard', tab: 'analisi' },    // N2
+  recovery: { page: 'body',      tab: 'nutrition' },  // N1
 };
 
 // Default tab per consolidated page (used when no localStorage value)
 const PAGE_DEFAULT_TAB = {
-  train:    'manual',
-  progress: 'general',
-  body:     'quicklog',
-  recovery: 'nutrition',
-  profile:  'me',
-  setup:    'library',
+  dashboard: 'overview',
+  train:     'manual',
+  body:      'quicklog',
+  profile:   'me',
+  setup:     'library',
 };
 
 function showPage(page) {
@@ -185,7 +190,7 @@ function showPage(page) {
   if (PAGE_ALIAS[page]) {
     const a = PAGE_ALIAS[page];
     showPage(a.page);
-    showTab(a.page, a.tab);
+    if (a.tab) showTab(a.page, a.tab);
     return;
   }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -199,44 +204,26 @@ function showPage(page) {
   // Router: allinea l'URL al path canonico della pagina (pushState solo se
   // cambia; i popstate arrivano già col path giusto → niente entry doppi).
   syncUrl(page);
-  document.querySelectorAll('.nav-btn').forEach(b=>{
-    b.classList.remove('active');
-    if(b.textContent===pageMap[page]) b.classList.add('active');
+  // Stato active su top-nav e bottom-nav mobile (entrambe usano data-page).
+  document.querySelectorAll('.nav-btn, .lay-bottomnav-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.page === page);
   });
   if(page==='dashboard') renderDashboard();
   if(page==='history') renderHistory();
-  if(page==='progress') {
-    // Progressi migrato a route .tsx (ProgressPage, wrap): scheletro in Preact
-    // (canvas inclusi), grafici/avatar/athletic popolati dal legacy dopo il mount.
-    mountPageHost('progress');
-    renderProgress(); renderAthleticDetail();
-  }
   if(page==='body') {
-    // Corpo migrato a route .tsx (BodyPage, wrap). Dopo il primo mount il DOM è
-    // nuovo: riaggancia i listener diretti (weight-target/height, data-settings).
+    // Corpo (BodyPage .tsx, wrap) — ingloba anche Alimentazione/Sonno (N1, ex
+    // Recupero): recovery.js popola i suoi id dentro i tab. Dopo il primo mount
+    // il DOM è nuovo: riaggancia i listener diretti.
     if (mountPageHost('body')) wireDirectInputListeners();
     renderWeightPage(); populateSettingsUI();
-  }
-  if(page==='recovery') {
-    // Recupero migrato a route .tsx (RecoveryPage, wrap): scheletro in Preact,
-    // logica/dati da recovery.js dopo il mount. Markup legacy rimosso una volta.
-    if (globalThis.Preact?.recovery) {
-      const recPageEl = document.getElementById('page-recovery');
-      let recHost = document.getElementById('recovery-host');
-      if (!recHost && recPageEl) {
-        recPageEl.innerHTML = '';
-        recHost = document.createElement('div');
-        recHost.id = 'recovery-host';
-        recPageEl.appendChild(recHost);
-      }
-      globalThis.Preact.recovery.mount({ host: recHost });
-    }
     renderRecoveryPage({ settings: settingsCache, toast });
   }
   if(page==='profile') {
-    // Profilo migrato a route .tsx (ProfilePage, wrap). Riaggancia friend-search.
+    // Profilo (ProfilePage .tsx, wrap) — ingloba anche l'Atletica (N2, ex
+    // Progressi): renderAthleticDetail popola avatar/radar/card nel tab.
     if (mountPageHost('profile')) wireDirectInputListeners();
     renderProfile(); renderFriendsPageLocal();
+    renderAthleticDetail();
   }
   if(page==='train') {
     // When the Preact Train takes over, it fully owns the page — return early so
@@ -428,6 +415,20 @@ function showTab(group, tab) {
   document.querySelectorAll('#page-'+group+' [data-tab-content]').forEach(s => {
     s.style.display = s.dataset.tabContent === tab ? '' : 'none';
   });
+  // Render on-demand per i tab fusi (N1/N2): i renderer legacy popolano i
+  // container quando il tab diventa visibile (i canvas Chart.js disegnati da
+  // nascosti hanno dimensioni nulle).
+  if (group === 'dashboard' && tab === 'analisi') renderProgress();
+  if (group === 'dashboard' && tab === 'overview') {
+    // Tornando alla Panoramica da Analisi i canvas potrebbero essere stati
+    // disegnati da nascosti (dimensioni nulle): ridisegna.
+    const sortedW = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderHeatmap(sortedW); renderWeeklyChart(sortedW); renderRadarChart(sortedW);
+  }
+  if (group === 'body' && (tab === 'nutrition' || tab === 'sleep')) {
+    renderRecoveryPage({ settings: settingsCache, toast });
+  }
+  if (group === 'profile' && tab === 'athletic') renderAthleticDetail();
   // Persist
   try { localStorage.setItem('ta_tab_' + group, tab); } catch(e) {}
 }
@@ -445,7 +446,6 @@ function onDataChanged() {
   const id = activePage.id;
   if (id === 'page-dashboard') renderDashboard();
   if (id === 'page-history') renderHistory();
-  if (id === 'page-progress') { renderProgress(); renderAthleticDetail(); }
   if (id === 'page-body') renderWeightPage();
 }
 

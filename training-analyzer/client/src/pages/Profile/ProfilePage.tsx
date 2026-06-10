@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { PageShell, Card } from '@/components/layout';
+import { PageShell, Card, BentoGrid } from '@/components/layout';
 
 // Profilo — route .tsx (WRAP). Scheletro con i 2 tab (Mio profilo/Amici) e gli
 // id che ui.js::renderProfile e friends.js usano. Il listener diretto
@@ -7,9 +7,12 @@ import { PageShell, Card } from '@/components/layout';
 // mount. Pulsanti via delega data-action. Look 1:1.
 export function ProfilePage() {
   return (
-    <PageShell eyebrow="07 · PROFILO" title="Profilo">
-      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <PageShell eyebrow="05 · PROFILO" title="Profilo">
+      {/* N2: il Profilo ospita anche l'Atletica (ex Progressi → Atletica).
+          renderAthleticDetail() di ui.js popola i container al cambio tab. */}
+      <div class="lay-tabbar">
         <button class="bm-tab active" data-tab-group="profile" data-tab="me">Mio profilo</button>
+        <button class="bm-tab" data-tab-group="profile" data-tab="athletic">Atletica</button>
         <button class="bm-tab" data-tab-group="profile" data-tab="friends">Amici</button>
       </div>
 
@@ -38,9 +41,31 @@ export function ProfilePage() {
         </Card>
         <div style="text-align:center;margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           <button class="btn btn-secondary" data-action="exportProfilePdf">Esporta PDF</button>
+          {/* Su mobile Setup non è nella bottom-nav: raggiungibile da qui. */}
+          <button class="btn btn-secondary" data-page="setup">Setup</button>
           <button class="btn btn-secondary" data-action="signOut">Esci dall'Account</button>
           <button class="btn btn-danger" data-action="deleteAccount">Elimina account</button>
         </div>
+      </div>
+
+      {/* ===== ATLETICA (ex Progressi) — id usati da ui.js::renderAthleticDetail ===== */}
+      <div data-tab-content="athletic" style="display:none">
+        <BentoGrid cols="split">
+          <Card hud>
+            <div class="card-title">Il tuo corpo</div>
+            <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Silhouette interattiva basata sulle tue misure. Clicca su una parte per i dettagli.</p>
+            <div id="body-avatar-container" />
+          </Card>
+          <Card hud>
+            <div class="card-title">Radar ultimi 30 giorni</div>
+            <div class="chart-container" style="height:300px"><canvas id="chart-radar-detail" /></div>
+          </Card>
+        </BentoGrid>
+        <div class="card-grid" id="athletic-detail-cards" />
+        <Card hud>
+          <div class="card-title">Valutazione Forma Fisica</div>
+          <div id="athletic-fitness-assessment" />
+        </Card>
       </div>
 
       <div data-tab-content="friends" style="display:none">

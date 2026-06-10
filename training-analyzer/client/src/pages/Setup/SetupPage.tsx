@@ -8,7 +8,7 @@ import { PageShell, Card } from '@/components/layout';
 // il mount. Pulsanti via delega data-action. Look 1:1.
 export function SetupPage() {
   return (
-    <PageShell eyebrow="08 · SETUP" title="Setup">
+    <PageShell eyebrow="06 · SETUP" title="Setup">
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
         <button class="bm-tab active" data-tab-group="setup" data-tab="library">Libreria</button>
         <button class="bm-tab" data-tab-group="setup" data-tab="import">Import</button>
@@ -87,6 +87,8 @@ export function SetupPage() {
       </div>
 
       <div data-tab-content="import" style="display:none">
+        <div class="lay-section">Sorgenti dati</div>
+        <div class="lay-bento lay-bento-pair">
         <Card>
           <div class="card-title">Import GPX (Garmin Running)</div>
           <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Esporta i file .gpx da Garmin Connect e trascinali qui.</p>
@@ -123,6 +125,8 @@ export function SetupPage() {
           </div>
           <div id="fit-preview" style="margin-top:12px" />
         </Card>
+        </div>
+        <div class="lay-section">Backup</div>
         <Card>
           <div class="card-title">Export / Backup</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">

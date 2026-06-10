@@ -25,6 +25,15 @@ export function DashboardPage() {
         <h1 class="dash-title">Buon <span class="dash-title-hl">allenamento</span></h1>
       </header>
 
+      {/* N2: la Dashboard ospita anche l'Analisi (ex Progressi → Generali).
+          Tab via delega data-tab-group di ui.js; showTab('dashboard','analisi')
+          fa partire renderProgress() che disegna i canvas qui sotto. */}
+      <div class="lay-tabbar">
+        <button class="bm-tab active" data-tab-group="dashboard" data-tab="overview">Panoramica</button>
+        <button class="bm-tab" data-tab-group="dashboard" data-tab="analisi">Analisi</button>
+      </div>
+
+      <div data-tab-content="overview">
       <section class="dash-hero" id="dash-hero">
         <Hero workouts={sorted} settings={settings} muscleGroups={mg} />
         <NextUp workouts={sorted} muscleGroups={mg} exercises={exLib} />
@@ -75,6 +84,33 @@ export function DashboardPage() {
         <div class="card-title">Ultimi Allenamenti</div>
         <RecentList workouts={sorted} />
       </Card>
+      </div>
+
+      {/* ===== ANALISI (ex Progressi → Generali): canvas disegnati da
+           ui.js::renderProgress (charts.js) quando il tab viene aperto ===== */}
+      <div data-tab-content="analisi" style="display:none">
+        <SectionDivider>Andamento</SectionDivider>
+        <Card hud>
+          <div class="card-title">Andamento Score</div>
+          <div class="chart-container"><canvas id="chart-scores" /></div>
+        </Card>
+        <BentoGrid cols="split">
+          <Card hud><div class="card-title">Volume Palestra (tonnellaggio)</div><div class="chart-container"><canvas id="chart-gym-volume" /></div></Card>
+          <Card hud><div class="card-title">Pace Corsa ponderato (min/km)</div><div class="chart-container"><canvas id="chart-run-pace" /></div></Card>
+        </BentoGrid>
+
+        <SectionDivider>Forza &amp; condizione</SectionDivider>
+        <BentoGrid cols="split">
+          <Card hud><div class="card-title">1RM Stimato (Epley)</div><div id="orm-select-container" style="margin-bottom:8px" /><div class="chart-container"><canvas id="chart-1rm" /></div></Card>
+          <Card hud><div class="card-title">Heart Rate Zones (Corse)</div><div id="hr-zones-container" /></Card>
+        </BentoGrid>
+
+        <SectionDivider>Distribuzione</SectionDivider>
+        <BentoGrid cols="split">
+          <Card hud><div class="card-title">Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles" /></div></Card>
+          <Card hud><div class="card-title">Frequenza per Settimana</div><div class="chart-container"><canvas id="chart-frequency" /></div></Card>
+        </BentoGrid>
+      </div>
     </>
   );
 }
