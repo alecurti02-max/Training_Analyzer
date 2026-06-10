@@ -14,6 +14,10 @@ import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
 import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 import { mountAdmin, unmountAdmin } from './pages/Admin/AdminPage';
 import { mountRecovery, unmountRecovery } from './pages/Recovery/RecoveryPage';
+import { mountProgress, unmountProgress } from './pages/Progress/ProgressPage';
+import { mountBodyPage, unmountBodyPage } from './pages/Body/BodyPage';
+import { mountSetupPage, unmountSetupPage } from './pages/Setup/SetupPage';
+import { mountProfilePage, unmountProfilePage } from './pages/Profile/ProfilePage';
 
 // Skin "carbon" — fallback difensivo. Normalmente lo imposta lo <script> inline
 // anti-FOUC in index.html (prima del paint, via hash CSP). Se quell'inline viene
@@ -41,20 +45,27 @@ globalThis.Preact = globalThis.Preact || {};
 globalThis.Preact.dashboard = { mount: mountDashboard, unmount: unmountDashboard };
 globalThis.Preact.history = { mount: mountHistory, unmount: unmountHistory };
 globalThis.Preact.profile = {
+  mount: mountProfilePage,
+  unmountPage: unmountProfilePage,
   mountFitness: mountFitnessAssessment,
   mountAthletic: mountAthleticDetail,
   computeAthleticMetrics,
   unmount: unmountProfile,
 };
 globalThis.Preact.setup = {
+  mount: mountSetupPage,
+  unmountPage: unmountSetupPage,
   mountSports,
   mountMuscleGroups,
   unmount: unmountSetup,
 };
 globalThis.Preact.body = {
+  mount: mountBodyPage,
+  unmountPage: unmountBodyPage,
   mountBmiBanner,
   unmount: unmountBody,
 };
+globalThis.Preact.progress = { mount: mountProgress, unmount: unmountProgress };
 // Train (wizard + live) — behind the ta_train_preact flag in ui.js. Unlike the
 // snapshot pages above, Train owns its own interactive state once mounted.
 globalThis.Preact.train = {
