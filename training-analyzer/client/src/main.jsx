@@ -13,8 +13,6 @@ import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setu
 import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
 import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 import { mountAdmin, unmountAdmin } from './pages/Admin/AdminPage';
-import { mountRecovery, unmountRecovery } from './pages/Recovery/RecoveryPage';
-import { mountProgress, unmountProgress } from './pages/Progress/ProgressPage';
 import { mountBodyPage, unmountBodyPage } from './pages/Body/BodyPage';
 import { mountSetupPage, unmountSetupPage } from './pages/Setup/SetupPage';
 import { mountProfilePage, unmountProfilePage } from './pages/Profile/ProfilePage';
@@ -65,7 +63,8 @@ globalThis.Preact.body = {
   mountBmiBanner,
   unmount: unmountBody,
 };
-globalThis.Preact.progress = { mount: mountProgress, unmount: unmountProgress };
+// N1/N2: Recupero è fuso in Corpo (tab) e Progressi è sciolto in Dashboard
+// (Analisi) + Profilo (Atletica): niente più bridge progress/recovery.
 // Train (wizard + live) — behind the ta_train_preact flag in ui.js. Unlike the
 // snapshot pages above, Train owns its own interactive state once mounted.
 globalThis.Preact.train = {
@@ -73,4 +72,3 @@ globalThis.Preact.train = {
   unmount: unmountTrain,
 };
 globalThis.Preact.admin = { mount: mountAdmin, unmount: unmountAdmin };
-globalThis.Preact.recovery = { mount: mountRecovery, unmount: unmountRecovery };

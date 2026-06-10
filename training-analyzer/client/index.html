@@ -76,9 +76,7 @@ d.dataset.skin=sk||'carbon';})();
     <button class="nav-btn active" data-page="dashboard">Dashboard</button>
     <button class="nav-btn" data-page="train">Allenamento</button>
     <button class="nav-btn" data-page="history">Storico</button>
-    <button class="nav-btn" data-page="progress">Progressi</button>
     <button class="nav-btn" data-page="body">Corpo</button>
-    <button class="nav-btn" data-page="recovery">Recupero</button>
     <button class="nav-btn" data-page="profile">Profilo</button>
     <button class="nav-btn" data-page="setup">Setup</button>
     <button class="nav-btn" data-page="admin" id="nav-admin" style="display:none">Admin</button>
@@ -96,6 +94,31 @@ d.dataset.skin=sk||'carbon';})();
 
 <!-- Telemetry ticker (skin Carbon) — popolato da js/ui.js::updateTelemetryTicker -->
 <div class="app-ticker" id="app-ticker" aria-hidden="true"><div class="app-ticker-track" id="app-ticker-track"></div></div>
+
+<!-- Bottom-nav mobile (N4) — bottoni [data-page]: la delega di ui.js gestisce il
+     click, showPage sincronizza lo stato active. Visibile solo ≤640px (CSS). -->
+<nav class="lay-bottomnav" aria-label="Navigazione principale">
+  <button class="lay-bottomnav-btn active" data-page="dashboard" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+    <span>Dash</span>
+  </button>
+  <button class="lay-bottomnav-btn" data-page="train" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>
+    <span>Allena</span>
+  </button>
+  <button class="lay-bottomnav-btn" data-page="history" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <span>Storico</span>
+  </button>
+  <button class="lay-bottomnav-btn" data-page="body" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 7.5v6M7 10l5 1.5L17 10M12 13.5L9 20M12 13.5l3 6.5"/></svg>
+    <span>Corpo</span>
+  </button>
+  <button class="lay-bottomnav-btn" data-page="profile" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+    <span>Profilo</span>
+  </button>
+</nav>
 
 <div class="container">
 
@@ -264,40 +287,8 @@ d.dataset.skin=sk||'carbon';})();
   </div>
 </div>
 
-<!-- PROGRESS (Generali + Atletica) -->
-<div id="page-progress" class="page">
-  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-    <button class="bm-tab active" data-tab-group="progress" data-tab="general">Generali</button>
-    <button class="bm-tab" data-tab-group="progress" data-tab="athletic">Atletica</button>
-  </div>
-  <div data-tab-content="general">
-    <div class="card"><div class="card-title">Andamento Score</div><div class="chart-container"><canvas id="chart-scores"></canvas></div></div>
-    <div class="card-grid">
-      <div class="card"><div class="card-title">Volume Palestra (tonnellaggio)</div><div class="chart-container"><canvas id="chart-gym-volume"></canvas></div></div>
-      <div class="card"><div class="card-title">Pace Corsa ponderato (min/km)</div><div class="chart-container"><canvas id="chart-run-pace"></canvas></div></div>
-    </div>
-    <div class="card"><div class="card-title">1RM Stimato (Epley)</div><div id="orm-select-container" style="margin-bottom:8px"></div><div class="chart-container"><canvas id="chart-1rm"></canvas></div></div>
-    <div class="card"><div class="card-title">Heart Rate Zones (Corse)</div><div id="hr-zones-container"></div></div>
-    <div class="card"><div class="card-title">Distribuzione Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles"></canvas></div></div>
-    <div class="card"><div class="card-title">Frequenza Allenamenti per Settimana</div><div class="chart-container"><canvas id="chart-frequency"></canvas></div></div>
-  </div>
-  <div data-tab-content="athletic" style="display:none">
-    <div class="card">
-      <div class="card-title">Il tuo corpo</div>
-      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Silhouette interattiva basata sulle tue misure. Clicca su una parte per i dettagli.</p>
-      <div id="body-avatar-container"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Radar ultimi 30 giorni</div>
-      <div class="chart-container" style="height:300px"><canvas id="chart-radar-detail"></canvas></div>
-    </div>
-    <div class="card-grid" id="athletic-detail-cards"></div>
-    <div class="card">
-      <div class="card-title">Valutazione Forma Fisica</div>
-      <div id="athletic-fitness-assessment"></div>
-    </div>
-  </div>
-</div>
+<!-- PROGRESS: pagina sciolta (N2) — i grafici "Generali" vivono nella tab
+     Analisi della Dashboard, l'Atletica nella tab omonima del Profilo. -->
 
 <!-- BODY (Quick log + Misure + Andamenti) -->
 <div id="page-body" class="page">
@@ -399,65 +390,8 @@ d.dataset.skin=sk||'carbon';})();
   </div>
 </div>
 
-<!-- RECOVERY (Alimentazione + Sonno) -->
-<div id="page-recovery" class="page">
-  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-    <button class="bm-tab active" data-tab-group="recovery" data-tab="nutrition">Alimentazione</button>
-    <button class="bm-tab" data-tab-group="recovery" data-tab="sleep">Sonno</button>
-  </div>
-
-  <div data-tab-content="nutrition">
-    <div class="card">
-      <div class="card-title">Oggi</div>
-      <div id="nutrition-today-summary"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Registra giornata</div>
-      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Inserisci i totali della giornata. Se esiste già un record per la data, viene aggiornato.</p>
-      <div class="form-row">
-        <div class="form-group"><label>Data</label><input type="date" id="nut-date"></div>
-        <div class="form-group"><label>Calorie (kcal)</label><input type="number" min="0" step="1" id="nut-calories" placeholder="es. 2200"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Proteine (g)</label><input type="number" min="0" step="0.1" id="nut-protein" placeholder="es. 140"></div>
-        <div class="form-group"><label>Carboidrati (g)</label><input type="number" min="0" step="0.1" id="nut-carbs" placeholder="es. 250"></div>
-        <div class="form-group"><label>Grassi (g)</label><input type="number" min="0" step="0.1" id="nut-fat" placeholder="es. 70"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group" style="flex:1"><label>Note (opz.)</label><input type="text" id="nut-notes" placeholder="es. cena fuori, surplus weekend..."></div>
-        <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" data-action="saveNutritionLog">Salva</button></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Storico</div>
-      <div id="nutrition-history"></div>
-    </div>
-  </div>
-
-  <div data-tab-content="sleep" style="display:none">
-    <div class="card">
-      <div class="card-title">Stanotte</div>
-      <div id="sleep-today-summary"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Registra notte</div>
-      <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">La data si riferisce al <strong>giorno del risveglio</strong>. Se esiste già un record per la data, viene aggiornato.</p>
-      <div class="form-row">
-        <div class="form-group"><label>Data</label><input type="date" id="slp-date"></div>
-        <div class="form-group"><label>Durata (ore)</label><input type="number" min="0" max="24" step="0.25" id="slp-duration" placeholder="es. 7.5"></div>
-        <div class="form-group"><label>Qualità (1-10)</label><input type="number" min="1" max="10" step="1" id="slp-quality" placeholder="es. 7"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group" style="flex:1"><label>Note (opz.)</label><input type="text" id="slp-notes" placeholder="es. risveglio notturno, sogni vividi..."></div>
-        <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" data-action="saveSleepLog">Salva</button></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Storico</div>
-      <div id="sleep-history"></div>
-    </div>
-  </div>
-</div>
+<!-- RECOVERY: pagina fusa in Corpo (N1) — Alimentazione e Sonno sono tab
+     della pagina Corpo (BodyPage.tsx); la logica resta in js/recovery.js. -->
 
 <!-- SETUP (Library + Import + Settings non-body) -->
 <div id="page-setup" class="page">

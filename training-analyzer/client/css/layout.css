@@ -71,3 +71,49 @@
 
 /* --- SectionHeader aside ------------------------------------------------ */
 .card-title-aside { font-size: .72rem; color: var(--text2); font-weight: 400; }
+
+/* --- BentoGrid: coppia 2×N (drop-zone import, coppie di card) ------------ */
+.lay-bento-pair { grid-template-columns: 1fr 1fr; }
+@media (max-width: 700px) { .lay-bento-pair { grid-template-columns: 1fr; } }
+
+/* --- Storico: gruppi mensili + striscia riepilogo ------------------------ */
+.hist-group { margin-bottom: 4px; }
+.hist-group > .lay-section { margin: 18px 2px 4px; }
+.hist-summary-strip {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: .64rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text2); margin: 0 2px 10px;
+}
+.hist-summary-strip b { color: var(--text); font-weight: 700; }
+
+/* --- Bottom-nav mobile (N4) ---------------------------------------------- */
+/* Markup statico in index.html (bottoni [data-page] → delega ui.js).
+   Visibile solo ≤640px; lo stato active è sincronizzato da showPage. */
+.lay-bottomnav {
+  display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+  background: color-mix(in srgb, var(--bg2) 92%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+.lay-bottomnav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; cursor: pointer; padding: 6px 2px;
+  color: var(--text2); font-family: var(--font-mono); font-size: .56rem;
+  letter-spacing: .08em; text-transform: uppercase; border-radius: 10px;
+  transition: var(--transition);
+}
+.lay-bottomnav-btn svg { width: 21px; height: 21px; pointer-events: none; }
+.lay-bottomnav-btn span { pointer-events: none; }
+.lay-bottomnav-btn.active { color: var(--accent); }
+.lay-bottomnav-btn.active svg { filter: drop-shadow(0 0 6px var(--pulse-glow)); }
+
+@media (max-width: 640px) {
+  .lay-bottomnav { display: flex; }
+  /* Le voci di navigazione passano alla bottom-nav; la barra alta tiene
+     brand + sync + tema + avatar. */
+  .nav .nav-scroll { display: none; }
+  .app-ticker { display: none !important; }
+  .container { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .live-fab { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+}

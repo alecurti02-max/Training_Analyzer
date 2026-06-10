@@ -7,7 +7,7 @@ import { PageShell, Card } from '@/components/layout';
 // porting completo (stats/tabella/grafici in .tsx) potrà arrivare in seguito.
 export function AdminPage() {
   return (
-    <PageShell eyebrow="09 · ADMIN" title="Admin">
+    <PageShell eyebrow="07 · ADMIN" title="Admin">
       <div class="card-grid" id="admin-stats" />
       <div class="dash-layout">
         <div class="dash-col-main">
