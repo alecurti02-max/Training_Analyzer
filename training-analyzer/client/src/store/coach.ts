@@ -18,6 +18,13 @@ export interface CoachClientRow {
   lastWorkoutDate?: string | null;
   workouts7d?: number;
   workouts30d?: number;
+  activeAssignment?: {
+    id: string;
+    title: string;
+    currentWeek: number;
+    weeks: number;
+    adherencePct: number | null;
+  } | null;
 }
 
 export const coachClients = signal<CoachClientRow[]>([]);
@@ -63,3 +70,69 @@ export const saveClientPlan = (clientId: string, plan: unknown) =>
 
 export const deleteClientPlan = (clientId: string, planId: string) =>
   api.del(`/api/coach/clients/${encodeURIComponent(clientId)}/planned-workouts/${encodeURIComponent(planId)}`);
+
+// ---- F2: schede (programs) e assegnazioni ----
+
+export interface ProgramDay {
+  key: string;
+  label?: string;
+  type?: string;
+  muscleGroups?: string[];
+  note?: string | null;
+  exercises?: unknown[];
+}
+
+export interface Program {
+  id: string;
+  title: string;
+  goal?: string | null;
+  notes?: string | null;
+  weeks: number;
+  days: ProgramDay[];
+  progressions: Array<{ week: number; loadPct?: number; deload?: boolean; note?: string | null }>;
+  status: 'draft' | 'active' | 'archived';
+  updatedAt?: string;
+}
+
+export const coachPrograms = signal<Program[]>([]);
+
+export async function loadPrograms(): Promise<Program[]> {
+  try {
+    const rows = await api.get<Program[]>('/api/coach/programs');
+    coachPrograms.value = Array.isArray(rows) ? rows : [];
+  } catch (e) {
+    coachPrograms.value = [];
+  }
+  return coachPrograms.value;
+}
+
+export async function saveProgram(program: Partial<Program> & { id?: string }): Promise<Program> {
+  const saved = program.id
+    ? await api.put<Program>(`/api/coach/programs/${encodeURIComponent(program.id)}`, program)
+    : await api.post<Program>('/api/coach/programs', program);
+  await loadPrograms();
+  return saved;
+}
+
+export async function deleteProgram(id: string): Promise<void> {
+  await api.del(`/api/coach/programs/${encodeURIComponent(id)}`);
+  await loadPrograms();
+}
+
+export async function duplicateProgram(id: string): Promise<Program> {
+  const copy = await api.post<Program>(`/api/coach/programs/${encodeURIComponent(id)}/duplicate`);
+  await loadPrograms();
+  return copy;
+}
+
+export const loadProgram = (id: string) =>
+  api.get<Program>(`/api/coach/programs/${encodeURIComponent(id)}`);
+
+export const assignProgram = (clientId: string, body: { programId: string; startDate: string; weekdayMap?: Record<string, number> | null; note?: string }) =>
+  api.post(`/api/coach/clients/${encodeURIComponent(clientId)}/assignments`, body);
+
+export const updateAssignment = (id: string, body: { status?: 'completed' | 'cancelled'; weekdayMap?: Record<string, number> | null; note?: string | null }) =>
+  api.put(`/api/coach/assignments/${encodeURIComponent(id)}`, body);
+
+export const loadAdherence = (clientId: string) =>
+  api.get(`/api/coach/clients/${encodeURIComponent(clientId)}/adherence`);

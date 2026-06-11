@@ -103,6 +103,9 @@ export function LiveSession({ userId }) {
       param: e.param || 'reps',
       sets: (Array.isArray(e.sets) && e.sets.length ? e.sets : [makeEmptySet(e, { live: true })]).map((st) => ({ ...st, done: false })),
     }));
+    // CRM F2: se il piano viene da una scheda assegnata (launchDay/pin del coach),
+    // trasporta il riferimento {assignmentId, dayKey, week} fino al salvataggio.
+    s._assignment = plan._assignment || null;
     setSelType(t); setSession(s); persist(s); setScreen('active'); setNow(Date.now());
   }, [lp]);
 
@@ -181,6 +184,9 @@ export function LiveSession({ userId }) {
       workout = buildSportWorkout(session.type, fields, { id: uid(), date: session.date, notes: finishNotes }, FIELD_DEFS, { extra: { duration: durationMin, rpe } });
     }
     attachScores(workout, { workoutsCache: data.workouts, settings: data.settings, calcTonnage, scoreWorkout, getAdvice });
+    // CRM F2: la chiave extra finisce in workout.data._assignment (looseObject);
+    // il server la valida e la "solleva" nelle colonne assignment* (anti-forgery).
+    if (session._assignment) workout._assignment = session._assignment;
     try {
       const saved = await trainBridge.saveWorkout(workout);
       if (saved && saved.id) workout.id = saved.id;

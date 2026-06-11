@@ -31,6 +31,16 @@ function ActiveClientCard({ row, onSelect }: { row: CoachClientRow; onSelect: (u
             Ultimo allenamento: <span style={atRisk ? 'color:var(--redline,#e54)' : ''}>{fmtDate(row.lastWorkoutDate)}</span>
             {' · '}{row.workouts7d ?? 0} negli ultimi 7g · {row.workouts30d ?? 0} negli ultimi 30g
           </div>
+          {row.activeAssignment && (
+            <div style="font-size:.75rem;color:var(--text2)">
+              Scheda: {row.activeAssignment.title} · sett. {row.activeAssignment.currentWeek}/{row.activeAssignment.weeks}
+              {row.activeAssignment.adherencePct != null && (
+                <span style={`font-weight:700;color:${row.activeAssignment.adherencePct >= 70 ? 'var(--accent)' : 'var(--redline,#e54)'}`}>
+                  {' '}· aderenza {row.activeAssignment.adherencePct}%
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <span style="color:var(--text2);font-size:.9rem">›</span>
       </div>

@@ -12,8 +12,10 @@ const SleepLog = require('./SleepLog')(sequelize);
 const PlannedWorkout = require('./PlannedWorkout')(sequelize);
 const TrainerProfile = require('./TrainerProfile')(sequelize);
 const CoachClient = require('./CoachClient')(sequelize);
+const Program = require('./Program')(sequelize);
+const ProgramAssignment = require('./ProgramAssignment')(sequelize);
 
-const models = { User, Workout, Exercise, Settings, Weight, Follow, BodyMeasurement, NutritionLog, SleepLog, PlannedWorkout, TrainerProfile, CoachClient };
+const models = { User, Workout, Exercise, Settings, Weight, Follow, BodyMeasurement, NutritionLog, SleepLog, PlannedWorkout, TrainerProfile, CoachClient, Program, ProgramAssignment };
 
 Object.values(models).forEach((model) => {
   if (typeof model.associate === 'function') {

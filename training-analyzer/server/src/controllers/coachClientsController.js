@@ -1,9 +1,12 @@
 const { Op, fn, col } = require('sequelize');
-const { User, Workout, CoachClient, PlannedWorkout } = require('../models');
+const { User, Workout, CoachClient, PlannedWorkout, ProgramAssignment } = require('../models');
 const { queryWorkouts } = require('./workoutController');
 const { computeStats } = require('./userController');
 const { makeDateUpsertController } = require('../utils/crud');
 const { pickFields: pickPlannedFields } = require('./plannedWorkoutController');
+const { rosterAssignments } = require('../services/adherenceService');
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Whitelist degli attributi User esposti al coach sui PROPRI clienti (l'email
 // serve: è il contatto che il PT ha in mano). Mai spread di toPublicJSON qui.
@@ -70,15 +73,22 @@ async function listClients(req, res, next) {
     });
 
     let statsByUid = {};
+    let assignByUid = {};
     if (req.query.includeStats === '1') {
       const activeIds = rels.filter((r) => r.status === 'active').map((r) => r.clientId);
-      if (activeIds.length) statsByUid = await rosterStats(activeIds);
+      if (activeIds.length) {
+        [statsByUid, assignByUid] = await Promise.all([
+          rosterStats(activeIds),
+          rosterAssignments(req.user.uid, activeIds),
+        ]);
+      }
     }
 
     res.json(rels.map((r) => ({
       relationship: pickRel(r),
       user: r.client,
       ...(statsByUid[r.clientId] || {}),
+      ...(assignByUid[r.clientId] || {}),
     })));
   } catch (err) {
     next(err);
@@ -194,9 +204,46 @@ async function clientStats(req, res, next) {
 // (mutationWhere); se il cliente ha già un planned su quella data, l'upsert ne
 // aggiorna il contenuto (200 invece di 201) ma la riga resta del cliente — la
 // proprietà non viene mai riassegnata da un upsert.
+// F2 — pin di un giorno-scheda: il body può portare assignmentId+dayKey. La
+// variante coach del pickFields li accetta SOLO se validatePinRef (sotto) ha
+// confermato che l'assignment è del coach autenticato per QUESTO cliente.
+function pickCoachPlannedFields(body) {
+  const out = pickPlannedFields(body);
+  if (typeof body.assignmentId === 'string') {
+    out.assignmentId = body.assignmentId;
+    out.dayKey = typeof body.dayKey === 'string' && body.dayKey ? body.dayKey.slice(0, 8) : null;
+  } else if (body.assignmentId === null) {
+    out.assignmentId = null;
+    out.dayKey = null;
+  }
+  return out;
+}
+
+// Middleware (dopo loadCoachClient): un assignmentId nel body che non è un
+// assignment del coach per questo cliente viene rimosso (mai 500, mai forgery).
+async function validatePinRef(req, res, next) {
+  try {
+    const id = req.body?.assignmentId;
+    if (id !== undefined && id !== null) {
+      const ok = typeof id === 'string' && UUID_RE.test(id)
+        && (await ProgramAssignment.findOne({
+          where: { id, coachId: req.user.uid, clientId: req.clientId },
+          attributes: ['id'],
+        }));
+      if (!ok) {
+        delete req.body.assignmentId;
+        delete req.body.dayKey;
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
 const coachPlanned = makeDateUpsertController({
   Model: PlannedWorkout,
-  pickFields: pickPlannedFields,
+  pickFields: pickCoachPlannedFields,
   entityName: 'Planned workout',
   requireAtLeastOneField: false,
   ownerId: (req) => req.clientId,
@@ -212,4 +259,5 @@ module.exports = {
   clientWorkoutById,
   clientStats,
   coachPlanned,
+  validatePinRef,
 };
