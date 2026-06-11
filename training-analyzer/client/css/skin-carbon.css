@@ -201,3 +201,280 @@
 }
 @keyframes cc-grow{ from{ transform:scaleY(0); } }
 @keyframes cc-reveal{ from{ opacity:0; transform:translateY(14px); } }
+
+/* ============================================================================
+   STRUMENTO "CONSOLE" — restyle giu 2026 (prototipo B, glow ridotto).
+   L'app come strumento professionale acceso: testate a targhetta con LED,
+   griglia blueprint, readout teal, comandi-tasto, gauge segmentati.
+   Tutto scoped a [data-skin="carbon"]: il kill-switch ta_skin='pista' resta
+   integro. Sezione in coda al file: a parità di specificità vince in cascata
+   sulle regole cockpit più sopra.
+   ========================================================================== */
+:root[data-skin="carbon"]{
+  --radius:4px;
+  --radius-sm:3px;
+  --card-shadow:none;
+  /* glow "ridotto": metà dell'alone pulse standard */
+  --glow-soft:color-mix(in srgb, var(--pulse-glow) 45%, transparent);
+}
+
+/* --- Griglia blueprint di fondo (al posto dello striping diagonale). La
+   dashboard-v2 spegne body::before con [data-active-page]: ri-accendiamo con
+   specificità maggiore. Sfuma verso il basso per non sporcare le liste. --- */
+:root[data-skin="carbon"] body::before,
+:root[data-skin="carbon"][data-active-page] body::before{
+  display:block !important;
+  background-image:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--accent) 7%, transparent) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 0 1px, transparent 1px 26px) !important;
+  mask-image:radial-gradient(ellipse 95% 72% at 50% 0%, #000 0%, transparent 72%);
+  -webkit-mask-image:radial-gradient(ellipse 95% 72% at 50% 0%, #000 0%, transparent 72%);
+}
+
+/* --- Card = modulo: bordo netto leggermente teal, niente levitazione --- */
+:root[data-skin="carbon"] .card{
+  border-radius:4px;
+  border-color:color-mix(in srgb, var(--accent) 14%, var(--border-strong));
+  box-shadow:none;
+}
+:root[data-skin="carbon"] .card:hover{
+  transform:none;
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* --- Testata a targhetta: .card-title diventa una strip full-bleed con LED --- */
+:root[data-skin="carbon"] .card-title{
+  font-family:var(--font-mono);
+  font-size:.64rem; font-weight:700; font-style:normal; line-height:1.2;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--text);
+  display:flex; align-items:center; gap:9px;
+  margin:0 -22px 16px; padding:9px 14px;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 13%, var(--bg3)), var(--bg3) 72%);
+  border-bottom:1px solid color-mix(in srgb, var(--accent) 25%, var(--border-strong));
+}
+:root[data-skin="carbon"] .card > .card-title:first-child{ margin-top:-22px; }
+:root[data-skin="carbon"] .card-title::before{
+  content:""; width:7px; height:7px; border-radius:50%; flex-shrink:0;
+  background:var(--accent); box-shadow:0 0 7px var(--glow-soft);
+  display:inline-block;
+}
+:root[data-skin="carbon"] .card-title-aside{ letter-spacing:.06em; }
+
+/* Le stat card della dashboard hanno padding forzato dalla v2: normalizza al
+   padding standard delle card così le targhette (margini negativi) sono a filo */
+:root[data-skin="carbon"] #page-dashboard #dash-stats > .card{
+  padding:22px 22px 24px !important; border-radius:4px !important;
+}
+:root[data-skin="carbon"] #page-dashboard .cc-stat-label{
+  margin:-22px -22px 14px; padding:8px 14px;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 13%, var(--bg3)), var(--bg3) 72%);
+  border-bottom:1px solid color-mix(in srgb, var(--accent) 25%, var(--border-strong));
+  font-size:.6rem; letter-spacing:.22em; color:var(--text);
+}
+:root[data-skin="carbon"] #page-dashboard .cc-stat-label i{
+  border-radius:50%; box-shadow:0 0 6px var(--glow-soft);
+}
+
+/* I tick angolari HUD lasciano il posto alle targhette */
+:root[data-skin="carbon"] #page-dashboard .cc-hud::before,
+:root[data-skin="carbon"] #page-dashboard .cc-hud::after{ display:none !important; }
+
+/* --- Hero/NextUp: pannello console con readout acceso (glow solo qui) --- */
+:root[data-skin="carbon"] #page-dashboard .cc-hero,
+:root[data-skin="carbon"] #page-dashboard .cc-nextup{
+  border:1px solid color-mix(in srgb, var(--accent) 28%, var(--border-strong));
+  border-radius:4px;
+  background-image:linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 45%);
+  box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, transparent);
+}
+:root[data-skin="carbon"] #page-dashboard .cc-hero-score{
+  font-size:clamp(3.8rem,9vw,6.2rem); font-weight:900; letter-spacing:-.04em;
+  color:var(--accent); text-shadow:0 0 24px var(--glow-soft);
+}
+:root[data-skin="carbon"] #page-dashboard .cc-stat-v .cc-num{
+  color:var(--accent); font-weight:900;
+}
+
+/* --- Chip di stato con LED (Ready/Push/Carico) --- */
+.px-status{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--font-mono); font-size:.58rem; font-weight:700;
+  letter-spacing:.2em; text-transform:uppercase;
+  border:1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
+  color:var(--accent); border-radius:3px; padding:4px 9px;
+  background:color-mix(in srgb, var(--accent) 8%, transparent);
+  white-space:nowrap;
+}
+.px-status i{
+  width:6px; height:6px; border-radius:50%; background:var(--accent);
+  box-shadow:0 0 6px var(--glow-soft, var(--pulse-glow));
+}
+.px-status.rl{
+  color:var(--redline, var(--red));
+  border-color:color-mix(in srgb, var(--redline, var(--red)) 50%, var(--border));
+  background:color-mix(in srgb, var(--redline, var(--red)) 8%, transparent);
+}
+.px-status.rl i{
+  background:var(--redline, var(--red));
+  box-shadow:0 0 6px color-mix(in srgb, var(--redline, var(--red)) 45%, transparent);
+}
+
+/* --- Barra di sforzo segmentata con zona REDLINE (hero) --- */
+.px-effort{
+  height:12px; position:relative; margin-top:14px;
+  border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border-strong));
+  background:var(--bg);
+  background-image:linear-gradient(90deg, transparent 0 82%, color-mix(in srgb, var(--redline, var(--red)) 20%, transparent) 82%);
+}
+.px-effort i{
+  position:absolute; inset:1px auto 1px 1px; display:block;
+  background:linear-gradient(90deg, var(--accent-dark), var(--accent));
+  mask-image:repeating-linear-gradient(90deg, #000 0 8px, transparent 8px 11px);
+  -webkit-mask-image:repeating-linear-gradient(90deg, #000 0 8px, transparent 8px 11px);
+}
+.px-effort-scale{
+  display:flex; justify-content:space-between; margin-top:4px;
+  font-family:var(--font-mono); font-size:.56rem; letter-spacing:.18em;
+  color:var(--text2); text-transform:uppercase;
+}
+.px-effort-scale b{ color:var(--redline, var(--red)); }
+
+/* --- Bottoni = comandi: mono, squadrati, corsa di pressione, glow ridotto --- */
+:root[data-skin="carbon"] .btn{
+  border-radius:3px !important;
+  font-family:var(--font-mono) !important; font-size:.72rem !important;
+  letter-spacing:.12em !important; text-transform:uppercase !important;
+}
+:root[data-skin="carbon"] .btn-primary{
+  box-shadow:0 3px 0 var(--accent-dark), 0 6px 16px -9px var(--pulse-glow) !important;
+}
+:root[data-skin="carbon"] .btn-primary:hover{
+  transform:translateY(1px) !important;
+  box-shadow:0 2px 0 var(--accent-dark), 0 6px 16px -9px var(--pulse-glow) !important;
+}
+:root[data-skin="carbon"] .btn-secondary{
+  box-shadow:0 3px 0 color-mix(in srgb, var(--border-strong) 75%, transparent) !important;
+}
+:root[data-skin="carbon"] .btn-secondary:hover{
+  transform:translateY(1px) !important;
+  box-shadow:0 2px 0 color-mix(in srgb, var(--border-strong) 75%, transparent) !important;
+}
+
+/* --- Tab/filtri = selettori di modalità: mono, squadrati, LED sotto l'attivo --- */
+:root[data-skin="carbon"] .bm-tab,
+:root[data-skin="carbon"] .tab-btn,
+:root[data-skin="carbon"] .filter-btn,
+:root[data-skin="carbon"] .lib-filter-btn{
+  border-radius:3px !important; border:1px solid var(--border-strong) !important;
+  font-family:var(--font-mono) !important; font-size:.66rem !important;
+  letter-spacing:.14em !important; text-transform:uppercase !important;
+  background:var(--bg) !important; color:var(--text2) !important;
+  padding:8px 13px !important;
+}
+:root[data-skin="carbon"] .bm-tab.active,
+:root[data-skin="carbon"] .tab-btn.active,
+:root[data-skin="carbon"] .filter-btn.active,
+:root[data-skin="carbon"] .lib-filter-btn.active{
+  background:color-mix(in srgb, var(--accent) 13%, var(--bg)) !important;
+  color:var(--accent) !important;
+  border-color:color-mix(in srgb, var(--accent) 55%, var(--border-strong)) !important;
+  box-shadow:inset 0 -3px 0 var(--accent) !important;
+}
+
+/* --- Divisore di sezione = lettura di canale (// + righello a tacche) --- */
+:root[data-skin="carbon"] .lay-section{
+  color:var(--accent); font-size:.62rem; letter-spacing:.24em; gap:12px;
+}
+:root[data-skin="carbon"] .lay-section::before{
+  content:"//"; color:color-mix(in srgb, var(--accent) 65%, transparent); font-weight:400;
+}
+:root[data-skin="carbon"] .lay-section::after{
+  background:repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 50%, transparent) 0 1px, transparent 1px 10px);
+  height:7px; align-self:center;
+  mask-image:linear-gradient(90deg, #000, transparent);
+  -webkit-mask-image:linear-gradient(90deg, #000, transparent);
+}
+
+/* --- Gauge segmentati (recovery, barre) + sparkline squadrata --- */
+:root[data-skin="carbon"] .muscle-bar-bg{
+  border-radius:0; height:11px; border:1px solid var(--border-strong); background:var(--bg);
+}
+:root[data-skin="carbon"] .muscle-bar-fill{
+  border-radius:0;
+  mask-image:repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+  -webkit-mask-image:repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+}
+:root[data-skin="carbon"] #page-dashboard .cc-spark{ gap:2px; }
+:root[data-skin="carbon"] #page-dashboard .cc-spark span{ border-radius:0; opacity:1; }
+
+/* --- Titoli: dritti e tecnici (via il corsivo skewato), evidenziatore → teal --- */
+:root[data-skin="carbon"] .lay-title{ transform:none; font-style:normal; letter-spacing:-.01em; }
+:root[data-skin="carbon"] .page::after{ transform:none; font-style:normal; }
+:root[data-skin="carbon"] #page-dashboard .dash-title{
+  transform:none !important; font-style:normal !important;
+  font-family:var(--font-heading) !important; letter-spacing:-.01em !important;
+}
+:root[data-skin="carbon"] #page-dashboard .dash-title .accent-word,
+:root[data-skin="carbon"] #page-dashboard .dash-title-hl{
+  background:none !important; background-image:none !important;
+  color:var(--accent) !important; -webkit-text-fill-color:var(--accent) !important;
+  padding:0 !important; margin:0 !important;
+}
+:root[data-skin="carbon"] #page-dashboard .dash-eyebrow{
+  color:var(--accent) !important; letter-spacing:.18em !important; text-transform:uppercase !important;
+}
+
+/* --- Bottom-nav e ticker in linea con la console --- */
+:root[data-skin="carbon"] .lay-bottomnav{
+  border-top:1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+
+/* --- Parità di specificità con il "card chrome" della dashboard-v2 ---------
+   La v2 governa le card con :root[data-active-page] .page.active .card e i
+   titoli con #page-dashboard .card-title (ID): queste regole pareggiano e
+   vincono, mantenendo i valori Strumento ovunque. --- */
+:root[data-skin="carbon"][data-active-page] .page.active .card{
+  border-radius:4px;
+  border:1px solid color-mix(in srgb, var(--accent) 14%, var(--border-strong));
+  padding:22px 22px 24px;
+  box-shadow:none;
+}
+:root[data-skin="carbon"][data-active-page] .page.active .card:hover{
+  transform:none;
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+  border-color:color-mix(in srgb, var(--accent) 35%, var(--border-strong));
+}
+:root[data-skin="carbon"] #page-dashboard .card-title{
+  font-family:var(--font-mono);
+  font-size:.64rem; font-weight:700; font-style:normal; line-height:1.2;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--text);
+  display:flex; align-items:center; gap:9px;
+  margin:-22px -22px 16px; padding:9px 14px;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 13%, var(--bg3)), var(--bg3) 72%);
+  border-bottom:1px solid color-mix(in srgb, var(--accent) 25%, var(--border-strong));
+}
+:root[data-skin="carbon"] #page-dashboard .card-title::before{
+  content:""; width:7px; height:7px; border-radius:50%; flex-shrink:0;
+  background:var(--accent); box-shadow:0 0 7px var(--glow-soft);
+  display:inline-block;
+}
+/* niente effetto evidenziatore della v2 sulle clickable-card */
+:root[data-skin="carbon"] #page-dashboard .clickable-card .card-title,
+:root[data-skin="carbon"] #page-dashboard .clickable-card:hover .card-title,
+:root[data-skin="carbon"][data-active-page] .clickable-card:hover .card-title{
+  display:flex; background-image:none !important;
+}
+
+/* --- Mobile: targhette a filo col padding ridotto delle card --- */
+@media (max-width:600px){
+  :root[data-skin="carbon"][data-active-page] .page.active .card{ padding:16px; }
+  :root[data-skin="carbon"] .card-title,
+  :root[data-skin="carbon"] #page-dashboard .card-title{ margin:0 -16px 14px; padding:8px 13px; }
+  :root[data-skin="carbon"] .card > .card-title:first-child,
+  :root[data-skin="carbon"] #page-dashboard .card > .card-title:first-child{ margin-top:-16px; }
+}
+@media (max-width:640px){
+  :root[data-skin="carbon"] #page-dashboard #dash-stats > .card{ padding:16px !important; }
+  :root[data-skin="carbon"] #page-dashboard .cc-stat-label{ margin:-16px -16px 12px; }
+  :root[data-skin="carbon"] #page-dashboard .cc-stat-v .cc-num{ font-size:2.3rem; }
+}
