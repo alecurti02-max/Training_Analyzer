@@ -92,7 +92,10 @@ export function Hero({ workouts, settings, muscleGroups }) {
 
   return (
     <div class="cc-hud cc-hero">
-      <div class="cc-hero-eyebrow">Sistema pronto · <b>{thisWeek.length} sessioni</b> questa settimana</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div class="cc-hero-eyebrow" style={{ marginBottom: 0 }}>Sistema pronto · <b>{thisWeek.length} sessioni</b> questa settimana</div>
+        <span class="px-status"><i />Ready</span>
+      </div>
       <div class="cc-hero-big">
         <span class="cc-num cc-hero-score">{avg30 ? score : '--'}</span>
         <div class="cc-hero-meta">
@@ -102,6 +105,14 @@ export function Hero({ workouts, settings, muscleGroups }) {
           )}
         </div>
       </div>
+      {avg30 > 0 && (
+        <>
+          {/* Barra di sforzo: score/10 sulla scala dello strumento; la zona
+              finale è il "redline" (oltre 8.2 stai spingendo davvero). */}
+          <div class="px-effort"><i style={{ width: `${Math.min(100, Math.round(avg30 * 10))}%` }} /></div>
+          <div class="px-effort-scale"><span>Potenza</span><b>Redline</b></div>
+        </>
+      )}
       <p class="cc-hero-line">{coaching.text}</p>
       <div class="cc-hero-sub">
         <div><span class="cc-num">{streak.current}</span><span class="cc-sub-lab">Streak · gg</span></div>
@@ -145,7 +156,10 @@ export function NextUp({ workouts, muscleGroups, exercises }) {
   return (
     <div class="cc-hud cc-nextup">
       <div>
-        <div class="cc-nextup-eyebrow">▸ Prossima sessione{planned && <span class="cc-nextup-when"> · {fmtWhen(planned.date)}</span>}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div class="cc-nextup-eyebrow">▸ Prossima sessione{planned && <span class="cc-nextup-when"> · {fmtWhen(planned.date)}</span>}</div>
+          <span class="px-status rl"><i />Push</span>
+        </div>
         {planned ? (
           <>
             <h3 class="cc-nextup-title">{planned.muscleGroups && planned.muscleGroups.length ? planned.muscleGroups.join(' & ') : sportName(planned.type)}</h3>
