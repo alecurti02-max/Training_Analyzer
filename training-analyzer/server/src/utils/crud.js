@@ -10,12 +10,30 @@ const { Op } = require('sequelize');
  *   - pickFields(body): function that returns only safe/validated fields from body
  *   - entityName: used in error messages ('Sleep log', 'Weight entry', ...)
  *   - requireAtLeastOneField: when true, create returns 400 if pickFields returns {}
+ *   - ownerId(req): resolver for the row owner (default: the authenticated user).
+ *     The coach routes pass req => req.clientId (after loadCoachClient) to operate
+ *     on a client's calendar without duplicating these handlers.
+ *   - stampFields(req): extra server-controlled fields merged into the CREATE
+ *     defaults only (e.g. { createdByCoachId }) — never from the body, and never
+ *     applied when the upsert lands on an existing row: ownership of a row must
+ *     not be reassigned by an upsert (a coach pinning over a client-created plan
+ *     updates its content but the row stays the client's).
+ *   - mutationWhere(req): extra WHERE for update/destroy (e.g. a coach may only
+ *     mutate rows they created).
  */
-function makeDateUpsertController({ Model, pickFields, entityName, requireAtLeastOneField = true }) {
+function makeDateUpsertController({
+  Model,
+  pickFields,
+  entityName,
+  requireAtLeastOneField = true,
+  ownerId = (req) => req.user.uid,
+  stampFields = null,
+  mutationWhere = null,
+}) {
   async function list(req, res, next) {
     try {
       const { from, to } = req.query;
-      const where = { userId: req.user.uid };
+      const where = { userId: ownerId(req) };
       if (from || to) {
         where.date = {};
         if (from) where.date[Op.gte] = from;
@@ -34,9 +52,11 @@ function makeDateUpsertController({ Model, pickFields, entityName, requireAtLeas
       if (requireAtLeastOneField && Object.keys(data).length === 0) {
         return res.status(400).json({ error: { message: `at least one ${entityName.toLowerCase()} field is required` } });
       }
+      const stamp = stampFields ? stampFields(req) : {};
+      const uid = ownerId(req);
       const [row, created] = await Model.findOrCreate({
-        where: { userId: req.user.uid, date },
-        defaults: { userId: req.user.uid, date, ...data },
+        where: { userId: uid, date },
+        defaults: { userId: uid, date, ...data, ...stamp },
       });
       if (!created) await row.update(data);
       res.status(created ? 201 : 200).json(row);
@@ -46,7 +66,7 @@ function makeDateUpsertController({ Model, pickFields, entityName, requireAtLeas
   async function update(req, res, next) {
     try {
       const row = await Model.findOne({
-        where: { id: req.params.id, userId: req.user.uid },
+        where: { id: req.params.id, userId: ownerId(req), ...(mutationWhere ? mutationWhere(req) : {}) },
       });
       if (!row) return res.status(404).json({ error: { message: `${entityName} not found` } });
       const data = pickFields(req.body);
@@ -59,7 +79,7 @@ function makeDateUpsertController({ Model, pickFields, entityName, requireAtLeas
   async function destroy(req, res, next) {
     try {
       const row = await Model.findOne({
-        where: { id: req.params.id, userId: req.user.uid },
+        where: { id: req.params.id, userId: ownerId(req), ...(mutationWhere ? mutationWhere(req) : {}) },
       });
       if (!row) return res.status(404).json({ error: { message: `${entityName} not found` } });
       await row.destroy();

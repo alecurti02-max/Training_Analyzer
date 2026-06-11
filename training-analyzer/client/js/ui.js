@@ -143,7 +143,7 @@ function showScreen(name) {
 
 // N1/N2: niente più pagine Progressi (→ Dashboard·Analisi + Profilo·Atletica)
 // e Recupero (→ tab di Corpo). Ordine = nav per frequenza d'uso (N3).
-const pageMap = {dashboard:'Dashboard',train:'Allenamento',history:'Storico',body:'Corpo',profile:'Profilo',setup:'Setup',admin:'Admin'};
+const pageMap = {dashboard:'Dashboard',train:'Allenamento',history:'Storico',body:'Corpo',profile:'Profilo',setup:'Setup',clienti:'Clienti',admin:'Admin'};
 
 // Old slugs → new page + tab (for backward compat with internal data-page="X" links and bookmarks)
 const PAGE_ALIAS = {
@@ -222,6 +222,11 @@ function showPage(page) {
     if (mountPageHost('setup')) wireDirectInputListeners();
     renderExerciseLibrary(); renderMuscleGroupsManager(); populateMuscleSelect();
     populateSettingsUI(); renderSportsManager(); renderNotifications();
+  }
+  if(page==='clienti') {
+    // Area PT (CRM) — Preact-only, route .tsx (ClientiPage). Nav gated al boot
+    // su trainerProfile; chi arriva via URL senza ruolo vede l'empty-state.
+    mountPageHost('clienti');
   }
   if(page==='admin') {
     // Admin migrato a route .tsx (AdminPage, wrap): scheletro in Preact, dati
@@ -2003,6 +2008,9 @@ initAuth(
       if(avatar) { avatar.src = user.photoURL; avatar.style.display = 'block'; }
     }
     setupAdminGating(user);
+    // Nav "Clienti" (area PT) solo per i trainer attivi (CRM F1).
+    const navClienti = document.getElementById('nav-clienti');
+    if (navClienti) navClienti.style.display = (user && user.trainerProfile && user.trainerProfile.status === 'active') ? '' : 'none';
     showScreen('app');
     await loadAllData();
     // Deep-link: se il router ha aperto una pagina diversa dalla dashboard,

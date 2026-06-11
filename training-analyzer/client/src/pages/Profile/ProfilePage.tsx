@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import { PageShell, Card, BentoGrid } from '@/components/layout';
+import { CoachTab } from './CoachTab';
 
 // Profilo — route .tsx (WRAP). Scheletro con i 2 tab (Mio profilo/Amici) e gli
 // id che ui.js::renderProfile e friends.js usano. Il listener diretto
@@ -14,6 +15,7 @@ export function ProfilePage() {
         <button class="bm-tab active" data-tab-group="profile" data-tab="me">Mio profilo</button>
         <button class="bm-tab" data-tab-group="profile" data-tab="athletic">Atletica</button>
         <button class="bm-tab" data-tab-group="profile" data-tab="friends">Amici</button>
+        <button class="bm-tab" data-tab-group="profile" data-tab="coach">Coach</button>
       </div>
 
       <div data-tab-content="me">
@@ -95,6 +97,11 @@ export function ProfilePage() {
           <button class="btn btn-primary btn-sm" data-action="compareSelected">Confronta Selezionati</button>
           <div id="friend-compare-result" class="compare-section" />
         </Card>
+      </div>
+
+      {/* ===== COACH (CRM PT, lato cliente): inviti + coach attivo ===== */}
+      <div data-tab-content="coach" style="display:none">
+        <CoachTab />
       </div>
     </PageShell>
   );

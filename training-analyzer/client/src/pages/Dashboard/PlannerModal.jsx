@@ -14,7 +14,9 @@ import { ExerciseSheet } from '../Train/components/ExerciseSheet.jsx';
 const SPORTS = ['gym', 'running', 'cycling', 'swimming', 'walking', 'karting', 'yoga', 'other'];
 function tomorrow() { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }
 
-export function PlannerModal({ muscleGroups = [], plan = null, exercises = [], workouts = [], onClose }) {
+// onSave/onDelete: override per l'area coach (salva sul calendario del CLIENTE
+// via /api/coach/*); default = planner personale (store/plans.js).
+export function PlannerModal({ muscleGroups = [], plan = null, exercises = [], workouts = [], onClose, onSave = savePlan, onDelete = deletePlan }) {
   const [date, setDate] = useState((plan && plan.date) || tomorrow());
   const [type, setType] = useState((plan && plan.type) || 'gym');
   const [muscles, setMuscles] = useState((plan && plan.muscleGroups) || []);
@@ -59,7 +61,7 @@ export function PlannerModal({ muscleGroups = [], plan = null, exercises = [], w
       ? [...new Set(exList.map((e) => e.muscle).filter(Boolean))]
       : muscles;
     try {
-      await savePlan({ date, type, muscleGroups: mg, note, exercises: payloadEx });
+      await onSave({ date, type, muscleGroups: mg, note, exercises: payloadEx });
       toast('Sessione programmata', 'success');
       onClose();
     } catch (e) { toast('Errore nel salvataggio', 'error'); setBusy(false); }
@@ -67,7 +69,7 @@ export function PlannerModal({ muscleGroups = [], plan = null, exercises = [], w
   async function remove() {
     if (!plan || !plan.id) return;
     setBusy(true);
-    try { await deletePlan(plan.id); toast('Programmazione rimossa'); onClose(); }
+    try { await onDelete(plan.id); toast('Programmazione rimossa'); onClose(); }
     catch (e) { toast('Errore', 'error'); setBusy(false); }
   }
 

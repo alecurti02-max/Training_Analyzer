@@ -13,6 +13,7 @@ import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setu
 import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
 import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 import { mountAdmin, unmountAdmin } from './pages/Admin/AdminPage';
+import { mountClienti, unmountClienti } from './pages/Clienti/ClientiPage';
 import { mountBodyPage, unmountBodyPage } from './pages/Body/BodyPage';
 import { mountSetupPage, unmountSetupPage } from './pages/Setup/SetupPage';
 import { mountProfilePage, unmountProfilePage } from './pages/Profile/ProfilePage';
@@ -72,3 +73,4 @@ globalThis.Preact.train = {
   unmount: unmountTrain,
 };
 globalThis.Preact.admin = { mount: mountAdmin, unmount: unmountAdmin };
+globalThis.Preact.clienti = { mount: mountClienti, unmount: unmountClienti };

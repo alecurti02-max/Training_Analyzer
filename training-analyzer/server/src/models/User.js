@@ -76,6 +76,7 @@ module.exports = (sequelize) => {
     User.hasMany(models.Weight, { foreignKey: 'userId', as: 'weights' });
     User.hasMany(models.Follow, { foreignKey: 'followerId', as: 'following' });
     User.hasMany(models.Follow, { foreignKey: 'followingId', as: 'followers' });
+    User.hasOne(models.TrainerProfile, { foreignKey: 'uid', as: 'trainerProfile' });
   };
 
   User.prototype.toPublicJSON = function () {
