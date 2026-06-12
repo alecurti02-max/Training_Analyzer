@@ -678,7 +678,8 @@ h1,h2,h3,h4,h5,h6{
 .nav-btn.active{
   background:var(--race);
   color:#fff;
-  box-shadow:0 2px 0 var(--race-deep),0 6px 18px -4px rgba(225,29,44,0.4);
+  /* glow via token: rosso in Pista, teal in Carbon (prima era rosso hardcoded) */
+  box-shadow:0 2px 0 var(--race-deep),0 6px 18px -4px var(--pulse-glow);
 }
 .nav-btn.active::after{display:none}
 .nav-avatar{
