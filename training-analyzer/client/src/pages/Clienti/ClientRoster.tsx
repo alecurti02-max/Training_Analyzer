@@ -41,6 +41,13 @@ function ActiveClientCard({ row, onSelect }: { row: CoachClientRow; onSelect: (u
               )}
             </div>
           )}
+          {(row.packageAlerts || []).map((a) => (
+            <div key={a.id} style="font-size:.75rem;color:var(--redline,#e54);font-weight:600">
+              ⚠ {a.title}: {a.sessionsLeft != null && a.sessionsLeft <= 2 ? `${a.sessionsLeft} sedute residue` : ''}
+              {a.sessionsLeft != null && a.sessionsLeft <= 2 && a.expiryDate ? ' · ' : ''}
+              {a.expiryDate ? `scade il ${fmtDate(a.expiryDate)}` : ''}
+            </div>
+          ))}
         </div>
         <span style="color:var(--text2);font-size:.9rem">›</span>
       </div>

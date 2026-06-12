@@ -1,5 +1,5 @@
 const { Op, fn, col } = require('sequelize');
-const { User, Workout, CoachClient, PlannedWorkout, ProgramAssignment } = require('../models');
+const { User, Workout, CoachClient, PlannedWorkout, ProgramAssignment, ClientPackage } = require('../models');
 const { queryWorkouts } = require('./workoutController');
 const { computeStats } = require('./userController');
 const { makeDateUpsertController } = require('../utils/crud');
@@ -63,6 +63,34 @@ async function rosterStats(clientIds) {
   return out;
 }
 
+// F3 — alert pacchetti per il roster: pacchetti attivi in scadenza entro 14
+// giorni o con ≤2 sedute residue, raggruppati per relazione (1 query).
+async function packageAlerts(relationshipIds) {
+  if (!relationshipIds.length) return {};
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + 14);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const rows = await ClientPackage.findAll({
+    where: { relationshipId: { [Op.in]: relationshipIds }, status: 'active' },
+    raw: true,
+  });
+  const out = {};
+  for (const p of rows) {
+    const sessionsLeft = p.totalSessions != null ? p.totalSessions - p.usedSessions : null;
+    const expiring = p.expiryDate != null && p.expiryDate <= cutoffStr;
+    const lowSessions = sessionsLeft != null && sessionsLeft <= 2;
+    if (!expiring && !lowSessions) continue;
+    (out[p.relationshipId] = out[p.relationshipId] || []).push({
+      id: p.id,
+      title: p.title,
+      expiryDate: p.expiryDate,
+      sessionsLeft,
+    });
+  }
+  return out;
+}
+
 // GET /api/coach/clients?includeStats=1 — roster (pending + active)
 async function listClients(req, res, next) {
   try {
@@ -74,12 +102,15 @@ async function listClients(req, res, next) {
 
     let statsByUid = {};
     let assignByUid = {};
+    let alertsByRel = {};
     if (req.query.includeStats === '1') {
-      const activeIds = rels.filter((r) => r.status === 'active').map((r) => r.clientId);
+      const active = rels.filter((r) => r.status === 'active');
+      const activeIds = active.map((r) => r.clientId);
       if (activeIds.length) {
-        [statsByUid, assignByUid] = await Promise.all([
+        [statsByUid, assignByUid, alertsByRel] = await Promise.all([
           rosterStats(activeIds),
           rosterAssignments(req.user.uid, activeIds),
+          packageAlerts(active.map((r) => r.id)),
         ]);
       }
     }
@@ -89,6 +120,7 @@ async function listClients(req, res, next) {
       user: r.client,
       ...(statsByUid[r.clientId] || {}),
       ...(assignByUid[r.clientId] || {}),
+      ...(alertsByRel[r.id] ? { packageAlerts: alertsByRel[r.id] } : {}),
     })));
   } catch (err) {
     next(err);

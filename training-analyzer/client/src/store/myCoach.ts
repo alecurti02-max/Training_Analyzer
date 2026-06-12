@@ -41,6 +41,12 @@ export const acceptCoach = (id: string) => transition(id, 'accept');
 export const declineCoach = (id: string) => transition(id, 'decline');
 export const endCoach = (id: string) => transition(id, 'end');
 
+// Opt-in condivisione dati sensibili (F3): solo il cliente la controlla.
+export async function updateSharing(relationshipId: string, patch: { body?: boolean; nutrition?: boolean; sleep?: boolean }) {
+  await api.put(`/api/me/coach/${encodeURIComponent(relationshipId)}/sharing`, patch);
+  await loadMyCoach(true);
+}
+
 // ---- F2: scheda attiva assegnata dal coach ----
 
 export interface MyProgramRow {

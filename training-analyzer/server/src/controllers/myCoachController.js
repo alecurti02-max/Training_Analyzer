@@ -54,4 +54,25 @@ const accept = makeTransition('pending', () => ({ status: 'active', acceptedAt: 
 const decline = makeTransition('pending', () => ({ status: 'declined' }));
 const end = makeTransition('active', () => ({ status: 'ended', endedBy: 'client', endedAt: new Date() }));
 
-module.exports = { myCoaches, accept, decline, end };
+// PUT /api/me/coach/:relationshipId/sharing { body?, nutrition?, sleep? }
+// L'opt-in sui dati sensibili è controllato SOLO dal cliente (merge booleani).
+const SHARING_KEYS = ['body', 'nutrition', 'sleep'];
+async function updateSharing(req, res, next) {
+  try {
+    const rel = await CoachClient.findOne({
+      where: { id: req.params.relationshipId, clientId: req.user.uid, status: 'active' },
+    });
+    if (!rel) return res.status(404).json({ error: { message: 'Relazione non trovata' } });
+
+    const sharing = { ...(rel.sharing || {}) };
+    for (const k of SHARING_KEYS) {
+      if (typeof req.body[k] === 'boolean') sharing[k] = req.body[k];
+    }
+    await rel.update({ sharing });
+    res.json({ relationship: pickRel(rel) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { myCoaches, accept, decline, end, updateSharing };

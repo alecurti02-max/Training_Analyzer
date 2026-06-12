@@ -25,6 +25,7 @@ export interface CoachClientRow {
     weeks: number;
     adherencePct: number | null;
   } | null;
+  packageAlerts?: Array<{ id: string; title: string; expiryDate: string | null; sessionsLeft: number | null }>;
 }
 
 export const coachClients = signal<CoachClientRow[]>([]);
@@ -136,3 +137,56 @@ export const updateAssignment = (id: string, body: { status?: 'completed' | 'can
 
 export const loadAdherence = (clientId: string) =>
   api.get(`/api/coach/clients/${encodeURIComponent(clientId)}/adherence`);
+
+// ---- F3: CRM (anagrafica/note private) + pacchetti + dati condivisi ----
+
+export interface CrmNote { id: string; date: string; text: string }
+
+export interface CrmProfile {
+  goals: string | null;
+  anamnesis: string | null;
+  contacts: { phone?: string; emergencyName?: string; emergencyPhone?: string };
+  tags: string[];
+  notes: CrmNote[];
+}
+
+export const loadClientProfile = (clientId: string) =>
+  api.get<CrmProfile>(`/api/coach/clients/${encodeURIComponent(clientId)}/profile`);
+
+export const saveClientProfile = (clientId: string, patch: Partial<CrmProfile>) =>
+  api.put<CrmProfile>(`/api/coach/clients/${encodeURIComponent(clientId)}/profile`, patch);
+
+export const addClientNote = (clientId: string, text: string) =>
+  api.post<CrmNote>(`/api/coach/clients/${encodeURIComponent(clientId)}/notes`, { text });
+
+export const deleteClientNote = (clientId: string, noteId: string) =>
+  api.del(`/api/coach/clients/${encodeURIComponent(clientId)}/notes/${encodeURIComponent(noteId)}`);
+
+export interface ClientPackage {
+  id: string;
+  type: 'package' | 'subscription';
+  title: string;
+  totalSessions: number | null;
+  usedSessions: number;
+  startDate: string;
+  expiryDate: string | null;
+  price: string | number | null;
+  status: 'active' | 'completed' | 'expired' | 'cancelled';
+  notes: string | null;
+}
+
+export const loadClientPackages = (clientId: string) =>
+  api.get<ClientPackage[]>(`/api/coach/clients/${encodeURIComponent(clientId)}/packages`);
+
+export const createClientPackage = (clientId: string, body: Partial<ClientPackage>) =>
+  api.post<ClientPackage>(`/api/coach/clients/${encodeURIComponent(clientId)}/packages`, body);
+
+export const updateClientPackage = (id: string, body: Partial<ClientPackage>) =>
+  api.put<ClientPackage>(`/api/coach/packages/${encodeURIComponent(id)}`, body);
+
+export const useClientPackage = (id: string) =>
+  api.post<ClientPackage>(`/api/coach/packages/${encodeURIComponent(id)}/use`);
+
+// Letture gated dall'opt-in del cliente: 403 (sharing_disabled) se non condiviso.
+export const loadSharedData = (clientId: string, kind: 'weights' | 'body-measurements' | 'nutrition' | 'sleep') =>
+  api.get(`/api/coach/clients/${encodeURIComponent(clientId)}/${kind}`);

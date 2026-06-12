@@ -1,10 +1,12 @@
 const router = require('express').Router();
 const authenticate = require('../middleware/authenticate');
 const requireTrainer = require('../middleware/requireTrainer');
-const { loadCoachClient } = require('../middleware/coachAccess');
+const { loadCoachClient, requireSharing } = require('../middleware/coachAccess');
 const ctrl = require('../controllers/coachClientsController');
 const programs = require('../controllers/programController');
 const assignments = require('../controllers/assignmentController');
+const crm = require('../controllers/crmController');
+const coachData = require('../controllers/coachDataController');
 
 // Area Personal Trainer. Catena obbligatoria: authenticate → requireTrainer;
 // le route per-cliente aggiungono loadCoachClient (relazione ATTIVA verificata).
@@ -40,5 +42,23 @@ router.post('/clients/:clientId/assignments', loadCoachClient, assignments.creat
 router.get('/clients/:clientId/assignments', loadCoachClient, assignments.listForClient);
 router.get('/clients/:clientId/adherence', loadCoachClient, assignments.adherence);
 router.put('/assignments/:id', assignments.update);
+
+// CRM: anagrafica + note private del coach — F3 (MAI client-facing)
+router.get('/clients/:clientId/profile', loadCoachClient, crm.getProfile);
+router.put('/clients/:clientId/profile', loadCoachClient, crm.updateProfile);
+router.post('/clients/:clientId/notes', loadCoachClient, crm.addNote);
+router.delete('/clients/:clientId/notes/:noteId', loadCoachClient, crm.deleteNote);
+
+// CRM: pacchetti/abbonamenti — F3
+router.get('/clients/:clientId/packages', loadCoachClient, crm.listPackages);
+router.post('/clients/:clientId/packages', loadCoachClient, crm.createPackage);
+router.put('/packages/:id', crm.updatePackage);
+router.post('/packages/:id/use', crm.usePackage);
+
+// Dati sensibili del cliente, READ-ONLY e gated dall'opt-in (sharing) — F3
+router.get('/clients/:clientId/weights', loadCoachClient, requireSharing('body'), coachData.listWeights);
+router.get('/clients/:clientId/body-measurements', loadCoachClient, requireSharing('body'), coachData.listBodyMeasurements);
+router.get('/clients/:clientId/nutrition', loadCoachClient, requireSharing('nutrition'), coachData.listNutrition);
+router.get('/clients/:clientId/sleep', loadCoachClient, requireSharing('sleep'), coachData.listSleep);
 
 module.exports = router;
