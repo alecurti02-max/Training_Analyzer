@@ -184,10 +184,14 @@ export function LogWizard({ userId }) {
     );
   }
 
+  // I non-gym saltano lo step 3 (serie & carichi): l'indicatore mostra solo
+  // gli step reali del percorso scelto (3 pallini invece di 4).
+  const steps = type && type !== 'gym' ? [1, 2, 4] : [1, 2, 3, 4];
+
   return (
     <div class="log-wizard">
       <div class="step-indicator">
-        {[1, 2, 3, 4].map((n) => (
+        {steps.map((n) => (
           <div key={n} class={`step-dot${n === step ? ' active' : ''}${n < step ? ' done' : ''}`} />
         ))}
       </div>
