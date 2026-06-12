@@ -11,7 +11,7 @@ import { toast } from '@/lib/toast.js';
 import { calcTonnage, scoreWorkout, getAdvice } from '@/scoring';
 import { trainData, trainBridge, activeSportsFrom, lastPerformance, pendingLivePlan, consumePendingLivePlan } from '@/store/train.js';
 import { initialSets, makeEmptySet } from './logic/setModel.js';
-import { buildGymWorkout, buildSportWorkout, attachScores } from './logic/buildWorkout.js';
+import { buildGymWorkout, buildSportWorkout, attachScores, countSkippedSets } from './logic/buildWorkout.js';
 import {
   getElapsed, formatTime, togglePause, startSession, adjustResumedDraft,
   REST_PRESETS, clampRestDefault, clampRestPreset, restDashoffset, restClock,
@@ -107,6 +107,8 @@ export function LiveSession({ userId }) {
     // trasporta il riferimento {assignmentId, dayKey, week} fino al salvataggio.
     s._assignment = plan._assignment || null;
     setSelType(t); setSession(s); persist(s); setScreen('active'); setNow(Date.now());
+    // Piano gym senza esercizi: apri subito il picker (come lo start manuale).
+    if (t === 'gym' && !s.exercises.length) setTimeout(() => setSheetOpen(true), 300);
   }, [lp]);
 
   // ---- start ----
@@ -259,7 +261,8 @@ export function LiveSession({ userId }) {
             <div>
               {!session.exercises.length && (
                 <div class="card" style="text-align:center;color:var(--text2);padding:32px">
-                  <p>Nessun esercizio aggiunto.</p><p style="font-size:.85rem">Usa il pulsante + per aggiungere esercizi.</p>
+                  <p>Nessun esercizio aggiunto.</p>
+                  <button class="btn btn-primary" style="margin-top:8px" onClick={() => setSheetOpen(true)}>+ Aggiungi esercizio</button>
                 </div>
               )}
               {session.exercises.map((ex, idx) => (
@@ -304,6 +307,12 @@ export function LiveSession({ userId }) {
                 <div class="live-summary-row"><span class="live-summary-label">Esercizi</span><span class="live-summary-value">{session.exercises.length}</span></div>
               )}
             </div>
+            {session.type === 'gym' && countSkippedSets(session.exercises) > 0 && (
+              <div class="advice-box" style="margin-top:8px">
+                {countSkippedSets(session.exercises)} serie compilate ma non segnate "Fatto" non verranno salvate.
+                Torna alla sessione per completarle.
+              </div>
+            )}
             <div class="form-row">
               <div class="form-group"><label>Durata (min)</label><input type="number" readonly value={Math.round(elapsed / 60)} /></div>
               <div class="form-group"><label>RPE (1-10)</label><input type="number" min="1" max="10" placeholder="7" value={finishRpe} onInput={(e) => setFinishRpe(e.target.value)} /></div>
