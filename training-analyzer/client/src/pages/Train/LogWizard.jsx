@@ -10,6 +10,7 @@ import { toast } from '@/lib/toast.js';
 import { calcTonnage, scoreWorkout, getAdvice } from '@/scoring';
 import { trainData, trainBridge, activeSportsFrom, lastPerformance, pendingPlan, consumePendingPlan } from '@/store/train.js';
 import { initialSets } from './logic/setModel.js';
+import { planToEditableExercises } from './logic/planPrefill.js';
 import { buildGymWorkout, buildSportWorkout, attachScores } from './logic/buildWorkout.js';
 import { ExerciseCard } from './components/GymSetEditor.jsx';
 import { ExerciseSheet } from './components/ExerciseSheet.jsx';
@@ -45,16 +46,18 @@ export function LogWizard({ userId }) {
     } catch (_) { /* ignore */ }
   }, [userId]);
 
-  // Pre-fill da allenamento PROGRAMMATO (Dashboard → "INIZIA ORA"). Ha precedenza
-  // sul draft: imposta tipo + muscoli + note e salta allo step 2.
+  // Pre-fill da allenamento PROGRAMMATO (Dashboard → "registra"). Ha precedenza
+  // sul draft: imposta tipo + muscoli + note + ESERCIZI del piano (stessa
+  // pre-compilazione del percorso live) e salta allo step 2.
   useEffect(() => {
     if (!pp) return;
     const plan = consumePendingPlan();
     if (!plan) return;
     setResume(null);
-    setType(plan.type || 'gym');
+    const t = plan.type || 'gym';
+    setType(t);
     setMuscles(Array.isArray(plan.muscleGroups) ? plan.muscleGroups : []);
-    setExercises([]);
+    setExercises(t === 'gym' ? planToEditableExercises(plan, data.workouts) : []);
     setSportFields({});
     setNotes(plan.note || '');
     setStep(2);

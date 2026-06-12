@@ -18,7 +18,7 @@ import { WorkoutItem } from '@/components/WorkoutItem/WorkoutItem.jsx';
 import { buildCoaching } from './coaching.js';
 import { SPORT_TEMPLATES } from '../../../js/sports.js';
 import { plannedWorkouts, loadPlans, nextPlan } from '@/store/plans.js';
-import { startLiveFromPlan, setRequestedTab } from '@/store/train.js';
+import { startLiveFromPlan, startFromPlan, setRequestedTab } from '@/store/train.js';
 import { PlannerModal } from './PlannerModal.jsx';
 
 // ─────────────────────────────────────────────
@@ -145,6 +145,13 @@ export function NextUp({ workouts, muscleGroups, exercises }) {
     if (plan) { startLiveFromPlan(plan); setRequestedTab('live'); }
     if (typeof window.showPage === 'function') window.showPage('train');
   };
+  // Stesso piano, percorso manuale: wizard pre-compilato (tipo+muscoli+esercizi)
+  // per registrare la sessione a posteriori invece di farla partire live.
+  const startManual = (plan) => {
+    startFromPlan(plan);
+    setRequestedTab('manual');
+    if (typeof window.showPage === 'function') window.showPage('train');
+  };
   const sportName = (t) => (SPORT_TEMPLATES[t] && SPORT_TEMPLATES[t].name) || t;
   const fmtWhen = (d) => {
     if (d === today) return 'oggi';
@@ -163,7 +170,7 @@ export function NextUp({ workouts, muscleGroups, exercises }) {
         {planned ? (
           <>
             <h3 class="cc-nextup-title">{planned.muscleGroups && planned.muscleGroups.length ? planned.muscleGroups.join(' & ') : sportName(planned.type)}</h3>
-            <div class="cc-nextup-meta">{planned.note || sportName(planned.type)} · <button type="button" class="cc-link" onClick={() => setPlanner(planned)}>modifica</button></div>
+            <div class="cc-nextup-meta">{planned.note || sportName(planned.type)} · <button type="button" class="cc-link" onClick={() => setPlanner(planned)}>modifica</button> · <button type="button" class="cc-link" onClick={() => startManual(planned)}>registra</button></div>
             <div class="cc-nextup-chips">
               <span class="cc-chip">{sportName(planned.type)}</span>
               {(planned.muscleGroups || []).slice(0, 3).map((m) => <span class="cc-chip" key={m}>{m}</span>)}

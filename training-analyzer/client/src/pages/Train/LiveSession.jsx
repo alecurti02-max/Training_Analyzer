@@ -10,7 +10,8 @@ import { todayStr, uid } from '@/lib/utils.js';
 import { toast } from '@/lib/toast.js';
 import { calcTonnage, scoreWorkout, getAdvice } from '@/scoring';
 import { trainData, trainBridge, activeSportsFrom, lastPerformance, pendingLivePlan, consumePendingLivePlan } from '@/store/train.js';
-import { initialSets, makeEmptySet } from './logic/setModel.js';
+import { initialSets } from './logic/setModel.js';
+import { planToEditableExercises } from './logic/planPrefill.js';
 import { buildGymWorkout, buildSportWorkout, attachScores, countSkippedSets } from './logic/buildWorkout.js';
 import {
   getElapsed, formatTime, togglePause, startSession, adjustResumedDraft,
@@ -93,16 +94,11 @@ export function LiveSession({ userId }) {
     setResume(null);
     const t = plan.type || 'gym';
     const s = startSession(t, todayStr(), Date.now());
-    s.exercises = (plan.exercises || []).map((e) => ({
-      name: e.name,
-      muscle: e.muscle,
-      secondaryMuscles: Array.isArray(e.secondaryMuscles) ? e.secondaryMuscles.slice() : [],
-      weightMode: e.weightMode || 'total',
-      barbellWeight: e.barbellWeight || null,
-      isUnilateral: !!e.isUnilateral,
-      param: e.param || 'reps',
-      sets: (Array.isArray(e.sets) && e.sets.length ? e.sets : [makeEmptySet(e, { live: true })]).map((st) => ({ ...st, done: false })),
-    }));
+    s.exercises = planToEditableExercises(plan, data.workouts, { live: true });
+    if (t !== 'gym') {
+      s.muscles = Array.isArray(plan.muscleGroups) && plan.muscleGroups.length
+        ? plan.muscleGroups : getDefaultMusclesForSport(t);
+    }
     // CRM F2: se il piano viene da una scheda assegnata (launchDay/pin del coach),
     // trasporta il riferimento {assignmentId, dayKey, week} fino al salvataggio.
     s._assignment = plan._assignment || null;

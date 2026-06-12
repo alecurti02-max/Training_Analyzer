@@ -37,17 +37,31 @@ export function setTrainBridge(bridge) {
 }
 
 // Pre-compilazione del wizard da un allenamento PROGRAMMATO (PlannedWorkout).
-// La Dashboard "Prossima sessione → INIZIA ORA" chiama startFromPlan(plan) e poi
-// showPage('train'); il LogWizard reagisce al signal e inizializza tipo/muscoli.
+// La Dashboard "Prossima sessione → registra" chiama startFromPlan(plan) e poi
+// showPage('train'); il LogWizard reagisce al signal e inizializza
+// tipo/muscoli/esercizi (via logic/planPrefill).
 export const pendingPlan = signal(null);
 export function startFromPlan(plan) { pendingPlan.value = plan || null; }
-export function consumePendingPlan() { const p = pendingPlan.value; pendingPlan.value = null; return p; }
 
 // Avvio della SESSIONE LIVE pre-compilata da un piano (con esercizi + serie).
 // La LiveSession auto-parte coi suoi esercizi; requestedTab apre il tab giusto.
 export const pendingLivePlan = signal(null);
 export function startLiveFromPlan(plan) { pendingLivePlan.value = plan || null; }
-export function consumePendingLivePlan() { const p = pendingLivePlan.value; pendingLivePlan.value = null; return p; }
+
+// I consume si azzerano a vicenda: lo stesso piano non deve pre-compilare
+// ANCHE l'altro tab (doppio inserimento) né restare in attesa per ore.
+export function consumePendingPlan() {
+  const p = pendingPlan.value;
+  pendingPlan.value = null;
+  pendingLivePlan.value = null;
+  return p;
+}
+export function consumePendingLivePlan() {
+  const p = pendingLivePlan.value;
+  pendingLivePlan.value = null;
+  pendingPlan.value = null;
+  return p;
+}
 
 // TrainApp legge questo al mount per aprire 'manual' | 'live'.
 export const requestedTab = signal(null);
@@ -61,14 +75,6 @@ export function activeSportsFrom(settings) {
   return sports;
 }
 
-// Last gym performance of an exercise by name (mirrors ui.js getLastPerformance).
-export function lastPerformance(workouts, exerciseName) {
-  const sorted = [...(workouts || [])]
-    .filter((w) => w.type === 'gym')
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
-  for (const w of sorted) {
-    const ex = (w.exercises || []).find((e) => e.name === exerciseName);
-    if (ex && ex.sets && ex.sets.length) return ex;
-  }
-  return null;
-}
+// Last gym performance — implementazione spostata in logic/planPrefill.js
+// (logic/ resta store-free); ri-esportata qui per i consumer esistenti.
+export { lastPerformance } from '../pages/Train/logic/planPrefill.js';
