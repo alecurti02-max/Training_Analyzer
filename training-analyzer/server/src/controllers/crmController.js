@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { CoachClientProfile, ClientPackage, CoachClient } = require('../models');
+const { Op } = require('sequelize');
+const { CoachClientProfile, ClientPackage, CoachClient, sequelize } = require('../models');
 
 // CRM del coach sul cliente: anagrafica+note (coach_client_profiles, 1:1 con la
 // relazione) e pacchetti (client_packages). Tutte le route stanno sotto
@@ -155,7 +156,9 @@ async function updatePackage(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// POST /api/coach/packages/:id/use — +1 seduta, auto-completed quando pieno
+// POST /api/coach/packages/:id/use — +1 seduta, auto-completed quando pieno.
+// L'incremento è un UPDATE atomico condizionato (niente read-modify-write):
+// due +1 concorrenti non possono superare totalSessions.
 async function usePackage(req, res, next) {
   try {
     const row = await findOwnedPackage(req.params.id, req.user.uid);
@@ -163,12 +166,28 @@ async function usePackage(req, res, next) {
     if (row.status !== 'active') {
       return res.status(400).json({ error: { message: 'Pacchetto non attivo', code: 'not_active' } });
     }
-    if (row.totalSessions != null && row.usedSessions >= row.totalSessions) {
+
+    const [affected] = await ClientPackage.update(
+      { usedSessions: sequelize.literal('"usedSessions" + 1') },
+      {
+        where: {
+          id: row.id,
+          status: 'active',
+          [Op.or]: [
+            { totalSessions: null },
+            sequelize.where(sequelize.col('usedSessions'), { [Op.lt]: sequelize.col('totalSessions') }),
+          ],
+        },
+      }
+    );
+    if (!affected) {
       return res.status(400).json({ error: { message: 'Sedute esaurite', code: 'sessions_exhausted' } });
     }
-    const usedSessions = row.usedSessions + 1;
-    const status = row.totalSessions != null && usedSessions >= row.totalSessions ? 'completed' : row.status;
-    await row.update({ usedSessions, status });
+
+    await row.reload();
+    if (row.status === 'active' && row.totalSessions != null && row.usedSessions >= row.totalSessions) {
+      await row.update({ status: 'completed' });
+    }
     res.json(row);
   } catch (err) { next(err); }
 }

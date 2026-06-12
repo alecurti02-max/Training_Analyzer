@@ -78,13 +78,19 @@ async function packageAlerts(relationshipIds) {
   const out = {};
   for (const p of rows) {
     const sessionsLeft = p.totalSessions != null ? p.totalSessions - p.usedSessions : null;
-    const expiring = p.expiryDate != null && p.expiryDate <= cutoffStr;
+    // Normalizzazione difensiva: su questo stack DATEONLY+raw:true torna già
+    // stringa YYYY-MM-DD anche su PG (verificato empiricamente — Sequelize
+    // registra il proprio type parser), ma un cambio di driver/parser non deve
+    // rompere il confronto in silenzio.
+    const expiry = p.expiryDate == null ? null
+      : (p.expiryDate instanceof Date ? p.expiryDate.toISOString().slice(0, 10) : String(p.expiryDate));
+    const expiring = expiry != null && expiry <= cutoffStr;
     const lowSessions = sessionsLeft != null && sessionsLeft <= 2;
     if (!expiring && !lowSessions) continue;
     (out[p.relationshipId] = out[p.relationshipId] || []).push({
       id: p.id,
       title: p.title,
-      expiryDate: p.expiryDate,
+      expiryDate: expiry,
       sessionsLeft,
     });
   }
