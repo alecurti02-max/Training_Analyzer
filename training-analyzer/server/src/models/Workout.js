@@ -51,6 +51,17 @@ module.exports = (sequelize) => {
         allowNull: true,
         defaultValue: null,
       },
+      // CRM F2 — aggancio scheda: popolate dal "lift" server-side di
+      // data._assignment in workoutController.create (mai dal body diretto).
+      // Colonne (non solo JSONB) perché l'aderenza aggrega con GROUP BY anche
+      // su SQLite nei test. SET NULL alla cancellazione dell'assignment.
+      assignmentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: { model: 'program_assignments', key: 'id' },
+      },
+      assignmentDayKey: { type: DataTypes.STRING(8), allowNull: true },
+      assignmentWeek: { type: DataTypes.INTEGER, allowNull: true },
     },
     {
       tableName: 'workouts',
@@ -58,6 +69,7 @@ module.exports = (sequelize) => {
       indexes: [
         { fields: ['userId', 'date'] },
         { fields: ['userId', 'type'] },
+        { fields: ['assignmentId'] },
       ],
     }
   );

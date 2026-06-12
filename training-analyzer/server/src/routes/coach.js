@@ -3,6 +3,8 @@ const authenticate = require('../middleware/authenticate');
 const requireTrainer = require('../middleware/requireTrainer');
 const { loadCoachClient } = require('../middleware/coachAccess');
 const ctrl = require('../controllers/coachClientsController');
+const programs = require('../controllers/programController');
+const assignments = require('../controllers/assignmentController');
 
 // Area Personal Trainer. Catena obbligatoria: authenticate → requireTrainer;
 // le route per-cliente aggiungono loadCoachClient (relazione ATTIVA verificata).
@@ -18,10 +20,25 @@ router.get('/clients/:clientId/workouts', loadCoachClient, ctrl.clientWorkouts);
 router.get('/clients/:clientId/workouts/:id', loadCoachClient, ctrl.clientWorkoutById);
 router.get('/clients/:clientId/stats', loadCoachClient, ctrl.clientStats);
 
-// Pianificazione sul calendario del cliente (upsert per data, firma coach)
+// Pianificazione sul calendario del cliente (upsert per data, firma coach).
+// validatePinRef ripulisce eventuali riferimenti scheda non legittimi nel body.
 router.get('/clients/:clientId/planned-workouts', loadCoachClient, ctrl.coachPlanned.list);
-router.post('/clients/:clientId/planned-workouts', loadCoachClient, ctrl.coachPlanned.create);
-router.put('/clients/:clientId/planned-workouts/:id', loadCoachClient, ctrl.coachPlanned.update);
+router.post('/clients/:clientId/planned-workouts', loadCoachClient, ctrl.validatePinRef, ctrl.coachPlanned.create);
+router.put('/clients/:clientId/planned-workouts/:id', loadCoachClient, ctrl.validatePinRef, ctrl.coachPlanned.update);
 router.delete('/clients/:clientId/planned-workouts/:id', loadCoachClient, ctrl.coachPlanned.destroy);
+
+// Schede (programs) del coach — F2
+router.get('/programs', programs.list);
+router.post('/programs', programs.create);
+router.get('/programs/:id', programs.getById);
+router.put('/programs/:id', programs.update);
+router.delete('/programs/:id', programs.destroy);
+router.post('/programs/:id/duplicate', programs.duplicate);
+
+// Assegnazioni e aderenza — F2
+router.post('/clients/:clientId/assignments', loadCoachClient, assignments.create);
+router.get('/clients/:clientId/assignments', loadCoachClient, assignments.listForClient);
+router.get('/clients/:clientId/adherence', loadCoachClient, assignments.adherence);
+router.put('/assignments/:id', assignments.update);
 
 module.exports = router;

@@ -1,8 +1,34 @@
 const { Op } = require('sequelize');
 const multer = require('multer');
-const { Workout } = require('../models');
+const { Workout, Program, ProgramAssignment } = require('../models');
 const { parseWorkoutFile } = require('../services/workoutImporter');
 const { validateWorkoutData } = require('../validation/workoutData');
+const { weekOf } = require('../services/assignmentMath');
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// CRM F2 — "lift" del riferimento scheda: il client mette {assignmentId, dayKey}
+// in data._assignment; qui lo si valida (anti-forgery: l'assignment deve essere
+// DEL cliente autenticato) e lo si materializza nelle colonne assignment*.
+// La settimana è calcolata server-side da startDate+data del workout (non ci si
+// fida del client). Meta non valida → scartata in silenzio, il workout si salva.
+// NB: lo status dell'assignment NON è verificato di proposito — una live avviata
+// con la scheda attiva deve potersi salvare anche se nel frattempo il coach l'ha
+// chiusa (l'aderenza guarda comunque solo l'assignment attivo).
+async function liftAssignmentMeta(meta, userId, date) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return {};
+  const id = meta.assignmentId;
+  if (typeof id !== 'string' || !UUID_RE.test(id)) return {};
+  const assignment = await ProgramAssignment.findByPk(id, {
+    include: [{ model: Program, as: 'program', attributes: ['weeks'] }],
+  });
+  if (!assignment || assignment.clientId !== userId) return {};
+  return {
+    assignmentId: assignment.id,
+    assignmentDayKey: typeof meta.dayKey === 'string' && meta.dayKey ? meta.dayKey.slice(0, 8) : null,
+    assignmentWeek: weekOf(assignment.startDate, date, assignment.program?.weeks || 1),
+  };
+}
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -61,12 +87,15 @@ async function create(req, res, next) {
       return res.status(400).json({ error: { message: 'Invalid workout data', issues: valid.issues } });
     }
 
+    const assignmentFields = await liftAssignmentMeta(data?._assignment, req.user.uid, date);
+
     const workout = await Workout.create({
       userId: req.user.uid,
       type,
       date,
       score: data?.scores?.overall ?? null,
       data: data || {},
+      ...assignmentFields,
     });
 
     res.status(201).json(workout);

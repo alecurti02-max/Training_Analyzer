@@ -27,6 +27,14 @@ module.exports = (sequelize) => {
         allowNull: true,
         references: { model: 'users', key: 'uid' },
       },
+      // Pin di un giorno-scheda (F2): riferimento all'assignment e alla giornata
+      // (es. 'A'); il lancio dal cliente trasporta il riferimento nel workout.
+      assignmentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: { model: 'program_assignments', key: 'id' },
+      },
+      dayKey: { type: DataTypes.STRING(8), allowNull: true },
     },
     {
       tableName: 'planned_workouts',

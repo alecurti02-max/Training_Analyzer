@@ -5,6 +5,7 @@ import { loadClientStats, removeRelationship } from '@/store/coach';
 import type { CoachClientRow } from '@/store/coach';
 import { ClientWorkouts } from './ClientWorkouts';
 import { ClientPlanning } from './ClientPlanning';
+import { ClientProgram } from './ClientProgram';
 
 // Dettaglio cliente per il PT: panoramica (stats), storico allenamenti
 // (read-only) e programmazione sul calendario del cliente. Tab in stato locale
@@ -12,8 +13,9 @@ import { ClientPlanning } from './ClientPlanning';
 
 const TABS = [
   { key: 'overview', label: 'Panoramica' },
+  { key: 'program', label: 'Scheda' },
   { key: 'workouts', label: 'Allenamenti' },
-  { key: 'planning', label: 'Programmazione' },
+  { key: 'planning', label: 'Calendario' },
 ] as const;
 
 interface ClientStats {
@@ -89,6 +91,7 @@ export function ClientDetail({ row, onBack }: { row: CoachClientRow; onBack: () 
       </div>
 
       {tab === 'overview' && <Overview clientId={u.uid} />}
+      {tab === 'program' && <ClientProgram clientId={u.uid} />}
       {tab === 'workouts' && <ClientWorkouts clientId={u.uid} />}
       {tab === 'planning' && <ClientPlanning clientId={u.uid} />}
     </div>
