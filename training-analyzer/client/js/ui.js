@@ -6,7 +6,7 @@ import { api, clearTokens } from './api.js';
 import { initAuth, setupLoginUI, logout } from './auth.js';
 import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports, getDefaultMusclesForSport } from './sports.js';
 import { scoreWorkout, getAdvice, renderAiAnalysis, getRecoveryStatus, calculateStreak, getFitnessAssessment, calcTonnage } from './scoring.js';
-import { destroyChart, storeChart, getChartTheme, renderHeatmap, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
+import { destroyChart, storeChart, getChartTheme, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
 import { loadMeasurements, renderMeasurementsPage, getMeasurements } from './bodyMeasurements.js';
 import { exportProfilePdf } from './pdfExport.js';
 import { loadRecoveryData, renderRecoveryPage, saveNutritionLog, saveSleepLog } from './recovery.js';
@@ -413,7 +413,7 @@ function showTab(group, tab) {
     // Tornando alla Panoramica da Analisi i canvas potrebbero essere stati
     // disegnati da nascosti (dimensioni nulle): ridisegna.
     const sortedW = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date));
-    renderHeatmap(sortedW); renderWeeklyChart(sortedW); renderRadarChart(sortedW);
+    renderWeeklyChart(sortedW); renderRadarChart(sortedW);
   }
   if (group === 'body' && (tab === 'nutrition' || tab === 'sleep')) {
     renderRecoveryPage({ settings: settingsCache, toast });
@@ -484,7 +484,6 @@ function renderDashboard() {
   }
   globalThis.Preact.dashboard.mount({ host });
   // I canvas ora vivono dentro DashboardPage: charts.js li trova dopo il mount.
-  renderHeatmap(workouts);
   renderWeeklyChart(workouts);
   renderRadarChart(workouts);
   updateTelemetryTicker();

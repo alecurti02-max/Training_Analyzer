@@ -385,16 +385,7 @@
   margin-left: var(--v2-s-2);
 }
 
-/* ============ Heatmap legend & chart containers ============ */
-#page-dashboard .heatmap-legend {
-  font-family: var(--v2-font-mono);
-  font-size: 10px;
-  color: var(--v2-text-muted);
-  letter-spacing: 0.04em;
-  text-transform: none;
-  margin-top: var(--v2-s-3);
-}
-#page-dashboard .heatmap-container,
+/* ============ Chart containers ============ */
 #page-dashboard .chart-container {
   padding: 0;
   background: transparent;

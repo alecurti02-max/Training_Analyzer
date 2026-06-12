@@ -3,12 +3,14 @@ import { workouts as workoutsSig } from '@/store/workouts';
 import { settings as settingsSig, muscleGroups as muscleGroupsSig } from '@/store/settings';
 import { exercises as exercisesSig } from '@/store/exercises';
 import { BentoGrid, Card, SectionDivider } from '@/components/layout';
-import { Hero, NextUp, StatsRow, StreakBox, RecoveryList, RecentList } from './Dashboard';
+import { Hero, NextUp, StatsRow, StreakBox, RecentList } from './Dashboard';
+import { WorkoutCalendar } from './WorkoutCalendar';
+import { RecoveryBodyMap } from './RecoveryBodyMap';
 
 // Dashboard — route .tsx autonoma (Tier-2). Possiede tutto il markup (header
 // editoriale + hero + telemetria + zone Prontezza/Registro + canvas Chart.js) e
 // legge i dati dai signal store (reattiva). I componenti dinamici sono riusati
-// da Dashboard.jsx. I canvas (heatmap/weekly/radar) restano disegnati da
+// da Dashboard.jsx. I canvas (weekly/radar) restano disegnati da
 // charts.js: ui.js li ridisegna dopo il mount. Montata dentro #page-dashboard,
 // così gli stili cockpit (cc-*, scoped a #page-dashboard) si applicano.
 export function DashboardPage() {
@@ -46,8 +48,8 @@ export function DashboardPage() {
       <SectionDivider>Prontezza &amp; corpo</SectionDivider>
       <BentoGrid cols="triple">
         <Card hud>
-          <div class="card-title">Recovery Status</div>
-          <RecoveryList workouts={sorted} muscleGroups={mg} />
+          <div class="card-title">Mappa del corpo</div>
+          <RecoveryBodyMap workouts={sorted} muscleGroups={mg} />
         </Card>
         <Card hud>
           <div class="card-title">Streak &amp; Consistenza</div>
@@ -62,17 +64,8 @@ export function DashboardPage() {
       <SectionDivider>Registro attività</SectionDivider>
       <BentoGrid cols="split">
         <Card hud>
-          <div class="card-title">Calendario Allenamenti</div>
-          <div class="heatmap-container"><canvas id="heatmap-canvas" class="heatmap-canvas" /></div>
-          <div class="heatmap-legend">
-            <span>Meno</span>
-            <span style="background:var(--bg3)" />
-            <span style="background:color-mix(in srgb,var(--pulse) 25%,transparent)" />
-            <span style="background:color-mix(in srgb,var(--pulse) 50%,transparent)" />
-            <span style="background:color-mix(in srgb,var(--pulse) 75%,transparent)" />
-            <span style="background:var(--pulse)" />
-            <span>Più</span>
-          </div>
+          <div class="card-title">Calendario Allenamenti <span style="font-size:.72rem;color:var(--text2);font-weight:400">ultimi 3 mesi</span></div>
+          <WorkoutCalendar workouts={sorted} />
         </Card>
         <Card hud>
           <div class="card-title">Volume Settimanale</div>
@@ -90,10 +83,6 @@ export function DashboardPage() {
            ui.js::renderProgress (charts.js) quando il tab viene aperto ===== */}
       <div data-tab-content="analisi" style="display:none">
         <SectionDivider>Andamento</SectionDivider>
-        <Card hud>
-          <div class="card-title">Andamento Score</div>
-          <div class="chart-container"><canvas id="chart-scores" /></div>
-        </Card>
         <BentoGrid cols="split">
           <Card hud><div class="card-title">Volume Palestra (tonnellaggio)</div><div class="chart-container"><canvas id="chart-gym-volume" /></div></Card>
           <Card hud><div class="card-title">Pace Corsa ponderato (min/km)</div><div class="chart-container"><canvas id="chart-run-pace" /></div></Card>
@@ -106,10 +95,7 @@ export function DashboardPage() {
         </BentoGrid>
 
         <SectionDivider>Distribuzione</SectionDivider>
-        <BentoGrid cols="split">
-          <Card hud><div class="card-title">Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles" /></div></Card>
-          <Card hud><div class="card-title">Frequenza per Settimana</div><div class="chart-container"><canvas id="chart-frequency" /></div></Card>
-        </BentoGrid>
+        <Card hud><div class="card-title">Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles" /></div></Card>
       </div>
     </>
   );
