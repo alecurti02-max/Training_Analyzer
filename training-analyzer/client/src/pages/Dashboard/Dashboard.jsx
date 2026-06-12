@@ -1,16 +1,12 @@
-// Dashboard page — Carbon Cockpit.
-//
-// Monta componenti Preact nei container placeholder di index.html #page-dashboard:
-//   #dash-hero-main  → <Hero>      (score 30gg gigante + coaching + sub-stat)   [NEW]
-//   #dash-hero-next  → <NextUp>    (prossima sessione + INIZIA ORA)             [NEW]
-//   #dash-stats      → <StatsRow>  (4 bento card con sparkline + tick HUD)
-//   #dash-streak     → <StreakBox>
-//   #dash-recovery   → <RecoveryList>
-//   #dash-recent     → <RecentList>
-// Heatmap/weekly/radar restano canvas legacy (charts.js). Markup workout-item
+// Dashboard — libreria componenti Carbon Cockpit usati da DashboardPage.tsx:
+//   <Hero>      score 30gg gigante + coaching + sub-stat
+//   <NextUp>    prossima sessione + INIZIA ORA
+//   <StatsRow>  4 bento card con sparkline + tick HUD
+//   <StreakBox> streak corrente + record
+//   <RecentList> ultimi 5 allenamenti
+// Weekly/radar restano canvas legacy (charts.js). Markup workout-item
 // invariato per la click-delegation legacy.
 
-import { render } from 'preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { calculateStreak, getRecoveryStatus } from '@/scoring';
 import { todayStr, daysBetween, weeklyBuckets } from '@/lib/utils.js';
@@ -257,44 +253,6 @@ export function StreakBox({ workouts }) {
 }
 
 // ─────────────────────────────────────────────
-// Recovery
-// ─────────────────────────────────────────────
-export function RecoveryList({ workouts, muscleGroups }) {
-  const recovery = getRecoveryStatus(workouts, muscleGroups);
-  const items = Object.entries(recovery.muscleRecovery)
-    .filter(([_, info]) => info.pct < 100 && info.lastWorked);
-
-  if (recovery.suggestedRestDays === 0 && items.length === 0) {
-    return <p style={{ color: 'var(--text2)', fontSize: '0.85rem' }}>Tutti i gruppi muscolari sono recuperati!</p>;
-  }
-
-  return (
-    <>
-      {recovery.suggestedRestDays > 0 && (
-        <div class="advice-box" style={{ marginBottom: 12 }}>
-          Carico alto ({recovery.workoutsLast7} in 7gg). Consigliati {recovery.suggestedRestDays} giorni di riposo.
-        </div>
-      )}
-      {items.map(([muscle, info]) => {
-        const color = info.pct >= 80 ? 'var(--green)' : info.pct >= 50 ? 'var(--yellow)' : 'var(--red)';
-        return (
-          <div class="muscle-item" key={muscle}>
-            <span>{muscle}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text2)' }}>{info.daysAgo}g fa</span>
-              <div class="muscle-bar-bg">
-                <div class="muscle-bar-fill" style={{ width: `${info.pct}%`, background: color }} />
-              </div>
-              <span style={{ fontSize: '0.8rem', width: 35, textAlign: 'right' }}>{info.pct}%</span>
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-// ─────────────────────────────────────────────
 // Recent workouts
 // ─────────────────────────────────────────────
 export function RecentList({ workouts }) {
@@ -309,34 +267,3 @@ export function RecentList({ workouts }) {
   return <>{workouts.slice(0, 5).map((w) => <WorkoutItem key={w.id} w={w} />)}</>;
 }
 
-// ─────────────────────────────────────────────
-// Mount API
-// ─────────────────────────────────────────────
-export function mountDashboard({ workouts, settings, muscleGroups, exercises }) {
-  const sorted = [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const s = settings || {};
-  const mg = muscleGroups || [];
-  const exLib = exercises || [];
-
-  const byId = (id) => document.getElementById(id);
-  const elHeroMain = byId('dash-hero-main');
-  const elHeroNext = byId('dash-hero-next');
-  const elStats = byId('dash-stats');
-  const elStreak = byId('dash-streak');
-  const elRecovery = byId('dash-recovery');
-  const elRecent = byId('dash-recent');
-
-  if (elHeroMain) render(<Hero workouts={sorted} settings={s} muscleGroups={mg} />, elHeroMain);
-  if (elHeroNext) render(<NextUp workouts={sorted} muscleGroups={mg} exercises={exLib} />, elHeroNext);
-  if (elStats) render(<StatsRow workouts={sorted} settings={s} />, elStats);
-  if (elStreak) render(<StreakBox workouts={sorted} />, elStreak);
-  if (elRecovery) render(<RecoveryList workouts={sorted} muscleGroups={mg} />, elRecovery);
-  if (elRecent) render(<RecentList workouts={sorted} />, elRecent);
-}
-
-export function unmountDashboard() {
-  for (const id of ['dash-hero-main', 'dash-hero-next', 'dash-stats', 'dash-streak', 'dash-recovery', 'dash-recent']) {
-    const el = document.getElementById(id);
-    if (el) render(null, el);
-  }
-}

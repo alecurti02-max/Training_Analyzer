@@ -3,8 +3,9 @@ import { workouts as workoutsSig } from '@/store/workouts';
 import { settings as settingsSig, muscleGroups as muscleGroupsSig } from '@/store/settings';
 import { exercises as exercisesSig } from '@/store/exercises';
 import { BentoGrid, Card, SectionDivider } from '@/components/layout';
-import { Hero, NextUp, StatsRow, StreakBox, RecoveryList, RecentList } from './Dashboard';
+import { Hero, NextUp, StatsRow, StreakBox, RecentList } from './Dashboard';
 import { WorkoutCalendar } from './WorkoutCalendar';
+import { RecoveryBodyMap } from './RecoveryBodyMap';
 
 // Dashboard — route .tsx autonoma (Tier-2). Possiede tutto il markup (header
 // editoriale + hero + telemetria + zone Prontezza/Registro + canvas Chart.js) e
@@ -47,8 +48,8 @@ export function DashboardPage() {
       <SectionDivider>Prontezza &amp; corpo</SectionDivider>
       <BentoGrid cols="triple">
         <Card hud>
-          <div class="card-title">Recovery Status</div>
-          <RecoveryList workouts={sorted} muscleGroups={mg} />
+          <div class="card-title">Mappa del corpo</div>
+          <RecoveryBodyMap workouts={sorted} muscleGroups={mg} />
         </Card>
         <Card hud>
           <div class="card-title">Streak &amp; Consistenza</div>
