@@ -3,7 +3,7 @@ import { Card } from '@/components/layout';
 import { toast } from '@/lib/toast.js';
 import {
   coachRelationships, loadMyCoach, acceptCoach, declineCoach, endCoach,
-  myPrograms, loadMyPrograms, launchDay,
+  myPrograms, loadMyPrograms, launchDay, updateSharing,
 } from '@/store/myCoach';
 import type { MyCoachRow, MyProgramRow } from '@/store/myCoach';
 import { progressionFor } from '@/lib/progression';
@@ -43,6 +43,14 @@ function PendingInvite({ row }: { row: MyCoachRow }) {
   );
 }
 
+// Opt-in del cliente sui dati sensibili (F3): il coach vede gli allenamenti di
+// default; peso/misure, nutrizione e sonno SOLO se attivati qui.
+const SHARING_OPTS = [
+  { key: 'body' as const, label: 'Peso e misure' },
+  { key: 'nutrition' as const, label: 'Nutrizione' },
+  { key: 'sleep' as const, label: 'Sonno' },
+];
+
 function ActiveCoach({ row }: { row: MyCoachRow }) {
   const [busy, setBusy] = useState(false);
   async function end() {
@@ -51,14 +59,33 @@ function ActiveCoach({ row }: { row: MyCoachRow }) {
     try { await endCoach(row.relationship.id); toast('Rapporto terminato'); }
     catch (e) { toast('Errore', 'error'); setBusy(false); }
   }
+  async function toggle(key: 'body' | 'nutrition' | 'sleep', value: boolean) {
+    setBusy(true);
+    try { await updateSharing(row.relationship.id, { [key]: value }); }
+    catch (e) { toast('Errore', 'error'); }
+    setBusy(false);
+  }
+  const sharing = row.relationship.sharing || {};
   return (
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <CoachAvatar coach={row.coach} />
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:.9rem">{row.coach?.displayName || 'Personal Trainer'}</div>
-        <div style="font-size:.75rem;color:var(--text2)">Ti segue: vede i tuoi allenamenti e programma le tue sessioni.</div>
+    <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <CoachAvatar coach={row.coach} />
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.9rem">{row.coach?.displayName || 'Personal Trainer'}</div>
+          <div style="font-size:.75rem;color:var(--text2)">Ti segue: vede i tuoi allenamenti e programma le tue sessioni.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" type="button" disabled={busy} onClick={end}>Termina</button>
       </div>
-      <button class="btn btn-secondary btn-sm" type="button" disabled={busy} onClick={end}>Termina</button>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0 44px">
+        <span style="font-size:.75rem;color:var(--text2)">Condividi anche:</span>
+        {SHARING_OPTS.map((o) => (
+          <label key={o.key} style="display:flex;align-items:center;gap:5px;font-size:.78rem;cursor:pointer">
+            <input type="checkbox" disabled={busy} checked={!!sharing[o.key]}
+              onChange={(e) => toggle(o.key, (e.target as HTMLInputElement).checked)} />
+            {o.label}
+          </label>
+        ))}
+      </div>
     </div>
   );
 }
