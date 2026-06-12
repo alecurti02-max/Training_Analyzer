@@ -60,41 +60,6 @@ export function getChartTheme() {
   };
 }
 
-// ==================== HEATMAP ====================
-export function renderHeatmap(workouts) {
-  const canvas = document.getElementById('heatmap-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const cellSize=13, cellGap=3, weeksToShow=52;
-  const totalWidth = weeksToShow*(cellSize+cellGap)+40;
-  const totalHeight = 7*(cellSize+cellGap)+20;
-  canvas.width=totalWidth; canvas.height=totalHeight;
-  canvas.style.width=totalWidth+'px'; canvas.style.height=totalHeight+'px';
-  ctx.clearRect(0,0,totalWidth,totalHeight);
-  const dateScores={};
-  workouts.forEach(w=>{ const d=w.date; if(!dateScores[d])dateScores[d]=0; dateScores[d]=Math.max(dateScores[d],w.scores?.overall||5); });
-  const today=new Date();
-  const cs = getComputedStyle(document.documentElement);
-  const accent = cs.getPropertyValue('--pulse').trim() || '#00E5CE';
-  const emptyColor = cs.getPropertyValue('--bg3').trim() || '#161B20';
-  const labelColor = cs.getPropertyValue('--text2').trim() || '#9AADAB';
-  const dayLabels=['L','M','M','G','V','S','D'];
-  ctx.fillStyle=labelColor; ctx.font='10px Manrope, sans-serif';
-  for(let d=0;d<7;d++){if(d%2===0) ctx.fillText(dayLabels[d],0,d*(cellSize+cellGap)+cellSize+12);}
-  for(let week=0;week<weeksToShow;week++){
-    for(let day=0;day<7;day++){
-      const correctedDate=new Date(today);
-      correctedDate.setDate(today.getDate()-((weeksToShow-1-week)*7+(today.getDay()===0?6:today.getDay()-1)-day));
-      if(correctedDate>today) continue;
-      const dateStr=correctedDate.toISOString().slice(0,10);
-      const score=dateScores[dateStr]||0;
-      const x=20+week*(cellSize+cellGap), y=12+day*(cellSize+cellGap);
-      ctx.fillStyle = score===0?emptyColor:score<5?hexToRgba(accent,0.25):score<7?hexToRgba(accent,0.5):score<8.5?hexToRgba(accent,0.75):accent;
-      ctx.beginPath(); ctx.roundRect(x,y,cellSize,cellSize,2); ctx.fill();
-    }
-  }
-}
-
 // ==================== RADAR CHART ====================
 export function renderRadarChart(workouts) {
   destroyChart('radar');

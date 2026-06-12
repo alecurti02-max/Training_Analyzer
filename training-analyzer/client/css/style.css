@@ -289,10 +289,6 @@ canvas{max-width:100%}
 .weight-stat .ws-label{font-size:.72rem;color:var(--text2);margin-top:4px;text-transform:uppercase;font-weight:600}
 
 /* ============ HEATMAP ============ */
-.heatmap-container{overflow-x:auto;padding:8px 0}
-.heatmap-canvas{display:block}
-.heatmap-legend{display:flex;align-items:center;gap:4px;margin-top:8px;font-size:.72rem;color:var(--text2)}
-.heatmap-legend span{width:12px;height:12px;border-radius:3px;display:inline-block}
 
 /* ============ STREAK ============ */
 .streak-display{display:flex;gap:28px;justify-content:center;align-items:center;padding:20px}
@@ -975,15 +971,6 @@ input:focus,select:focus,textarea:focus{
   color:#fff;
 }
 
-/* --- HEATMAP legend --- */
-.heatmap-legend{
-  font-family:var(--font-mono);
-  font-size:0.66rem;
-  text-transform:uppercase;
-  letter-spacing:0.08em;
-  color:var(--text2);
-}
-
 /* --- HR Zones --- */
 .hr-zone{
   font-family:var(--font-body);
@@ -1318,11 +1305,6 @@ input:focus,select:focus,textarea:focus{
   padding:14px 18px;
   font-family:var(--font-body);
   font-weight:500;
-}
-
-/* --- Heatmap legend cells (already styled) --- */
-.heatmap-legend span:not(:first-child):not(:last-child){
-  border-radius:3px !important;
 }
 
 /* --- Modal — sharper edges, bold header --- */

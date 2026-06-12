@@ -4,11 +4,12 @@ import { settings as settingsSig, muscleGroups as muscleGroupsSig } from '@/stor
 import { exercises as exercisesSig } from '@/store/exercises';
 import { BentoGrid, Card, SectionDivider } from '@/components/layout';
 import { Hero, NextUp, StatsRow, StreakBox, RecoveryList, RecentList } from './Dashboard';
+import { WorkoutCalendar } from './WorkoutCalendar';
 
 // Dashboard — route .tsx autonoma (Tier-2). Possiede tutto il markup (header
 // editoriale + hero + telemetria + zone Prontezza/Registro + canvas Chart.js) e
 // legge i dati dai signal store (reattiva). I componenti dinamici sono riusati
-// da Dashboard.jsx. I canvas (heatmap/weekly/radar) restano disegnati da
+// da Dashboard.jsx. I canvas (weekly/radar) restano disegnati da
 // charts.js: ui.js li ridisegna dopo il mount. Montata dentro #page-dashboard,
 // così gli stili cockpit (cc-*, scoped a #page-dashboard) si applicano.
 export function DashboardPage() {
@@ -62,17 +63,8 @@ export function DashboardPage() {
       <SectionDivider>Registro attività</SectionDivider>
       <BentoGrid cols="split">
         <Card hud>
-          <div class="card-title">Calendario Allenamenti</div>
-          <div class="heatmap-container"><canvas id="heatmap-canvas" class="heatmap-canvas" /></div>
-          <div class="heatmap-legend">
-            <span>Meno</span>
-            <span style="background:var(--bg3)" />
-            <span style="background:color-mix(in srgb,var(--pulse) 25%,transparent)" />
-            <span style="background:color-mix(in srgb,var(--pulse) 50%,transparent)" />
-            <span style="background:color-mix(in srgb,var(--pulse) 75%,transparent)" />
-            <span style="background:var(--pulse)" />
-            <span>Più</span>
-          </div>
+          <div class="card-title">Calendario Allenamenti <span style="font-size:.72rem;color:var(--text2);font-weight:400">ultimi 3 mesi</span></div>
+          <WorkoutCalendar workouts={sorted} />
         </Card>
         <Card hud>
           <div class="card-title">Volume Settimanale</div>
