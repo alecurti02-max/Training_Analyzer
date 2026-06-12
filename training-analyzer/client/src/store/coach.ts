@@ -188,5 +188,9 @@ export const useClientPackage = (id: string) =>
   api.post<ClientPackage>(`/api/coach/packages/${encodeURIComponent(id)}/use`);
 
 // Letture gated dall'opt-in del cliente: 403 (sharing_disabled) se non condiviso.
-export const loadSharedData = (clientId: string, kind: 'weights' | 'body-measurements' | 'nutrition' | 'sleep') =>
-  api.get(`/api/coach/clients/${encodeURIComponent(clientId)}/${kind}`);
+// Finestra di 90 giorni: la UI mostra gli ultimi 14, inutile idratare anni di
+// log (la list date-upsert supporta già ?from=).
+export const loadSharedData = (clientId: string, kind: 'weights' | 'body-measurements' | 'nutrition' | 'sleep') => {
+  const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+  return api.get(`/api/coach/clients/${encodeURIComponent(clientId)}/${kind}?from=${from}`);
+};

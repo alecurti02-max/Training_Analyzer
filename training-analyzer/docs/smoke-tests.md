@@ -134,3 +134,22 @@ Convenzione: ☐ = da eseguire, ☑ = passato, ✗ = fallito (annota issue).
 - ☐ `GET /api/workouts` < 500ms.
 - ☐ `POST /api/profile/health` (AI coach): risposta ≤ 30s, JSON valido.
 - ☐ Health endpoint `/health` o `/` risponde 200.
+
+## 16. Coach / Clienti (CRM PT, F1–F4)
+
+Servono 2 account: un trainer (via `TRAINER_EMAILS` o registrato da `/register-pt`)
+e un cliente.
+
+- ☐ Nav "Clienti" visibile SOLO al trainer; `/clienti` da non-trainer → empty-state.
+- ☐ Invito per email → il cliente lo vede in Profilo→Coach → Accetta → roster attivo.
+- ☐ Revoca invito / Termina rapporto (da entrambi i lati) → letture coach chiuse.
+- ☐ Schede: crea scheda A/B con progressione (es. sett. 2 al 105%), assegna al cliente.
+- ☐ Cliente: Profilo→Coach mostra "La tua scheda · Settimana X di Y"; "Avvia" giorno →
+  live precompilata coi carichi aggiustati; salva → il coach vede l'aderenza aggiornata.
+- ☐ Pin giornata su data → appare nella NextUp del cliente, INIZIA ORA la lancia.
+- ☐ Note/anagrafica: salvataggio e timeline; IL CLIENTE NON LE VEDE MAI.
+- ☐ Pacchetti: crea, +1 seduta (auto-completed quando pieno), alert roster se
+  scadenza ≤14gg o ≤2 sedute residue.
+- ☐ Sharing: peso/nutrizione/sonno visibili al coach SOLO dopo il toggle del cliente;
+  revoca immediata.
+- ☐ `/register-pt` → form registrazione PT → account con area Clienti attiva.

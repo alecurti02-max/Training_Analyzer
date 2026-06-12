@@ -77,7 +77,7 @@ training-analyzer/
     │   ├── index.js, app.js
     │   ├── config/             env, database (dialect auto: postgres prod / sqlite test),
     │   │                       passport
-    │   ├── models/             10 Sequelize models
+    │   ├── models/             16 Sequelize models (10 base + 6 CRM PT)
     │   ├── controllers/        Sottili. CRUD via utils/crud.js (4 risorse).
     │   ├── routes/             11 thin routers
     │   ├── middleware/         authenticate, authorize, errorHandler, ...
@@ -145,7 +145,35 @@ handling (workout-item, hist-filter, ecc.) continua via global delegation in ui.
 
 - `server/src/utils/crud.js::makeDateUpsertController({Model, pickFields, entityName})`
   genera list/create/update/destroy con `findOrCreate({userId, date})` upsert.
-- Usato da: weight, sleep, nutrition, body-measurement (4 controller, ~20 LOC ciascuno).
+  Opzioni avanzate (CRM): `ownerId(req)` resolver, `stampFields(req)` (solo in
+  create — mai riassegna la proprietà su upsert), `mutationWhere(req)`.
+- Usato da: weight, sleep, nutrition, body-measurement (4 controller, ~20 LOC
+  ciascuno) + planned-workout (anche in variante coach).
+
+### CRM Personal Trainer (F1–F4, giu 2026)
+
+- **Ruolo trainer** = riga in `trainer_profiles` (NON `User.role`); attivazione:
+  env `TRAINER_EMAILS` (boot, come `ADMIN_EMAIL`), pagina `/register-pt`
+  (self-serve, flag `asTrainer` su register), o admin. Middleware `requireTrainer`.
+- **Relazione** `coach_clients` con consenso (invito email → accept), UNIQUE
+  (coachId, clientId), re-invito riusa la riga. `loadCoachClient` carica la
+  relazione ATTIVA su /api/coach/clients/:clientId/*; `requireSharing(key)` gata
+  i dati sensibili sull'opt-in del cliente (`sharing` JSONB, solo lui lo cambia).
+- **Schede**: `programs` (giorni A/B/C JSONB + progressioni per-settimana) +
+  `program_assignments` (startDate, weekdayMap; currentWeek SEMPRE calcolata —
+  `services/assignmentMath.js`, speculare a `client/src/lib/progression.ts`:
+  tenerli in sync). Esecuzione on-demand: launchDay → live coi carichi al
+  loadPct → salvataggio con lift anti-forgery di `data._assignment` in colonne
+  `workouts.assignment*` (week ricalcolata server-side). Aderenza in
+  `services/adherenceService.js`.
+- **CRM**: `coach_client_profiles` (anagrafica + note timeline — MAI esposte su
+  route client-facing, test dedicato in `tests/crm.test.js`) e `client_packages`
+  (+1 seduta manuale, alert scadenze computati nel roster).
+- **Client**: pagina `Clienti` (`src/pages/Clienti/`, Preact-only, nav gated su
+  `user.trainerProfile`), tab Coach in `ProfilePage` (`CoachTab.tsx`), store
+  `store/coach.ts` (lato PT) e `store/myCoach.ts` (lato cliente).
+- **Monetizzazione futura**: `router.use('/api/coach', requirePremium)` — non
+  applicato in v1.
 
 ## Convenzioni
 

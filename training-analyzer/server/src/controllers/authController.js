@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const passport = require('passport');
-const { User, Settings } = require('../models');
+const { User, Settings, TrainerProfile } = require('../models');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -30,6 +30,8 @@ const registerValidation = [
     .withMessage('Cognome richiesto')
     .isLength({ max: 60 })
     .withMessage('Cognome troppo lungo'),
+  // CRM F4 — registrazione PT self-serve dalla pagina /register-pt.
+  body('asTrainer').optional().isBoolean().withMessage('asTrainer deve essere booleano'),
 ];
 
 const loginValidation = [
@@ -79,6 +81,13 @@ async function register(req, res, next) {
     });
 
     await Settings.create({ userId: user.uid });
+
+    // CRM F4: la registrazione da /register-pt attiva subito il profilo trainer
+    // (self-serve). Quando arriverà l'attivazione via gestore palestra basterà
+    // creare qui status:'pending' e attivare dal manager — design invariato.
+    if (req.body.asTrainer === true) {
+      await TrainerProfile.create({ uid: user.uid, status: 'active', source: 'self_serve' });
+    }
 
     const tokens = await issueTokens(user);
     res.status(201).json({ user: user.toPublicJSON(), ...tokens });
