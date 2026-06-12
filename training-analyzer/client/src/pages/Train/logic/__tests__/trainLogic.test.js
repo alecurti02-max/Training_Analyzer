@@ -78,6 +78,24 @@ test('buildGymWorkout onlyDone keeps only completed sets (live)', () => {
   expect(built.exercises[0].sets).toEqual([{ reps: 5, weight: 60, rpe: null }]);
 });
 
+test('countSkippedSets: conta solo le serie con dati e non "Fatto" (specchio del filtro onlyDone)', () => {
+  const ex = [{
+    name: 'Panca', param: 'reps', isUnilateral: false,
+    sets: [
+      { reps: 5, weight: 60, done: true },   // salvata → non conta
+      { reps: 5, weight: 60, done: false },  // dati + non fatta → conta
+      { reps: 0, weight: 0, done: false },   // vuota → non conta (come il filtro)
+      { reps: '', weight: '', done: false }, // vuota (stringhe) → non conta
+    ],
+  }, {
+    name: 'Curl', param: 'reps', isUnilateral: true,
+    sets: [{ reps: 10, weightLeft: 12, weightRight: 12, done: false }], // conta
+  }];
+  expect(BW.countSkippedSets(ex)).toBe(2);
+  expect(BW.countSkippedSets([])).toBe(0);
+  expect(BW.countSkippedSets(null)).toBe(0);
+});
+
 test('buildSportWorkout running: pace → paceInput + numeric _pace, pace removed', () => {
   const w = BW.buildSportWorkout('running', { distance: '10', duration: '50', pace: '5:00', avghr: '150' }, { id: 'r', date: '2026-05-10', notes: '' }, FIELD_DEFS);
   expect(w.pace).toBeUndefined();
