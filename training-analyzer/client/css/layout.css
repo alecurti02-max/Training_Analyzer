@@ -99,7 +99,7 @@
 .lay-bottomnav-btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
   background: none; border: none; cursor: pointer; padding: 6px 2px;
-  color: var(--text2); font-family: var(--font-mono); font-size: .56rem;
+  color: var(--text2); font-family: var(--font-mono); font-size: .62rem;
   letter-spacing: .08em; text-transform: uppercase; border-radius: 10px;
   transition: var(--transition);
 }

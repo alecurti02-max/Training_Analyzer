@@ -478,3 +478,72 @@
   :root[data-skin="carbon"] #page-dashboard .cc-stat-label{ margin:-16px -16px 12px; }
   :root[data-skin="carbon"] #page-dashboard .cc-stat-v .cc-num{ font-size:2.3rem; }
 }
+
+/* --- NAV CONSOLE ----------------------------------------------------------
+   Barra di navigazione in linea col linguaggio Carbon (superficie glassy,
+   hairline accent, mono uppercase, pill HUD teal per l'active).
+   La dashboard-v2 governa la nav con :root[data-active-page] .nav-* {…!important}
+   e in dark con [data-theme="dark"] (specificità b=4): qui usiamo
+   [data-skin="carbon"][data-active-page][data-theme] (b=4, data-theme è sempre
+   settato dall'anti-FOUC) + import successivo a dashboard-v2 → vince il cascade.
+   Ogni proprietà che la v2 setta con !important va ri-dichiarata, o trapela. */
+:root[data-skin="carbon"][data-active-page][data-theme] .nav{
+  background:color-mix(in srgb, var(--bg2) 82%, transparent) !important;
+  backdrop-filter:blur(14px) saturate(140%) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(140%) !important;
+  border-bottom:1px solid color-mix(in srgb, var(--accent) 20%, var(--border)) !important;
+}
+:root[data-skin="carbon"][data-active-page][data-theme] .nav-brand{
+  font-family:var(--font-heading) !important;
+  font-style:italic !important;
+  font-weight:800 !important;
+  font-size:1.3rem !important;
+  text-transform:uppercase !important;
+  letter-spacing:-.01em !important;
+  color:var(--text) !important;
+}
+:root[data-skin="carbon"][data-active-page][data-theme] .nav-brand::after{
+  background:var(--accent) !important;
+  width:6px !important; height:6px !important;
+}
+:root[data-skin="carbon"][data-active-page][data-theme] .nav-btn{
+  font-family:var(--font-mono) !important;
+  font-size:.68rem !important;
+  font-weight:600 !important;
+  text-transform:uppercase !important;
+  letter-spacing:.14em !important;
+  /* fix contrasto: gli inattivi erano grigio spento su barra blurrata */
+  color:color-mix(in srgb, var(--text) 35%, var(--text2)) !important;
+  background-color:transparent !important;
+  background-image:none !important;   /* spegne l'evidenziatore giallo v2 */
+  border-radius:4px !important;
+  padding:8px 12px !important;
+  box-shadow:none !important;
+}
+:root[data-skin="carbon"][data-active-page][data-theme] .nav-btn:hover{
+  color:var(--text) !important;
+  background-color:var(--bg3) !important;
+  background-image:none !important;
+}
+:root[data-skin="carbon"][data-active-page][data-theme] .nav-btn.active{
+  color:var(--accent) !important;
+  background-color:color-mix(in srgb, var(--accent) 10%, transparent) !important;
+  background-image:none !important;
+  font-weight:700 !important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+             0 0 14px -4px var(--pulse-glow) !important;
+}
+
+/* Bottom-nav mobile: stessa superficie console; active a pill teal.
+   (Niente !important: la v2 non la tocca; specificità b=2 batte layout.css.) */
+:root[data-skin="carbon"] .lay-bottomnav{
+  background:color-mix(in srgb, var(--bg2) 86%, transparent);
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+}
+:root[data-skin="carbon"] .lay-bottomnav-btn{ letter-spacing:.06em; }
+:root[data-skin="carbon"] .lay-bottomnav-btn.active{
+  color:var(--accent);
+  background:color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius:8px;
+}
