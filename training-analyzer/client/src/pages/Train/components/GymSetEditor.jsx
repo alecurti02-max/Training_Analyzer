@@ -169,7 +169,8 @@ export function ExerciseCard({ ex, exIdx, live, optsOpen, onToggleOpts, onChange
       ))}
       <div style="display:flex;gap:6px;margin-top:4px">
         <button class="btn btn-sm btn-secondary" onClick={() => setSets(addSet(ex.sets, ex, { live }))}>+ Serie</button>
-        {!live && ex.lastPerf && <button class="copy-set-btn" onClick={onCopyLast}>Copia precedente</button>}
+        {/* In live sparisce appena una serie è "Fatto": copiare sovrascriverebbe lavoro completato. */}
+        {ex.lastPerf && !(live && ex.sets.some((s) => s.done)) && <button class="copy-set-btn" onClick={onCopyLast}>Copia precedente</button>}
       </div>
     </div>
   );
