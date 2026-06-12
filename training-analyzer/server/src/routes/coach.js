@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const rateLimit = require('express-rate-limit');
 const authenticate = require('../middleware/authenticate');
 const requireTrainer = require('../middleware/requireTrainer');
 const { loadCoachClient, requireSharing } = require('../middleware/coachAccess');
@@ -12,9 +13,19 @@ const coachData = require('../controllers/coachDataController');
 // le route per-cliente aggiungono loadCoachClient (relazione ATTIVA verificata).
 router.use(authenticate, requireTrainer);
 
+// Mitiga l'enumeration delle email via inviti (la 404 esplicita è una scelta
+// UX consapevole, ma il volume va limitato).
+const inviteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Troppi inviti, riprova più tardi' } },
+});
+
 // Roster + inviti (sulle relazioni, non sul singolo cliente)
 router.get('/clients', ctrl.listClients);
-router.post('/clients/invites', ctrl.invite);
+router.post('/clients/invites', inviteLimiter, ctrl.invite);
 router.delete('/clients/:relationshipId', ctrl.removeClient);
 
 // Dati del cliente (read-only)

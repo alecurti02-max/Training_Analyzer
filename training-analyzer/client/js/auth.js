@@ -58,6 +58,12 @@ export async function initAuth(onLogin, onLogout) {
 export function setupLoginUI() {
   const statusEl = document.getElementById('login-status');
 
+  // CRM F4 — registrazione Personal Trainer: il path dedicato /register-pt
+  // (servito dallo stesso index.html via SPA fallback) apre direttamente il
+  // form di registrazione email con label dedicata e registra con asTrainer.
+  // Nessun toggle nel form standard: un utente B2C non si auto-flagga per sbaglio.
+  const isPtSignup = window.location.pathname === '/register-pt';
+
   // Google login button
   const googleBtn = document.getElementById('btn-google-login');
   if (googleBtn) {
@@ -108,7 +114,9 @@ export function setupLoginUI() {
       const password = (document.getElementById('register-password') || document.getElementById('reg-password'))?.value;
       if (statusEl) statusEl.textContent = 'Registrazione in corso...';
       try {
-        await register({ firstName, lastName, email, password });
+        await register({ firstName, lastName, email, password, asTrainer: isPtSignup });
+        // Torna alla root: lo slug register-pt non è una pagina dell'app.
+        if (isPtSignup) { window.location.href = '/'; return; }
         window.location.reload();
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Errore: ' + (err.message || 'Registrazione fallita');
@@ -127,14 +135,38 @@ export function setupLoginUI() {
       if (loginF) loginF.style.display = loginF.style.display === 'none' ? 'block' : 'none';
     });
   }
+
+  // /register-pt: attiva il tab email, mostra subito il form di registrazione
+  // con l'intestazione PT (riusa la stessa logica dei listener sopra).
+  if (isPtSignup) {
+    const emailTab = [...document.querySelectorAll('.auth-tab-btn, .login-tab')]
+      .find((b) => b.dataset.tab === 'email');
+    if (emailTab) emailTab.click();
+    const regForm = document.getElementById('register-form');
+    const loginF = document.getElementById('login-form');
+    if (regForm) {
+      regForm.style.display = 'block';
+      if (!document.getElementById('pt-signup-banner')) {
+        const banner = document.createElement('p');
+        banner.id = 'pt-signup-banner';
+        banner.textContent = 'Registrazione Personal Trainer — il tuo account potrà gestire clienti e schede.';
+        banner.style.cssText = 'font-size:.82rem;color:var(--accent);font-weight:600;margin-bottom:8px';
+        regForm.parentNode.insertBefore(banner, regForm);
+      }
+    }
+    if (loginF) loginF.style.display = 'none';
+  }
 }
 
 export function loginWithGoogle() {
   window.location.href = '/api/auth/google';
 }
 
-export async function register({ firstName, lastName, email, password }) {
-  const data = await api.post('/api/auth/register', { firstName, lastName, email, password });
+export async function register({ firstName, lastName, email, password, asTrainer = false }) {
+  const data = await api.post('/api/auth/register', {
+    firstName, lastName, email, password,
+    ...(asTrainer ? { asTrainer: true } : {}),
+  });
   setTokens(data.accessToken || data.token, data.refreshToken);
   return data.user || data;
 }
