@@ -90,10 +90,6 @@ export function DashboardPage() {
            ui.js::renderProgress (charts.js) quando il tab viene aperto ===== */}
       <div data-tab-content="analisi" style="display:none">
         <SectionDivider>Andamento</SectionDivider>
-        <Card hud>
-          <div class="card-title">Andamento Score</div>
-          <div class="chart-container"><canvas id="chart-scores" /></div>
-        </Card>
         <BentoGrid cols="split">
           <Card hud><div class="card-title">Volume Palestra (tonnellaggio)</div><div class="chart-container"><canvas id="chart-gym-volume" /></div></Card>
           <Card hud><div class="card-title">Pace Corsa ponderato (min/km)</div><div class="chart-container"><canvas id="chart-run-pace" /></div></Card>
@@ -106,10 +102,7 @@ export function DashboardPage() {
         </BentoGrid>
 
         <SectionDivider>Distribuzione</SectionDivider>
-        <BentoGrid cols="split">
-          <Card hud><div class="card-title">Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles" /></div></Card>
-          <Card hud><div class="card-title">Frequenza per Settimana</div><div class="chart-container"><canvas id="chart-frequency" /></div></Card>
-        </BentoGrid>
+        <Card hud><div class="card-title">Gruppi Muscolari (ultime 4 sett.)</div><div class="chart-container"><canvas id="chart-muscles" /></div></Card>
       </div>
     </>
   );

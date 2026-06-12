@@ -152,20 +152,6 @@ export function renderProgress(workoutsCache, settingsCache) {
   const ct = getChartTheme();
   const workouts=[...workoutsCache].sort((a,b)=>new Date(a.date)-new Date(b.date));
 
-  destroyChart('scores');
-  const scored=workouts.filter(w=>w.scores?.overall);
-  if(scored.length){
-    const ctx=document.getElementById('chart-scores')?.getContext('2d');
-    if(ctx) charts.scores=new Chart(ctx,{type:'line',
-      data:{labels:scored.map(w=>formatDate(w.date)),datasets:[
-        {label:'Palestra',data:scored.map(w=>w.type==='gym'?w.scores.overall:null),borderColor:ct.pulse,pointBackgroundColor:ct.pulse,spanGaps:false,tension:.3},
-        {label:'Corsa',data:scored.map(w=>w.type==='running'?w.scores.overall:null),borderColor:ct.volt,pointBackgroundColor:ct.volt,spanGaps:false,tension:.3},
-        {label:'Altro',data:scored.map(w=>w.type!=='gym'&&w.type!=='running'?w.scores.overall:null),borderColor:ct.aqua,pointBackgroundColor:ct.aqua,spanGaps:false,tension:.3}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ct.textColor}}},scales:{x:{...ct,ticks:{...ct.ticks,maxTicksLimit:10}},y:{min:0,max:10,...ct}}}
-    });
-  }
-
   destroyChart('gymVolume');
   const gymW=workouts.filter(w=>w.type==='gym');
   if(gymW.length){
@@ -215,19 +201,6 @@ export function renderProgress(workoutsCache, settingsCache) {
     });
   }
 
-  destroyChart('frequency');
-  const freqWeeks={};
-  workouts.forEach(w=>{const wk=getWeekStart(w.date);freqWeeks[wk]=(freqWeeks[wk]||0)+1;});
-  const freqLabels=Object.keys(freqWeeks).sort().slice(-16);
-  if(freqLabels.length){
-    const ctx=document.getElementById('chart-frequency')?.getContext('2d');
-    const goal=settingsCache.weekgoal||4;
-    if(ctx) charts.frequency=new Chart(ctx,{type:'bar',
-      data:{labels:freqLabels.map(l=>{const d=new Date(l);return d.getDate()+'/'+(d.getMonth()+1);}),
-        datasets:[{label:'Allenamenti',data:freqLabels.map(l=>freqWeeks[l]||0),backgroundColor:freqLabels.map(l=>(freqWeeks[l]||0)>=goal?hexToRgba(ct.volt,0.7):hexToRgba(ct.amber,0.7))}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:ct,y:{...ct,ticks:{...ct.ticks,stepSize:1}}}}
-    });
-  }
 }
 
 // ==================== 1RM CHART ====================
