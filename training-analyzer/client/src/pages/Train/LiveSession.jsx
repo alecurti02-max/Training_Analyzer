@@ -5,13 +5,14 @@
 // navigating away mid-session must not leak/double-count timers).
 
 import { useState, useEffect, useRef } from 'preact/hooks';
-import { SPORT_TEMPLATES, FIELD_DEFS } from '../../../js/sports.js';
+import { SPORT_TEMPLATES, FIELD_DEFS, getDefaultMusclesForSport } from '../../../js/sports.js';
 import { todayStr, uid } from '@/lib/utils.js';
 import { toast } from '@/lib/toast.js';
 import { calcTonnage, scoreWorkout, getAdvice } from '@/scoring';
 import { trainData, trainBridge, activeSportsFrom, lastPerformance, pendingLivePlan, consumePendingLivePlan } from '@/store/train.js';
-import { initialSets, makeEmptySet } from './logic/setModel.js';
-import { buildGymWorkout, buildSportWorkout, attachScores } from './logic/buildWorkout.js';
+import { initialSets } from './logic/setModel.js';
+import { planToEditableExercises } from './logic/planPrefill.js';
+import { buildGymWorkout, buildSportWorkout, attachScores, countSkippedSets } from './logic/buildWorkout.js';
 import {
   getElapsed, formatTime, togglePause, startSession, adjustResumedDraft,
   REST_PRESETS, clampRestDefault, clampRestPreset, restDashoffset, restClock,
@@ -93,26 +94,26 @@ export function LiveSession({ userId }) {
     setResume(null);
     const t = plan.type || 'gym';
     const s = startSession(t, todayStr(), Date.now());
-    s.exercises = (plan.exercises || []).map((e) => ({
-      name: e.name,
-      muscle: e.muscle,
-      secondaryMuscles: Array.isArray(e.secondaryMuscles) ? e.secondaryMuscles.slice() : [],
-      weightMode: e.weightMode || 'total',
-      barbellWeight: e.barbellWeight || null,
-      isUnilateral: !!e.isUnilateral,
-      param: e.param || 'reps',
-      sets: (Array.isArray(e.sets) && e.sets.length ? e.sets : [makeEmptySet(e, { live: true })]).map((st) => ({ ...st, done: false })),
-    }));
+    s.exercises = planToEditableExercises(plan, data.workouts, { live: true });
+    if (t !== 'gym') {
+      s.muscles = Array.isArray(plan.muscleGroups) && plan.muscleGroups.length
+        ? plan.muscleGroups : getDefaultMusclesForSport(t);
+    }
     // CRM F2: se il piano viene da una scheda assegnata (launchDay/pin del coach),
     // trasporta il riferimento {assignmentId, dayKey, week} fino al salvataggio.
     s._assignment = plan._assignment || null;
     setSelType(t); setSession(s); persist(s); setScreen('active'); setNow(Date.now());
+    // Piano gym senza esercizi: apri subito il picker (come lo start manuale).
+    if (t === 'gym' && !s.exercises.length) setTimeout(() => setSheetOpen(true), 300);
   }, [lp]);
 
   // ---- start ----
   function start() {
     if (!selType) { toast('Seleziona un tipo!', 'error'); return; }
     const s = startSession(selType, date, Date.now());
+    // Parità col wizard: gli sport partono coi muscoli di default pre-selezionati
+    // (chip modificabili in sessione; usati dal recovery in dashboard).
+    if (selType !== 'gym') s.muscles = getDefaultMusclesForSport(selType);
     setSession(s); persist(s); setScreen('active'); setNow(Date.now());
     if (selType === 'gym') setTimeout(() => setSheetOpen(true), 300);
   }
@@ -181,7 +182,7 @@ export function LiveSession({ userId }) {
     } else {
       const fields = {};
       Object.entries(session.sportFields || {}).forEach(([k, v]) => { fields[k] = v; });
-      workout = buildSportWorkout(session.type, fields, { id: uid(), date: session.date, notes: finishNotes }, FIELD_DEFS, { extra: { duration: durationMin, rpe } });
+      workout = buildSportWorkout(session.type, fields, { id: uid(), date: session.date, notes: finishNotes }, FIELD_DEFS, { muscles: session.muscles, extra: { duration: durationMin, rpe } });
     }
     attachScores(workout, { workoutsCache: data.workouts, settings: data.settings, calcTonnage, scoreWorkout, getAdvice });
     // CRM F2: la chiave extra finisce in workout.data._assignment (looseObject);
@@ -259,7 +260,8 @@ export function LiveSession({ userId }) {
             <div>
               {!session.exercises.length && (
                 <div class="card" style="text-align:center;color:var(--text2);padding:32px">
-                  <p>Nessun esercizio aggiunto.</p><p style="font-size:.85rem">Usa il pulsante + per aggiungere esercizi.</p>
+                  <p>Nessun esercizio aggiunto.</p>
+                  <button class="btn btn-primary" style="margin-top:8px" onClick={() => setSheetOpen(true)}>+ Aggiungi esercizio</button>
                 </div>
               )}
               {session.exercises.map((ex, idx) => (
@@ -274,6 +276,11 @@ export function LiveSession({ userId }) {
                     updateExercise(idx, next, { startRest: after > before });
                   }}
                   onRemove={() => removeExercise(idx)}
+                  onCopyLast={() => {
+                    if (!ex.lastPerf) return;
+                    updateExercise(idx, { ...ex, sets: initialSets(ex, ex.lastPerf, { live: true }) });
+                    toast('Serie copiate!');
+                  }}
                 />
               ))}
             </div>
@@ -283,6 +290,11 @@ export function LiveSession({ userId }) {
               <SportFields
                 type={session.type} values={session.sportFields || {}} skipDuration
                 onChange={(k, v) => updateSession({ ...session, sportFields: { ...session.sportFields, [k]: v } })}
+                showMuscles muscles={session.muscles || []}
+                onToggleMuscle={(m) => {
+                  const cur = session.muscles || [];
+                  updateSession({ ...session, muscles: cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m] });
+                }}
               />
             </div>
           )}
@@ -304,6 +316,12 @@ export function LiveSession({ userId }) {
                 <div class="live-summary-row"><span class="live-summary-label">Esercizi</span><span class="live-summary-value">{session.exercises.length}</span></div>
               )}
             </div>
+            {session.type === 'gym' && countSkippedSets(session.exercises) > 0 && (
+              <div class="advice-box" style="margin-top:8px">
+                {countSkippedSets(session.exercises)} serie compilate ma non segnate "Fatto" non verranno salvate.
+                Torna alla sessione per completarle.
+              </div>
+            )}
             <div class="form-row">
               <div class="form-group"><label>Durata (min)</label><input type="number" readonly value={Math.round(elapsed / 60)} /></div>
               <div class="form-group"><label>RPE (1-10)</label><input type="number" min="1" max="10" placeholder="7" value={finishRpe} onInput={(e) => setFinishRpe(e.target.value)} /></div>

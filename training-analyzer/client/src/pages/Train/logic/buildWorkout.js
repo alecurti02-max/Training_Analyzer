@@ -54,6 +54,19 @@ export function buildGymExercises(exercises, { onlyDone = false } = {}) {
   return out;
 }
 
+// Serie con dati inseriti ma mai segnate "Fatto": al salvataggio live
+// (onlyDone:true) buildGymExercises le scarta — il finish screen le segnala
+// all'utente invece di perderle in silenzio. Stesso predicato del filtro sopra.
+export function countSkippedSets(exercises) {
+  let n = 0;
+  (exercises || []).forEach((ex) => {
+    (ex.sets || []).forEach((s) => {
+      if (!s.done && ((s.reps > 0) || (s.repsLeft > 0) || (s.repsRight > 0))) n++;
+    });
+  });
+  return n;
+}
+
 // Apply the running pace transform in place: pace string → paceInput + numeric _pace.
 // Mirrors js/ui.js:909-914 / 1608-1613 exactly.
 export function applyRunningPace(workout) {
