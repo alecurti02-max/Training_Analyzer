@@ -8,6 +8,7 @@ const { execFileSync } = require('child_process');
 const app = require('./app');
 const { connectDB, sequelize } = require('./config/database');
 const { User } = require('./models');
+const { promoteTrainersFromEnv } = require('./utils/bootstrapTrainers');
 
 const PORT = process.env.PORT || 3000;
 
@@ -47,6 +48,7 @@ async function start() {
   console.log('Database tables synced');
 
   await promoteAdminFromEnv();
+  await promoteTrainersFromEnv();
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

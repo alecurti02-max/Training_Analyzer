@@ -1,5 +1,5 @@
 const { Op, fn, col, literal } = require('sequelize');
-const { User, Workout, Follow, sequelize } = require('../models');
+const { User, Workout, Follow, TrainerProfile, sequelize } = require('../models');
 
 // Dialect-aware JSONB numeric extraction. Postgres has `(data->>'k')::float`,
 // SQLite has the JSON1 `json_extract(data, '$.k')`. Whitelist of allowed fields
@@ -46,7 +46,12 @@ async function myProfile(req, res, next) {
     // Compute stats
     const stats = await computeStats(req.user.uid);
 
-    res.json({ ...user.toPublicJSON(), stats });
+    // Il client (boot in ui.js) gata la nav "Clienti" su trainerProfile.status.
+    const trainer = await TrainerProfile.findByPk(req.user.uid, {
+      attributes: ['status', 'bio', 'source'],
+    });
+
+    res.json({ ...user.toPublicJSON(), stats, trainerProfile: trainer || null });
   } catch (err) {
     next(err);
   }
@@ -173,4 +178,4 @@ async function deleteAccount(req, res, next) {
   }
 }
 
-module.exports = { search, myProfile, userStats, follow, unfollow, myFollowing, deleteAccount };
+module.exports = { search, myProfile, userStats, follow, unfollow, myFollowing, deleteAccount, computeStats };

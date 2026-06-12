@@ -6,26 +6,32 @@ const { validateWorkoutData } = require('../validation/workoutData');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// Query condivisa tra la lista dell'utente e la vista coach sul cliente
+// (routes/coach.js): stesso filtraggio/paginazione, cambia solo lo userId.
+async function queryWorkouts(userId, query) {
+  const { type, from, to, limit = 50, offset = 0 } = query;
+  const where = { userId };
+
+  if (type) where.type = type;
+  if (from || to) {
+    where.date = {};
+    if (from) where.date[Op.gte] = from;
+    if (to) where.date[Op.lte] = to;
+  }
+
+  const { count, rows } = await Workout.findAndCountAll({
+    where,
+    order: [['date', 'DESC'], ['createdAt', 'DESC']],
+    limit: Math.min(parseInt(limit, 10) || 50, 5000),
+    offset: parseInt(offset, 10) || 0,
+  });
+
+  return { workouts: rows, total: count, limit: parseInt(limit, 10), offset: parseInt(offset, 10) };
+}
+
 async function list(req, res, next) {
   try {
-    const { type, from, to, limit = 50, offset = 0 } = req.query;
-    const where = { userId: req.user.uid };
-
-    if (type) where.type = type;
-    if (from || to) {
-      where.date = {};
-      if (from) where.date[Op.gte] = from;
-      if (to) where.date[Op.lte] = to;
-    }
-
-    const { count, rows } = await Workout.findAndCountAll({
-      where,
-      order: [['date', 'DESC'], ['createdAt', 'DESC']],
-      limit: Math.min(parseInt(limit, 10) || 50, 5000),
-      offset: parseInt(offset, 10) || 0,
-    });
-
-    res.json({ workouts: rows, total: count, limit: parseInt(limit, 10), offset: parseInt(offset, 10) });
+    res.json(await queryWorkouts(req.user.uid, req.query));
   } catch (err) {
     next(err);
   }
@@ -180,4 +186,4 @@ async function destroyAll(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, bulkCreate, update, destroy, destroyAll, importFile, upload };
+module.exports = { list, getById, create, bulkCreate, update, destroy, destroyAll, importFile, upload, queryWorkouts };

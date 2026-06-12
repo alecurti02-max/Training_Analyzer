@@ -18,6 +18,15 @@ module.exports = (sequelize) => {
       muscleGroups: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       exercises: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       note: { type: DataTypes.TEXT, allowNull: true },
+      // Valorizzato quando la sessione è pianificata da un coach sul calendario
+      // del cliente (route /api/coach/*). Il coach può modificare/eliminare solo
+      // le righe con il proprio uid qui; per il cliente la riga è sua a tutti
+      // gli effetti (la vede in NextUp e la lancia con INIZIA ORA).
+      createdByCoachId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: { model: 'users', key: 'uid' },
+      },
     },
     {
       tableName: 'planned_workouts',
