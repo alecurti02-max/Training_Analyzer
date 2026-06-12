@@ -31,6 +31,14 @@ function AnagraficaForm({ clientId, profile, onSaved }: {
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       });
       onSaved(saved);
+      // Riallinea il form alla verità del server (es. troncamenti dei bound):
+      // gli useState non si risincronizzano da soli al cambio della prop.
+      setGoals(saved.goals || '');
+      setAnamnesis(saved.anamnesis || '');
+      setPhone(saved.contacts?.phone || '');
+      setEmergencyName(saved.contacts?.emergencyName || '');
+      setEmergencyPhone(saved.contacts?.emergencyPhone || '');
+      setTags((saved.tags || []).join(', '));
       toast('Anagrafica salvata', 'success');
     } catch (e) { toast('Errore', 'error'); }
     setBusy(false);

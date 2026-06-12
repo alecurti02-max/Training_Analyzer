@@ -134,7 +134,16 @@ export function PackagesPanel({ clientId }: { clientId: string }) {
   const [rows, setRows] = useState<ClientPackage[] | null>(null);
 
   function reload() {
-    loadClientPackages(clientId).then(setRows).catch(() => setRows([]));
+    loadClientPackages(clientId)
+      .then(setRows)
+      .catch(() => {
+        // Se il reload fallisce DOPO un'azione riuscita (es. +1 seduta), tieni
+        // la lista precedente invece di flashare il vuoto; [] solo al primo load.
+        setRows((prev) => {
+          if (prev != null) toast('Errore nel ricaricare i pacchetti', 'error');
+          return prev ?? [];
+        });
+      });
   }
   useEffect(() => { setRows(null); reload(); }, [clientId]);
 
