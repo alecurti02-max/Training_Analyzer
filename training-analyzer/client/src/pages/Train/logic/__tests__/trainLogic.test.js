@@ -104,6 +104,17 @@ test('buildSportWorkout running: pace → paceInput + numeric _pace, pace remove
   expect(w.distance).toBe(10);
 });
 
+test('buildSportWorkout: muscles espliciti + extra live (durata dal timer); vuoti → assenti', () => {
+  const w = BW.buildSportWorkout('running', { distance: '8' }, { id: 'l', date: '2026-06-11', notes: '' }, FIELD_DEFS,
+    { muscles: ['Quadricipiti', 'Polpacci'], extra: { duration: 45, rpe: 6 } });
+  expect(w.muscles).toEqual(['Quadricipiti', 'Polpacci']);
+  expect(w.duration).toBe(45);
+  expect(w.rpe).toBe(6);
+  // selezione vuota → la chiave muscles NON viene attaccata (autofill legacy al save)
+  const w2 = BW.buildSportWorkout('cycling', {}, { id: 'l2', date: '2026-06-11', notes: '' }, FIELD_DEFS, { muscles: [], extra: { duration: 30 } });
+  expect(w2.muscles).toBeUndefined();
+});
+
 test('SCORE PARITY: a gym save reproduces the P0 fixture score (8.4)', () => {
   const HISTORY = [
     { id: 'h1', type: 'gym', date: '2026-05-01', duration: 55, rpe: 7, exercises: [{ name: 'Squat', muscle: 'Quadricipiti', sets: [{ reps: 5, weight: 90 }] }, { name: 'Panca', muscle: 'Petto', barbellWeight: 20, sets: [{ reps: 5, weight: 50 }] }], _tonnage: 800 },
