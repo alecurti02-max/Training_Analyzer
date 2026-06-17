@@ -16,16 +16,40 @@ import { renderAdmin, setupAdminGating } from './admin.js';
 import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
 import { uid, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate, getWeekStart, daysBetween } from '../src/lib/utils.js';
 import { toast } from '../src/lib/toast.js';
-import { syncFromLegacy } from '../src/lib/dataSync';
 import { initialSegment, syncUrl, initRouter } from '../src/lib/router';
+import { effect } from '@preact/signals';
+import { workouts as workoutsSig, setWorkouts, addWorkout, removeWorkouts as removeWorkoutsFromStore, updateWorkout as updateWorkoutInStore } from '../src/store/workouts';
+import { settings as settingsSig, setSettings, activeSports as activeSportsSig, setActiveSports, muscleGroups as muscleGroupsSig, setMuscleGroups } from '../src/store/settings';
+import { exercises as exercisesSig, setExercises } from '../src/store/exercises';
+import { weights as weightsSig, setWeights } from '../src/store/weights';
+import { following as followingSig, setFollowing } from '../src/store/following';
+import { currentUser as currentUserSig, setUser } from '../src/store/user.js';
 
 // ==================== GLOBAL STATE ====================
+// M1 (P3): la fonte di verità è nei signal store (src/store/*). Le variabili
+// qui sotto sono REPLICHE DI LETTURA sincronizzate via effect(): il codice
+// legacy continua a leggerle come prima, ma OGNI mutazione DEVE passare dagli
+// store (setWorkouts/addWorkout/removeWorkouts/updateWorkout, setSettings,
+// setExercises, setWeights, setFollowing, setActiveSports, setMuscleGroups,
+// setUser) — mai riassegnarle o mutarle in place, o i lettori Preact non si
+// accorgono del cambiamento.
 let currentUser = null;
-let workoutsCache = [], settingsCache = {}, exercisesCache = null, weightsCache = [];
+let workoutsCache = [], settingsCache = {}, exercisesCache = [], weightsCache = [];
 const EXERCISES_LOAD_FAILED = Symbol('exercises_load_failed');
+// true se GET /api/exercises è fallita in questa sessione (prima era il
+// sentinel exercisesCache === null): blocca il fallback ai default in Train.
+let exercisesLoadFailed = false;
 let followingCache = {};
 let activeSports = ['gym','running'];
 let muscleGroups = [...DEFAULT_MUSCLES];
+effect(() => { workoutsCache = workoutsSig.value; });
+effect(() => { settingsCache = settingsSig.value; });
+effect(() => { exercisesCache = exercisesSig.value; });
+effect(() => { weightsCache = weightsSig.value; });
+effect(() => { followingCache = followingSig.value; });
+effect(() => { activeSports = activeSportsSig.value; });
+effect(() => { muscleGroups = muscleGroupsSig.value; });
+effect(() => { currentUser = currentUserSig.value; });
 let isOnline = navigator.onLine;
 
 // Il Train (wizard + live) è interamente Preact (src/pages/Train/): il vecchio
@@ -84,8 +108,10 @@ async function loadAllData() {
     const rawWorkouts = Array.isArray(workoutsRes) ? workoutsRes
       : (workoutsRes?.workouts ? workoutsRes.workouts
       : (workoutsRes ? Object.values(workoutsRes) : []));
+    const newSettings = settingsRes || {};
     // Flatten: merge .data JSONB into top-level fields so the rest of the app works
-    workoutsCache = rawWorkouts.map(w => {
+    const userBW = newSettings.bodyweight || 0;
+    const flatWorkouts = rawWorkouts.map(w => {
       const data = w.data || {};
       // Remove conflicting keys from data before merging
       const { id: _ignoreId, type: _ignoreType, date: _ignoreDate, userId: _ignoreUser, ...safeData } = data;
@@ -94,36 +120,37 @@ async function loadAllData() {
       flat.id = w.id;
       flat.type = w.type;
       flat.date = w.date;
+      // Tonnage for gym workouts (settings already loaded → bodyweight noto)
+      if (flat.type === 'gym' && !flat._tonnage) flat._tonnage = calcTonnage(flat.exercises, userBW);
       return flat;
     });
-    settingsCache = settingsRes || {};
-    if (settingsCache.activeSports) activeSports = settingsCache.activeSports;
-    if (settingsCache.muscleGroups) muscleGroups = settingsCache.muscleGroups;
-
-    // Compute tonnage for gym workouts (after settings load so we know user bodyweight)
-    const userBW = settingsCache.bodyweight || 0;
-    workoutsCache.forEach(w => {
-      if (w.type === 'gym' && !w._tonnage) {
-        w._tonnage = calcTonnage(w.exercises, userBW);
-      }
-    });
+    setWorkouts(flatWorkouts);
+    setSettings(newSettings);
+    // Slice: niente alias con l'array dentro settings (mutazioni indipendenti)
+    if (newSettings.activeSports) setActiveSports([...newSettings.activeSports]);
+    if (newSettings.muscleGroups) setMuscleGroups([...newSettings.muscleGroups]);
 
     if (exercisesRes === EXERCISES_LOAD_FAILED) {
       // Server/network error: keep working set empty for this session, do NOT overwrite the server.
-      exercisesCache = [];
+      exercisesLoadFailed = true;
+      setExercises([]);
       toast('Errore caricamento libreria esercizi: i dati sul server non sono stati toccati', 'error');
     } else if (Array.isArray(exercisesRes) && !exercisesRes.length) {
       // Legitimate empty list (new user onboarding): seed with defaults.
-      exercisesCache = getDefaultExercises();
-      api.put('/api/exercises', exercisesCache).catch(() => {});
+      exercisesLoadFailed = false;
+      const defaults = getDefaultExercises();
+      setExercises(defaults);
+      api.put('/api/exercises', defaults).catch(() => {});
     } else {
-      exercisesCache = exercisesRes;
+      exercisesLoadFailed = false;
+      setExercises(exercisesRes);
     }
 
-    weightsCache = Array.isArray(weightsRes) ? weightsRes : (weightsRes ? Object.values(weightsRes) : []);
-    weightsCache.sort((a,b) => new Date(a.date) - new Date(b.date));
+    const weightsList = Array.isArray(weightsRes) ? weightsRes : (weightsRes ? Object.values(weightsRes) : []);
+    weightsList.sort((a,b) => new Date(a.date) - new Date(b.date));
+    setWeights(weightsList);
 
-    followingCache = followingRes || {};
+    setFollowing(followingRes || {});
 
     populateSettingsUI();
     onDataChanged();
@@ -380,14 +407,17 @@ function mountTrainPreactIfEnabled() {
     data: {
       workouts: workoutsCache,
       settings: settingsCache,
-      exercises: exercisesCache || getDefaultExercises(),
+      // Libreria non ancora caricata → default; load fallito → lista vuota
+      // (mai sovrascrivere il server coi default su errore transiente).
+      exercises: exercisesCache.length ? exercisesCache : (exercisesLoadFailed ? [] : getDefaultExercises()),
     },
     bridge: {
       saveWorkout,
       getDefaultExercises,
-      // Mirror the legacy post-save: push to cache, toast, go to dashboard.
+      // Post-save: store action (i lettori signal — Dashboard inclusa — vedono
+      // SUBITO il workout appena salvato; il vecchio .push() li lasciava stantii).
       onSaved: (workout, message) => {
-        workoutsCache.push(workout);
+        addWorkout(workout);
         if (message) toast(message, 'success');
         showPage('dashboard');
       },
@@ -424,13 +454,9 @@ function showTab(group, tab) {
 }
 
 function onDataChanged() {
-  // Fase 7a: mirror unidirezionale dei let-cache legacy nei signal store
-  // (src/store/*). Additivo — i lettori signal arriveranno nei PR successivi.
-  // Eseguito prima dell'early-return così i signal restano sempre in pari.
-  syncFromLegacy({
-    workouts: workoutsCache, settings: settingsCache, exercises: exercisesCache,
-    weights: weightsCache, following: followingCache, activeSports, muscleGroups,
-  });
+  // M1: niente più mirror — gli store SONO la fonte di verità e i lettori
+  // Preact reagiscono da soli. Qui resta solo il re-render delle pagine
+  // legacy "classiche" attive (renderer imperativi non reattivi).
   const activePage = document.querySelector('.page.active');
   if (!activePage) return;
   const id = activePage.id;
@@ -457,12 +483,12 @@ async function deleteWorkout(id) {
 }
 
 async function saveSettingsToServer(s) {
-  settingsCache = s;
+  setSettings(s);
   await api.put('/api/settings', s);
 }
 
 async function saveExercisesToServer(lib) {
-  exercisesCache = lib;
+  setExercises(lib);
   await api.put('/api/exercises', lib);
 }
 
@@ -614,7 +640,7 @@ async function deleteSelected() {
   for (const id of ids) {
     try { await api.del('/api/workouts/' + id); deleted++; } catch(e) { console.error('Delete error', id, e); }
   }
-  workoutsCache = workoutsCache.filter(w => !_selectedIds.has(w.id));
+  removeWorkoutsFromStore(_selectedIds);
   _selectedIds.clear();
   toast(`${deleted} allenamenti eliminati`, 'success');
   updateSelectCount();
@@ -667,13 +693,17 @@ async function handleAiAnalyzeClick(workoutId, force) {
   }
   try {
     const res = await api.analyzeWorkout(workoutId, { force: !!force });
-    w.aiAnalysis = res.aiAnalysis;
-    w.aiAnalysisGeneratedAt = res.aiAnalysisGeneratedAt;
-    w.aiAnalysisModel = res.aiAnalysisModel;
-    w.aiAnalysisVersion = res.aiAnalysisVersion;
+    const merged = {
+      ...w,
+      aiAnalysis: res.aiAnalysis,
+      aiAnalysisGeneratedAt: res.aiAnalysisGeneratedAt,
+      aiAnalysisModel: res.aiAnalysisModel,
+      aiAnalysisVersion: res.aiAnalysisVersion,
+    };
+    updateWorkoutInStore(merged);
     if (section) {
-      section.outerHTML = renderAiAnalysisSection(w);
-      bindAiAnalyzeButtons(w);
+      section.outerHTML = renderAiAnalysisSection(merged);
+      bindAiAnalyzeButtons(merged);
     }
     if (!res.cached) toast('Analisi AI generata', 'success');
   } catch (err) {
@@ -898,7 +928,7 @@ function showWorkoutDetail(id) {
   document.getElementById('modal-delete-btn').onclick=async ()=>{
     if(confirm('Eliminare questo allenamento?')){
       await deleteWorkout(id);
-      workoutsCache = workoutsCache.filter(w => w.id !== id);
+      removeWorkoutsFromStore([id]);
       closeModal();
       toast('Allenamento eliminato');
       onDataChanged();
@@ -1182,9 +1212,9 @@ function editWorkout(id) {
     try {
       const { type, date, id: wId, data: _d, createdAt, updatedAt, userId, ...rest } = updated;
       await api.put('/api/workouts/' + id, { type, date, data: rest });
-      // Update cache
-      const idx = workoutsCache.findIndex(x => x.id === id);
-      if (idx !== -1) workoutsCache[idx] = { ...workoutsCache[idx], ...updated };
+      // Update store (i lettori signal si aggiornano da soli)
+      const prev = workoutsCache.find(x => x.id === id);
+      if (prev) updateWorkoutInStore({ ...prev, ...updated });
       toast('Allenamento aggiornato!', 'success');
       showWorkoutDetail(id); // show updated detail
       onDataChanged();
@@ -1240,9 +1270,11 @@ async function saveWeight() {
   if(!value){toast('Inserisci il peso!','error');return;}
   const saved = await api.post('/api/weights', { date, value });
   const entry = saved && saved.id ? saved : { id: uid(), date, value };
-  const i = weightsCache.findIndex(w => w.date === entry.date);
-  if (i >= 0) weightsCache[i] = entry; else weightsCache.push(entry);
-  weightsCache.sort((a,b) => new Date(a.date) - new Date(b.date));
+  const next = [...weightsCache];
+  const i = next.findIndex(w => w.date === entry.date);
+  if (i >= 0) next[i] = entry; else next.push(entry);
+  next.sort((a,b) => new Date(a.date) - new Date(b.date));
+  setWeights(next);
   document.getElementById('weight-value').value='';
   toast('Peso registrato!','success');
   renderWeightPage();
@@ -1443,12 +1475,11 @@ async function addExerciseToLibrary(){
   const name=document.getElementById('lib-name').value.trim(),muscle=document.getElementById('lib-muscle').value;
   const param=document.getElementById('lib-param')?.value||'reps';
   if(!name){toast('Inserisci un nome!','error');return;}
-  const lib=exercisesCache||[];
-  if(lib.some(e=>e.name.toLowerCase()===name.toLowerCase())){toast('Esercizio gia presente!','error');return;}
+  if((exercisesCache||[]).some(e=>e.name.toLowerCase()===name.toLowerCase())){toast('Esercizio gia presente!','error');return;}
   const opts = readLibWeightOptions();
   const isUnilateral = !!document.getElementById('lib-unilateral')?.checked;
   const secondaryMuscles = readLibSecondaryChips().filter(m => m && m !== muscle);
-  lib.push({name,muscle,param,...opts,isUnilateral,secondaryMuscles});
+  const lib=[...(exercisesCache||[]), {name,muscle,param,...opts,isUnilateral,secondaryMuscles}];
   lib.sort((a,b)=>a.name.localeCompare(b.name));
   await saveExercisesToServer(lib);
   document.getElementById('lib-name').value='';
@@ -1551,8 +1582,10 @@ function editExercise(idx){
     const isUnilateral = !!document.getElementById('edit-ex-unilateral').checked;
     const newMuscle = document.getElementById('edit-ex-muscle').value;
     const secondaryMuscles = readLibSecondaryChips('edit-ex-secondary-muscles').filter(m => m && m !== newMuscle);
-    lib[idx]={name:newName, muscle:newMuscle, param:newParam, weightMode, barbellWeight, isUnilateral, secondaryMuscles};
-    await saveExercisesToServer(lib);
+    const next = lib.map((e, i) => i === idx
+      ? {name:newName, muscle:newMuscle, param:newParam, weightMode, barbellWeight, isUnilateral, secondaryMuscles}
+      : e);
+    await saveExercisesToServer(next);
     toast('Esercizio modificato!','success');
     closeModal();
     document.getElementById('modal-delete-btn').style.display='';
@@ -1577,7 +1610,7 @@ async function syncSettingsFromMeasurement(m) {
     if (m[k] != null) patch[k] = m[k];
   }
   if (!Object.keys(patch).length) return;
-  settingsCache = { ...settingsCache, ...patch };
+  setSettings({ ...settingsCache, ...patch });
   try {
     await api.put('/api/settings', patch);
     populateSettingsUI();
@@ -1656,8 +1689,8 @@ function populateSettingsUI(){
   setVal('set-muscle-mass', s.muscleMass);
   setVal('set-bone-mass', s.boneMass);
   setVal('set-protein', s.protein);
-  if(s.activeSports) activeSports = s.activeSports;
-  if(s.muscleGroups) muscleGroups = s.muscleGroups;
+  if(s.activeSports) setActiveSports([...s.activeSports]);
+  if(s.muscleGroups) setMuscleGroups([...s.muscleGroups]);
   populateMuscleSelect();
 }
 
@@ -1702,7 +1735,7 @@ function renderSportsManager() {
 
 function addSport(key) {
   if (!activeSports.includes(key)) {
-    activeSports.push(key);
+    setActiveSports([...activeSports, key]);
     saveSettings();
     renderSportsManager();
   }
@@ -1711,7 +1744,7 @@ function addSport(key) {
 function removeSport(key) {
   const tmpl = SPORT_TEMPLATES[key];
   if (tmpl?.fixed) return;
-  activeSports = activeSports.filter(s => s !== key);
+  setActiveSports(activeSports.filter(s => s !== key));
   saveSettings();
   renderSportsManager();
 }
@@ -1729,7 +1762,7 @@ function addMuscleGroup() {
   const name = input.value.trim();
   if (!name) { toast('Inserisci un nome!', 'error'); return; }
   if (muscleGroups.includes(name)) { toast('Gruppo gia presente!', 'error'); return; }
-  muscleGroups.push(name);
+  setMuscleGroups([...muscleGroups, name]);
   input.value = '';
   saveSettings();
   renderMuscleGroupsManager();
@@ -1738,7 +1771,7 @@ function addMuscleGroup() {
 
 function removeMuscleGroup(name) {
   if (DEFAULT_MUSCLES.includes(name)) return;
-  muscleGroups = muscleGroups.filter(m => m !== name);
+  setMuscleGroups(muscleGroups.filter(m => m !== name));
   saveSettings();
   renderMuscleGroupsManager();
 }
@@ -1800,7 +1833,7 @@ window.deleteWorkoutsByIds = async (ids) => {
   for (const id of ids) {
     try { await api.del('/api/workouts/' + id); deleted++; } catch (e) { console.error('Delete error', id, e); }
   }
-  workoutsCache = workoutsCache.filter((w) => !ids.includes(w.id));
+  removeWorkoutsFromStore(ids);
   toast(deleted + ' allenamenti eliminati', 'success');
   onDataChanged();
 };
@@ -1869,10 +1902,18 @@ window.addFriendByUID = () => { const input = document.getElementById('friend-ui
 window.toggleFollow = toggleFollow;
 window.compareSelected = () => compareSelected(Object.values(followingCache));
 window.updateORMChart = updateORMChart;
-window.handleGPXFiles = (files) => handleGPXFiles(files, { workoutsCache, settingsCache, onImported: () => loadAllData() });
-window.handleCSVFile = (file) => handleCSVFile(file, exercisesCache, { workoutsCache, settingsCache, onImported: () => loadAllData() });
-window.handleAppleHealthFile = (file) => handleAppleHealthFile(file, { workoutsCache, settingsCache, onImported: () => loadAllData() });
-window.handleFITFile = (file) => handleFITFile(file, { workoutsCache, settingsCache, onImported: () => loadAllData() });
+// Getter "live": import.js legge workoutsCache/settingsCache dal bag al CLICK
+// di conferma (non alla selezione del file) — coi getter lo scoring usa sempre
+// i dati correnti anche se nel frattempo un altro import ha aggiornato lo store.
+const importBag = () => ({
+  get workoutsCache() { return workoutsSig.value; },
+  get settingsCache() { return settingsSig.value; },
+  onImported: () => loadAllData(),
+});
+window.handleGPXFiles = (files) => handleGPXFiles(files, importBag());
+window.handleCSVFile = (file) => handleCSVFile(file, exercisesCache, importBag());
+window.handleAppleHealthFile = (file) => handleAppleHealthFile(file, importBag());
+window.handleFITFile = (file) => handleFITFile(file, importBag());
 window.confirmCSVImport = () => confirmCSVImport(window._csvImportData, workoutsCache, settingsCache);
 window.importHealthWorkouts = () => importHealthWorkouts(window._healthImportData, workoutsCache, settingsCache);
 window.exportAllData = () => exportAllData({ workoutsCache, settingsCache, exercisesCache, weightsCache });
@@ -1918,7 +1959,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!confirm('Sei sicuro? Verranno eliminati TUTTI gli allenamenti.')) return;
       try {
         const res = await api.del('/api/workouts');
-        workoutsCache = [];
+        setWorkouts([]);
         toast('Eliminati ' + (res?.deleted || 'tutti gli') + ' allenamenti', 'success');
         onDataChanged();
       } catch (err) { toast('Errore: ' + err.message, 'error'); }
@@ -2000,7 +2041,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==================== BOOT ====================
 initAuth(
   async (user) => {
-    currentUser = user;
+    // Store action: aggiorna anche la replica locale via effect E sblocca i
+    // lettori Preact del signal (Train.jsx usa uid per i draft per-utente:
+    // prima il signal restava null e i draft finivano tutti su *_anon).
+    setUser(user);
     document.getElementById('nav-user').textContent = user.displayName || user.email || 'Utente';
     if (user.photoURL) {
       const avatar = document.getElementById('nav-avatar');
