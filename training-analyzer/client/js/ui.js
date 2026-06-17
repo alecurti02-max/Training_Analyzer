@@ -18,10 +18,10 @@ import { uid, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate, ge
 import { toast } from '../src/lib/toast.js';
 import { initialSegment, syncUrl, initRouter } from '../src/lib/router';
 import { effect } from '@preact/signals';
-import { workouts as workoutsSig, setWorkouts, addWorkout, removeWorkouts as removeWorkoutsFromStore, updateWorkout as updateWorkoutInStore } from '../src/store/workouts';
-import { settings as settingsSig, setSettings, activeSports as activeSportsSig, setActiveSports, muscleGroups as muscleGroupsSig, setMuscleGroups } from '../src/store/settings';
-import { exercises as exercisesSig, setExercises } from '../src/store/exercises';
-import { weights as weightsSig, setWeights } from '../src/store/weights';
+import { workouts as workoutsSig, setWorkouts, addWorkout, updateWorkout as updateWorkoutInStore, postWorkout, deleteWorkoutById, deleteManyWorkouts, deleteAllWorkouts as deleteAllWorkoutsAction } from '../src/store/workouts';
+import { settings as settingsSig, setSettings, persistSettings, activeSports as activeSportsSig, setActiveSports, muscleGroups as muscleGroupsSig, setMuscleGroups } from '../src/store/settings';
+import { exercises as exercisesSig, setExercises, persistExercises } from '../src/store/exercises';
+import { weights as weightsSig, setWeights, upsertWeight } from '../src/store/weights';
 import { following as followingSig, setFollowing } from '../src/store/following';
 import { currentUser as currentUserSig, setUser } from '../src/store/user.js';
 
@@ -465,32 +465,12 @@ function onDataChanged() {
   if (id === 'page-body') renderWeightPage();
 }
 
-// ==================== SAVE HELPERS (API calls) ====================
-async function saveWorkout(workout) {
-  // Auto-fill default muscles for non-gym workouts that didn't go through a form
-  // (imports, live recording). Form-based flows pass an explicit muscles array.
-  if (workout.type !== 'gym' && workout.muscles === undefined) {
-    const defaults = getDefaultMusclesForSport(workout.type);
-    if (defaults.length) workout.muscles = defaults;
-  }
-  const { type, date, ...rest } = workout;
-  const saved = await api.post('/api/workouts', { type, date, data: rest });
-  return saved;
-}
-
-async function deleteWorkout(id) {
-  await api.del('/api/workouts/' + id);
-}
-
-async function saveSettingsToServer(s) {
-  setSettings(s);
-  await api.put('/api/settings', s);
-}
-
-async function saveExercisesToServer(lib) {
-  setExercises(lib);
-  await api.put('/api/exercises', lib);
-}
+// ==================== SAVE HELPERS ====================
+// M2: la persistenza vive negli store (src/store/*). Questi alias mantengono i
+// nomi usati dal bridge Train e dai call-site legacy mentre ui.js viene smontato.
+const saveWorkout = postWorkout;            // POST, ritorna la riga salvata
+const saveSettingsToServer = persistSettings;
+const saveExercisesToServer = persistExercises;
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
@@ -634,13 +614,7 @@ function deselectAll() {
 async function deleteSelected() {
   if (!_selectedIds.size) { toast('Nessun allenamento selezionato', 'error'); return; }
   if (!confirm(`Eliminare ${_selectedIds.size} allenamenti?`)) return;
-  let deleted = 0;
-  const ids = [..._selectedIds];
-  // Delete in batches
-  for (const id of ids) {
-    try { await api.del('/api/workouts/' + id); deleted++; } catch(e) { console.error('Delete error', id, e); }
-  }
-  removeWorkoutsFromStore(_selectedIds);
+  const deleted = await deleteManyWorkouts([..._selectedIds]);
   _selectedIds.clear();
   toast(`${deleted} allenamenti eliminati`, 'success');
   updateSelectCount();
@@ -927,8 +901,7 @@ function showWorkoutDetail(id) {
 
   document.getElementById('modal-delete-btn').onclick=async ()=>{
     if(confirm('Eliminare questo allenamento?')){
-      await deleteWorkout(id);
-      removeWorkoutsFromStore([id]);
+      await deleteWorkoutById(id);
       closeModal();
       toast('Allenamento eliminato');
       onDataChanged();
@@ -1270,11 +1243,7 @@ async function saveWeight() {
   if(!value){toast('Inserisci il peso!','error');return;}
   const saved = await api.post('/api/weights', { date, value });
   const entry = saved && saved.id ? saved : { id: uid(), date, value };
-  const next = [...weightsCache];
-  const i = next.findIndex(w => w.date === entry.date);
-  if (i >= 0) next[i] = entry; else next.push(entry);
-  next.sort((a,b) => new Date(a.date) - new Date(b.date));
-  setWeights(next);
+  upsertWeight(entry);
   document.getElementById('weight-value').value='';
   toast('Peso registrato!','success');
   renderWeightPage();
@@ -1825,15 +1794,11 @@ function initApp() {
 // Expose key functions on window for any remaining inline onclick handlers
 window.showPage = showPage;
 window.showWorkoutDetail = showWorkoutDetail;
-// Esposto per HistoryPage (.tsx): elimina N workout per id mantenendo in pari la
-// cache legacy (workoutsCache) + i signal store (via onDataChanged → mirror).
+// Esposto per HistoryPage (.tsx): elimina N workout per id. La store action
+// fa le DELETE e aggiorna il signal (HistoryPage reagisce da sola).
 window.deleteWorkoutsByIds = async (ids) => {
   if (!Array.isArray(ids) || !ids.length) return;
-  let deleted = 0;
-  for (const id of ids) {
-    try { await api.del('/api/workouts/' + id); deleted++; } catch (e) { console.error('Delete error', id, e); }
-  }
-  removeWorkoutsFromStore(ids);
+  const deleted = await deleteManyWorkouts(ids);
   toast(deleted + ' allenamenti eliminati', 'success');
   onDataChanged();
 };
@@ -1958,8 +1923,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteAllWorkouts: async () => {
       if (!confirm('Sei sicuro? Verranno eliminati TUTTI gli allenamenti.')) return;
       try {
-        const res = await api.del('/api/workouts');
-        setWorkouts([]);
+        const res = await deleteAllWorkoutsAction();
         toast('Eliminati ' + (res?.deleted || 'tutti gli') + ' allenamenti', 'success');
         onDataChanged();
       } catch (err) { toast('Errore: ' + err.message, 'error'); }

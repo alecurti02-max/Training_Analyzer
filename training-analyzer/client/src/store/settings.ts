@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals';
+import { api } from '@/lib/api';
 import { DEFAULT_MUSCLES } from '../../js/sports.js';
 
 // Impostazioni utente + due derivati che loadAllData estrae da settings
@@ -18,4 +19,11 @@ export function setActiveSports(list: string[] | null | undefined): void {
 }
 export function setMuscleGroups(list: string[] | null | undefined): void {
   if (Array.isArray(list)) muscleGroups.value = list;
+}
+
+// Persistenza (M2): aggiorna ottimisticamente il signal e fa PUT. settings è
+// upsert/merge lato server. Sostituisce ui.js::saveSettingsToServer.
+export async function persistSettings(s: Record<string, any>): Promise<void> {
+  setSettings(s);
+  await api.put('/api/settings', s);
 }
