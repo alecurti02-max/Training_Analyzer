@@ -50,7 +50,7 @@ function FitnessAssessmentBasic({ fa }) {
 }
 
 // ── Athletic detail: fitness card with sublabels + body composition breakdown ──
-function FitnessAssessmentAthletic({ fa }) {
+export function FitnessAssessmentAthletic({ fa }) {
   const bc = fa.bodyComp;
   return (
     <>
@@ -122,7 +122,7 @@ function AthleticMetricCard({ label, value, icon, desc }) {
   );
 }
 
-function AthleticMetrics({ metrics }) {
+export function AthleticMetrics({ metrics }) {
   return <>{metrics.map((m) => <AthleticMetricCard key={m.label} {...m} />)}</>;
 }
 
