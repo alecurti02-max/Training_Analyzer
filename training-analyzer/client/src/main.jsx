@@ -11,7 +11,6 @@ import {
   unmountProfile,
 } from './pages/Profile/Profile.jsx';
 import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setup.jsx';
-import { mountBmiBanner, unmountBody } from './pages/Body/Body.jsx';
 import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 import { mountAdmin, unmountAdmin } from './pages/Admin/AdminPage';
 import { mountClienti, unmountClienti } from './pages/Clienti/ClientiPage';
@@ -63,12 +62,9 @@ globalThis.Preact.setup = {
   mountMuscleGroups,
   unmount: unmountSetup,
 };
-globalThis.Preact.body = {
-  mount: mountBodyPage,
-  unmountPage: unmountBodyPage,
-  mountBmiBanner,
-  unmount: unmountBody,
-};
+// Corpo (M3): pagina autonoma registrata nel router. Niente più bridge BMI/wrap.
+registerPage('body', mountBodyPage);
+globalThis.Preact.body = { mount: mountBodyPage, unmount: unmountBodyPage };
 // N1/N2: Recupero è fuso in Corpo (tab) e Progressi è sciolto in Dashboard
 // (Analisi) + Profilo (Atletica): niente più bridge progress/recovery.
 // Train (wizard + live) — behind the ta_train_preact flag in ui.js. Unlike the

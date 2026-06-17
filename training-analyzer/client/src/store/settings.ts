@@ -27,3 +27,11 @@ export async function persistSettings(s: Record<string, any>): Promise<void> {
   setSettings(s);
   await api.put('/api/settings', s);
 }
+
+// Patch parziale (M3 Body): merge ottimistico nel signal + PUT del solo subset.
+// Il server fa upsert/merge, quindi PUT parziale aggiorna solo i campi passati —
+// niente footgun del full-object (che azzererebbe i campi non montati).
+export async function patchSettings(partial: Record<string, any>): Promise<void> {
+  setSettings({ ...settings.value, ...partial });
+  await api.put('/api/settings', partial);
+}
