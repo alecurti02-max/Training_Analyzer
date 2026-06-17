@@ -4,12 +4,6 @@ import { initThemeToggle } from './components/ThemeToggle/ThemeToggle.jsx';
 import { mountDashboard, unmountDashboard } from './pages/Dashboard/DashboardPage';
 import { mountHistory, unmountHistory, mountHistoryPage } from './pages/History/HistoryPage';
 import { registerPage } from './lib/router';
-import {
-  mountFitnessAssessment,
-  mountAthleticDetail,
-  computeAthleticMetrics,
-  unmountProfile,
-} from './pages/Profile/Profile.jsx';
 import { mountSports, mountMuscleGroups, unmountSetup } from './pages/Setup/Setup.jsx';
 import { mountTrain, unmountTrain } from './pages/Train/Train.jsx';
 import { mountAdmin, unmountAdmin } from './pages/Admin/AdminPage';
@@ -47,14 +41,9 @@ globalThis.Preact.history = { mount: mountHistory, unmount: unmountHistory };
 // (host+render in src/); ui.js::showPage lo prende dal registry invece del
 // proprio branch legacy. Le altre pagine seguiranno una alla volta.
 registerPage('history', mountHistoryPage);
-globalThis.Preact.profile = {
-  mount: mountProfilePage,
-  unmountPage: unmountProfilePage,
-  mountFitness: mountFitnessAssessment,
-  mountAthletic: mountAthleticDetail,
-  computeAthleticMetrics,
-  unmount: unmountProfile,
-};
+// Profilo (M3): pagina Preact autonoma nel registry.
+registerPage('profile', mountProfilePage);
+globalThis.Preact.profile = { mount: mountProfilePage, unmount: unmountProfilePage };
 globalThis.Preact.setup = {
   mount: mountSetupPage,
   unmountPage: unmountSetupPage,

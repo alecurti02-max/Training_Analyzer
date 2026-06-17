@@ -13,9 +13,9 @@ import { exportProfilePdf } from './pdfExport.js';
 // Recupero (Alimentazione + Sonno) migrato a Preact (M3 Body): NutritionTab/
 // SleepTab in src/pages/Body/recovery/ con i propri store. recovery.js rimosso.
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
-import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
+// Amici (friends.js) e Profilo/Atletica migrati a Preact (M3): src/pages/Profile/
+// (FriendsTab + AthleticTab che wrappa bodyAvatar.js). friends.js rimosso.
 import { renderAdmin, setupAdminGating } from './admin.js';
-import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
 import { uid, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate, getWeekStart, daysBetween } from '../src/lib/utils.js';
 import { toast } from '../src/lib/toast.js';
 import { initialSegment, syncUrl, initRouter, getPageHandler } from '../src/lib/router';
@@ -227,14 +227,7 @@ function showPage(page) {
   const pageHandler = getPageHandler(page);
   if (pageHandler) { pageHandler(); return; }
   if(page==='dashboard') renderDashboard();
-  // Corpo (M3): pagina Preact autonoma nel registry router (gestita sopra).
-  if(page==='profile') {
-    // Profilo (ProfilePage .tsx, wrap) — ingloba anche l'Atletica (N2, ex
-    // Progressi): renderAthleticDetail popola avatar/radar/card nel tab.
-    if (mountPageHost('profile')) wireDirectInputListeners();
-    renderProfile(); renderFriendsPageLocal();
-    renderAthleticDetail();
-  }
+  // Corpo e Profilo (M3): pagine Preact autonome nel registry router (sopra).
   if(page==='train') {
     // Train è solo Preact (il fallback legacy è stato rimosso). Early-return:
     // la pagina possiede i propri tab, salta il restore PAGE_DEFAULT_TAB.
@@ -355,9 +348,7 @@ function wireDirectInputListeners() {
   const fitInput = fresh('fit-file');
   if (fitInput) fitInput.addEventListener('change', (e) => window.handleFITFile(e.target.files[0]));
 
-  // Friend search input (Profilo → Amici)
-  const friendSearch = fresh('friend-search');
-  if (friendSearch) friendSearch.addEventListener('input', (e) => searchUsersAPI(e.target.value));
+  // (Ricerca amici: FriendsTab Preact — M3.)
 
   // Exercise library filter (Setup → Libreria)
   const libFilter = fresh('lib-filter');
@@ -439,8 +430,7 @@ function showTab(group, tab) {
     const sortedW = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date));
     renderWeeklyChart(sortedW); renderRadarChart(sortedW);
   }
-  // Alimentazione/Sonno (body) sono Preact autonomi: niente render legacy qui.
-  if (group === 'profile' && tab === 'athletic') renderAthleticDetail();
+  // Corpo e Profilo (M3) sono Preact autonomi con tab locali: niente render qui.
   // Persist
   try { localStorage.setItem('ta_tab_' + group, tab); } catch(e) {}
 }
@@ -1195,92 +1185,11 @@ function renderProgress() {
 // Corpo (M3): peso/misure/BMI sono interamente Preact (src/pages/Body/).
 
 // ==================== PROFILE ====================
-function renderProfile() {
-  if(!currentUser) return;
-  const avatarEl = document.getElementById('profile-avatar');
-  if(avatarEl) avatarEl.src=currentUser.photoURL||'';
-  document.getElementById('profile-name').textContent=currentUser.displayName||'Utente';
-  document.getElementById('profile-email').textContent=currentUser.email||'';
-  document.getElementById('profile-link').value=window.location.href;
-  document.getElementById('profile-uid').value=currentUser.uid||'';
-  // Show registration date from profile
-  if(currentUser.createdAt) {
-    document.getElementById('profile-since').textContent='Registrato dal '+formatDate(currentUser.createdAt);
-  }
-}
-
+// Profilo (M3): Mio profilo, Atletica (radar + avatar + valutazione) e Amici
+// sono interamente Preact (src/pages/Profile/). copyAppLink/copyUID restano qui
+// come azioni globali (delega data-action), usano currentUser/clipboard.
 function copyAppLink(){navigator.clipboard.writeText(window.location.href).then(()=>toast('Link copiato!')).catch(()=>toast('Errore copia','error'));}
 function copyUID(){navigator.clipboard.writeText(currentUser?.uid||'').then(()=>toast('UID copiato!')).catch(()=>toast('Errore copia','error'));}
-
-// Fitness assessment renders (legacy DOM versions) replaced by
-// src/pages/Profile/Profile.jsx in Fase 6b. Old functions removed in Fase 8b.
-
-// ==================== ATHLETIC DETAIL ====================
-function openBodyPartModal(partKey) {
-  const info = getBodyPartInfo(partKey, settingsCache);
-  const modal = document.getElementById('workout-modal');
-  if (!modal) return;
-  document.getElementById('modal-title').textContent = info.title;
-  // Hide workout-specific buttons (used only for workout edit/delete flow)
-  const editBtn = document.getElementById('modal-edit-btn');
-  const delBtn = document.getElementById('modal-delete-btn');
-  if (editBtn) editBtn.style.display = 'none';
-  if (delBtn) delBtn.style.display = 'none';
-  document.getElementById('modal-body').innerHTML = `
-    <div class="body-detail-row"><span>Valore corrente</span><strong>${info.valueStr}${info.delta || ''}</strong></div>
-    <div class="body-detail-row"><span>Range tipico</span><strong>${info.idealStr}</strong></div>
-    ${info.extra || ''}
-    <div class="body-detail-explanation">${info.explanation}</div>
-  `;
-  modal.classList.add('show');
-}
-
-function renderAthleticDetail() {
-  // Render body avatar (silhouette + side panel) at the top — imperative.
-  const avatarEl = document.getElementById('body-avatar-container');
-  if (avatarEl) renderBodyAvatar(avatarEl, settingsCache);
-
-  // Fase 6b: metric cards + athletic fitness assessment renderizzati da Preact.
-  // Il radar Chart.js resta imperative (richiede canvas + Chart instance lifecycle).
-  const ctx = { workouts: workoutsCache, settings: settingsCache, weights: weightsCache, muscleGroups };
-  let radarValues = null;
-  if (globalThis.Preact?.profile) {
-    const { radarValues: rv } = globalThis.Preact.profile.computeAthleticMetrics(ctx);
-    radarValues = rv;
-    globalThis.Preact.profile.mountAthletic(ctx);
-  }
-
-  // Radar chart (legacy Chart.js)
-  destroyChart('radarDetail');
-  const canvasCtx = document.getElementById('chart-radar-detail')?.getContext('2d');
-  if (canvasCtx && radarValues) {
-    const isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const textColor = isLight ? '#0E1014' : '#F4F5F8';
-    const gridColor = isLight ? 'rgba(14,16,20,0.10)' : 'rgba(244,245,248,0.10)';
-    const _accRadar = getComputedStyle(document.documentElement).getPropertyValue('--pulse').trim() || '#00E5CE';
-    storeChart('radarDetail', new Chart(canvasCtx, {
-      type: 'radar',
-      data: {
-        labels: ['Forza', 'Resistenza', 'Consistenza', 'Recupero', 'Progressione', 'Varieta', 'Proporzioni'],
-        datasets: [{
-          label: 'Profilo',
-          data: radarValues.map((v) => Math.round(v * 10) / 10),
-          backgroundColor: _accRadar + '26',
-          borderColor: _accRadar,
-          pointBackgroundColor: _accRadar,
-          pointBorderColor: isLight ? '#fff' : '#0A0C0E',
-          borderWidth: 2,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { r: { min: 0, max: 10, ticks: { stepSize: 2, color: textColor, backdropColor: 'transparent' }, grid: { color: gridColor }, pointLabels: { color: textColor, font: { size: 13, family: 'Poppins' } } } },
-        plugins: { legend: { display: false } },
-      },
-    }));
-  }
-}
 
 // ==================== EXERCISE LIBRARY ====================
 function renderExerciseLibrary(){
@@ -1668,19 +1577,7 @@ function renderNotifications() {
 }
 
 // ==================== FRIENDS (local wrapper) ====================
-function renderFriendsPageLocal() {
-  // Set myStats for compare feature
-  const now = todayStr();
-  const myL7 = workoutsCache.filter(w => daysBetween(now, w.date) <= 7);
-  window._friendsMyStats = {
-    avgScore: workoutsCache.length ? workoutsCache.reduce((s,w) => s + (w.scores?.overall||0), 0) / workoutsCache.length : 0,
-    weekWorkouts: myL7.length,
-    weekKm: myL7.filter(w => w.type === 'running').reduce((s,w) => s + (w.distance||0), 0),
-    weekTonnage: myL7.filter(w => w.type === 'gym').reduce((s,w) => s + (w._tonnage||0), 0),
-    totalWorkouts: workoutsCache.length
-  };
-  renderFriendsPageModule({ followingCache, workoutsCache, currentUser });
-}
+// (Amici: tab Preact in src/pages/Profile/FriendsTab — M3.)
 
 // ==================== INIT APP ====================
 function initApp() {
@@ -1772,10 +1669,6 @@ async function deleteAccount() {
   }
 }
 window.deleteAccount = deleteAccount;
-window.searchUsers = searchUsersAPI;
-window.addFriendByUID = () => { const input = document.getElementById('friend-uid-input'); addFriendByUID(input?.value?.trim()); };
-window.toggleFollow = toggleFollow;
-window.compareSelected = () => compareSelected(Object.values(followingCache));
 window.updateORMChart = updateORMChart;
 // Getter "live": import.js legge workoutsCache/settingsCache dal bag al CLICK
 // di conferma (non alla selezione del file) — coi getter lo scoring usa sempre
@@ -1823,8 +1716,6 @@ document.addEventListener('DOMContentLoaded', () => {
     addMuscleGroup: () => addMuscleGroup(),
     copyAppLink: () => copyAppLink(),
     copyUID: () => copyUID(),
-    addFriendByUID: () => window.addFriendByUID(),
-    compareSelected: () => window.compareSelected(),
     closeModal: () => closeModal(),
     saveSettings: () => saveSettings(),
     deleteAllWorkouts: async () => {
@@ -1859,12 +1750,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showTab(btn.dataset.tabGroup, btn.dataset.tab);
   });
 
-  // Body avatar — click on a silhouette part opens detail modal
-  document.addEventListener('click', (e) => {
-    const part = e.target.closest('.body-avatar-svg [data-body-part]');
-    if (!part) return;
-    openBodyPartModal(part.dataset.bodyPart);
-  });
+  // (Body avatar click → modal: gestito da AthleticTab Preact — M3.)
 
   // Log-tab switcher on body/quicklog (Peso / Misurazione completa) — nested tabs
   document.addEventListener('click', (e) => {
