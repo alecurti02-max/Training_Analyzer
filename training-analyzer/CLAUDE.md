@@ -104,12 +104,16 @@ training-analyzer/
 
 ### State
 
-- **Legacy (ui.js)**: `let workoutsCache, settingsCache, exercisesCache, weightsCache,`
-  `currentUser, muscleGroups, activeSports, followingCache` (linee 19-46).
-  Modificato direttamente da funzioni in ui.js. Passato come props a Preact via
-  `globalThis.Preact.<page>.mount({...})`.
-- **Preact**: `src/store/user.js` ha `currentUser` signal. Altri store arriveranno
-  quando il legacy state verrà smantellato (Fase 7 / 8 successiva).
+- **Fonte di verità: signal store in `src/store/`** (M1/P3, giu 2026): workouts,
+  settings (+activeSports/muscleGroups), exercises, weights, following, user.
+  OGNI mutazione passa dai setter/azioni degli store (`setWorkouts`, `addWorkout`,
+  `removeWorkouts`, `updateWorkout`, `setSettings`, `setExercises`, `setWeights`,
+  `setFollowing`, `setActiveSports`, `setMuscleGroups`, `setUser`).
+- **ui.js**: le vecchie `let` (workoutsCache, settingsCache, …) sono REPLICHE DI
+  LETTURA sincronizzate via `effect()` in testa al file. Il codice legacy le legge
+  come prima, ma NON vanno mai riassegnate né mutate in place (push/splice/sort/
+  index-set), o i lettori Preact non si aggiornano. `syncFromLegacy`/dataSync è
+  stato rimosso.
 
 ### Bridge Preact ↔ Legacy
 
