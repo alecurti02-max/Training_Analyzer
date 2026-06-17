@@ -125,3 +125,22 @@ export function unmountHistory(host?: HTMLElement) {
   const el = host || document.getElementById('history-preact-host');
   if (el) render(null, el);
 }
+
+// Mount self-contained (M3): crea/riusa l'host dentro #page-history, nasconde il
+// markup legacy fratello e renderizza. Registrato nel router; showPage lo chiama
+// al posto del vecchio ui.js::renderHistory. La pagina legge il signal workouts,
+// quindi resta reattiva senza re-render imperativi (onDataChanged).
+export function mountHistoryPage(): void {
+  const pageEl = document.getElementById('page-history');
+  if (!pageEl) return;
+  let host = document.getElementById('history-preact-host');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'history-preact-host';
+    pageEl.appendChild(host);
+  }
+  Array.from(pageEl.children).forEach((c) => {
+    (c as HTMLElement).style.display = c === host ? '' : 'none';
+  });
+  render(<HistoryPage />, host);
+}
