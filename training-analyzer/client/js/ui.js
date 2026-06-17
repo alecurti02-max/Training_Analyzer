@@ -9,7 +9,8 @@ import { scoreWorkout, getAdvice, renderAiAnalysis, getRecoveryStatus, calculate
 import { destroyChart, storeChart, getChartTheme, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
 import { loadMeasurements, renderMeasurementsPage, getMeasurements } from './bodyMeasurements.js';
 import { exportProfilePdf } from './pdfExport.js';
-import { loadRecoveryData, renderRecoveryPage, saveNutritionLog, saveSleepLog } from './recovery.js';
+// Recupero (Alimentazione + Sonno) migrato a Preact (M3 Body): NutritionTab/
+// SleepTab in src/pages/Body/recovery/ con i propri store. recovery.js rimosso.
 import { handleGPXFiles, handleCSVFile, handleAppleHealthFile, handleFITFile, exportAllData, importJSONBackup } from './import.js';
 import { searchUsers as searchUsersAPI, renderSearchResults, addFriendByUID, toggleFollow, renderFriendsPage as renderFriendsPageModule, renderFollowingList, renderCompareCheckboxes, compareSelected, timeAgo } from './friends.js';
 import { renderAdmin, setupAdminGating } from './admin.js';
@@ -102,7 +103,7 @@ async function loadAllData() {
       api.get('/api/users/me/following').catch(() => ({}))
     ]);
     await loadMeasurements();
-    await loadRecoveryData();
+    // Recupero: i tab Preact (NutritionTab/SleepTab) caricano i propri store on-mount.
 
     // Normalize workouts: server returns { workouts: [...] } with data in JSONB .data field
     const rawWorkouts = Array.isArray(workoutsRes) ? workoutsRes
@@ -227,12 +228,11 @@ function showPage(page) {
   if (pageHandler) { pageHandler(); return; }
   if(page==='dashboard') renderDashboard();
   if(page==='body') {
-    // Corpo (BodyPage .tsx, wrap) — ingloba anche Alimentazione/Sonno (N1, ex
-    // Recupero): recovery.js popola i suoi id dentro i tab. Dopo il primo mount
-    // il DOM è nuovo: riaggancia i listener diretti.
+    // Corpo (BodyPage .tsx, wrap) — Peso/Misure/Andamenti ancora legacy; i tab
+    // Alimentazione/Sonno sono Preact autonomi (si caricano da soli). Dopo il
+    // primo mount il DOM è nuovo: riaggancia i listener diretti.
     if (mountPageHost('body')) wireDirectInputListeners();
     renderWeightPage(); populateSettingsUI();
-    renderRecoveryPage({ settings: settingsCache, toast });
   }
   if(page==='profile') {
     // Profilo (ProfilePage .tsx, wrap) — ingloba anche l'Atletica (N2, ex
@@ -449,9 +449,7 @@ function showTab(group, tab) {
     const sortedW = [...workoutsCache].sort((a, b) => new Date(b.date) - new Date(a.date));
     renderWeeklyChart(sortedW); renderRadarChart(sortedW);
   }
-  if (group === 'body' && (tab === 'nutrition' || tab === 'sleep')) {
-    renderRecoveryPage({ settings: settingsCache, toast });
-  }
+  // Alimentazione/Sonno (body) sono Preact autonomi: niente render legacy qui.
   if (group === 'profile' && tab === 'athletic') renderAthleticDetail();
   // Persist
   try { localStorage.setItem('ta_tab_' + group, tab); } catch(e) {}
@@ -1905,8 +1903,6 @@ document.addEventListener('DOMContentLoaded', () => {
     signOut: () => logout().then(() => { showScreen('login'); setupLoginUI(); }),
     deleteAccount: () => deleteAccount(),
     exportProfilePdf: () => handleExportProfilePdf(),
-    saveNutritionLog: () => saveNutritionLog(),
-    saveSleepLog: () => saveSleepLog(),
     exportAllData: () => window.exportAllData(),
     triggerImportJSON: () => document.getElementById('import-json')?.click(),
     saveWeight: () => saveWeight(),
