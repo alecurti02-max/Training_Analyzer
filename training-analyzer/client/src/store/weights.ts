@@ -1,4 +1,6 @@
 import { signal } from '@preact/signals';
+import { api } from '@/lib/api';
+import { uid } from '@/lib/utils';
 
 // Pesi corporei (ordinati per data crescente, come in loadAllData).
 export const weights = signal<any[]>([]);
@@ -17,4 +19,11 @@ export function upsertWeight(entry: { date: string; value: number; id?: string }
   next.sort((a, b) => +new Date(a.date) - +new Date(b.date));
   setWeights(next);
   return next;
+}
+
+// Azione (M3 Body): POST del peso + upsert sul signal. Il server fa upsert per
+// data; se non torna un id usiamo uno locale (come il vecchio saveWeight).
+export async function addWeightEntry(date: string, value: number): Promise<void> {
+  const saved = await api.post<any>('/api/weights', { date, value });
+  upsertWeight(saved && saved.id ? saved : { id: uid(), date, value });
 }

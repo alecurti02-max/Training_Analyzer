@@ -6,8 +6,9 @@ import { api, clearTokens } from './api.js';
 import { initAuth, setupLoginUI, logout } from './auth.js';
 import { SPORT_TEMPLATES, FIELD_DEFS, DEFAULT_MUSCLES, getUserActiveSports, getDefaultMusclesForSport } from './sports.js';
 import { scoreWorkout, getAdvice, renderAiAnalysis, getRecoveryStatus, calculateStreak, getFitnessAssessment, calcTonnage } from './scoring.js';
-import { destroyChart, storeChart, getChartTheme, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones, renderWeightChart } from './charts.js';
-import { loadMeasurements, renderMeasurementsPage, getMeasurements } from './bodyMeasurements.js';
+import { destroyChart, storeChart, getChartTheme, renderRadarChart, renderWeeklyChart, renderProgress as renderProgressCharts, render1RMChart, updateORMChart, renderHRZones } from './charts.js';
+// Corpo (M3) interamente Preact: misurazioni nel signal store (no bodyMeasurements.js).
+import { measurements as measurementsSig } from '../src/store/measurements';
 import { exportProfilePdf } from './pdfExport.js';
 // Recupero (Alimentazione + Sonno) migrato a Preact (M3 Body): NutritionTab/
 // SleepTab in src/pages/Body/recovery/ con i propri store. recovery.js rimosso.
@@ -22,7 +23,7 @@ import { effect } from '@preact/signals';
 import { workouts as workoutsSig, setWorkouts, addWorkout, updateWorkout as updateWorkoutInStore, postWorkout, deleteWorkoutById, deleteManyWorkouts, deleteAllWorkouts as deleteAllWorkoutsAction } from '../src/store/workouts';
 import { settings as settingsSig, setSettings, persistSettings, activeSports as activeSportsSig, setActiveSports, muscleGroups as muscleGroupsSig, setMuscleGroups } from '../src/store/settings';
 import { exercises as exercisesSig, setExercises, persistExercises } from '../src/store/exercises';
-import { weights as weightsSig, setWeights, upsertWeight } from '../src/store/weights';
+import { weights as weightsSig, setWeights } from '../src/store/weights';
 import { following as followingSig, setFollowing } from '../src/store/following';
 import { currentUser as currentUserSig, setUser } from '../src/store/user.js';
 
@@ -102,8 +103,7 @@ async function loadAllData() {
       api.get('/api/weights').catch(() => []),
       api.get('/api/users/me/following').catch(() => ({}))
     ]);
-    await loadMeasurements();
-    // Recupero: i tab Preact (NutritionTab/SleepTab) caricano i propri store on-mount.
+    // Corpo (misure/recupero): i tab Preact caricano i propri store on-mount.
 
     // Normalize workouts: server returns { workouts: [...] } with data in JSONB .data field
     const rawWorkouts = Array.isArray(workoutsRes) ? workoutsRes
@@ -227,13 +227,7 @@ function showPage(page) {
   const pageHandler = getPageHandler(page);
   if (pageHandler) { pageHandler(); return; }
   if(page==='dashboard') renderDashboard();
-  if(page==='body') {
-    // Corpo (BodyPage .tsx, wrap) — Peso/Misure/Andamenti ancora legacy; i tab
-    // Alimentazione/Sonno sono Preact autonomi (si caricano da soli). Dopo il
-    // primo mount il DOM è nuovo: riaggancia i listener diretti.
-    if (mountPageHost('body')) wireDirectInputListeners();
-    renderWeightPage(); populateSettingsUI();
-  }
+  // Corpo (M3): pagina Preact autonoma nel registry router (gestita sopra).
   if(page==='profile') {
     // Profilo (ProfilePage .tsx, wrap) — ingloba anche l'Atletica (N2, ex
     // Progressi): renderAthleticDetail popola avatar/radar/card nel tab.
@@ -333,11 +327,7 @@ function wireDirectInputListeners() {
     input.addEventListener('change', () => saveSettings());
   });
 
-  // Weight target and height inputs (save on change)
-  const weightTarget = fresh('weight-target');
-  if (weightTarget) weightTarget.addEventListener('change', () => saveWeightTarget());
-  const weightHeight = fresh('weight-height');
-  if (weightHeight) weightHeight.addEventListener('change', () => saveWeightHeight());
+  // (Peso target/altezza: ora gestiti dal WeightTab Preact — M3 Body.)
 
   // Drag & Drop zones + click-to-open file picker (Setup → Import)
   const dropFileMap = { 'gpx-drop': 'gpx-file', 'csv-drop': 'csv-file', 'health-drop': 'health-file', 'fit-drop': 'fit-file' };
@@ -463,8 +453,7 @@ function onDataChanged() {
   if (!activePage) return;
   const id = activePage.id;
   if (id === 'page-dashboard') renderDashboard();
-  // History (M3) legge il signal workouts → reattiva, niente re-render qui.
-  if (id === 'page-body') renderWeightPage();
+  // History e Corpo (M3) sono Preact reattivi sui signal → niente re-render qui.
 }
 
 // ==================== SAVE HELPERS ====================
@@ -1203,57 +1192,7 @@ function renderProgress() {
   renderProgressCharts(workoutsCache, settingsCache);
 }
 
-// ==================== WEIGHT / BODY MEASUREMENTS ====================
-function renderWeightPage() {
-  // Date default for the simple weight log
-  const wd = document.getElementById('weight-date');
-  if (wd && !wd.value) wd.value = todayStr();
-
-  // BMI banner on the overview
-  renderBmiBanner();
-
-  // Delegate the rest to the measurements module
-  renderMeasurementsPage({
-    weights: weightsCache,
-    settings: settingsCache,
-    onChange: () => { renderMeasurementsPage({ weights: weightsCache, settings: settingsCache }); renderBmiBanner(); },
-    onSave: syncSettingsFromMeasurement,
-    toast,
-  });
-
-  // Prefill obiettivo / altezza inputs
-  const tgt = document.getElementById('weight-target');
-  if (tgt && settingsCache.weightTarget != null) tgt.value = settingsCache.weightTarget;
-  const hIn = document.getElementById('weight-height');
-  if (hIn && settingsCache.height != null) hIn.value = settingsCache.height;
-}
-
-function renderBmiBanner() {
-  // Fase 6c: delegated to Preact (src/pages/Body/Body.jsx).
-  globalThis.Preact?.body?.mountBmiBanner({ weights: weightsCache, settings: settingsCache });
-}
-
-async function saveWeight() {
-  const date=document.getElementById('weight-date').value||todayStr();
-  const value=parseFloat(document.getElementById('weight-value').value);
-  if(!value){toast('Inserisci il peso!','error');return;}
-  const saved = await api.post('/api/weights', { date, value });
-  const entry = saved && saved.id ? saved : { id: uid(), date, value };
-  upsertWeight(entry);
-  document.getElementById('weight-value').value='';
-  toast('Peso registrato!','success');
-  renderWeightPage();
-}
-
-async function saveWeightTarget(){
-  const v=parseFloat(document.getElementById('weight-target').value);
-  if(v){await saveSettingsToServer({...settingsCache,weightTarget:v});renderWeightChart(weightsCache,settingsCache);}
-}
-
-async function saveWeightHeight(){
-  const v=parseInt(document.getElementById('weight-height').value);
-  if(v){await saveSettingsToServer({...settingsCache,height:v});}
-}
+// Corpo (M3): peso/misure/BMI sono interamente Preact (src/pages/Body/).
 
 // ==================== PROFILE ====================
 function renderProfile() {
@@ -1560,29 +1499,7 @@ function editExercise(idx){
 window.duplicateExercise = duplicateExercise;
 window.editExercise = editExercise;
 
-// Mirror the latest body measurement into Settings, so the static fields under
-// "Corpo > Misure > Composizione corporea" reflect the most recent log without
-// requiring the user to re-type them. PUT /api/settings is upsert/merge, so
-// we only send the fields actually present in the measurement.
-async function syncSettingsFromMeasurement(m) {
-  if (!m || typeof m !== 'object') return;
-  const FIELDS = [
-    'circChest','circWaist','circHips','circShoulders','circBicep','circNeck','circThigh','circCalf',
-    'bodyFat','skeletalMuscle','subcutaneousFat','visceralFat','bodyWater','muscleMass','boneMass','protein',
-  ];
-  const patch = {};
-  for (const k of FIELDS) {
-    if (m[k] != null) patch[k] = m[k];
-  }
-  if (!Object.keys(patch).length) return;
-  setSettings({ ...settingsCache, ...patch });
-  try {
-    await api.put('/api/settings', patch);
-    populateSettingsUI();
-  } catch (e) {
-    console.error('syncSettingsFromMeasurement failed:', e);
-  }
-}
+// (Mirror misurazione→Settings ora in store/measurements.saveMeasurement — M3 Body.)
 
 // ==================== SETTINGS ====================
 async function saveSettings(){
@@ -1800,9 +1717,6 @@ window.deleteWorkoutsByIds = async (ids) => {
 };
 window.filterHistory = filterHistory;
 window.closeModal = closeModal;
-window.saveWeight = saveWeight;
-window.saveWeightTarget = saveWeightTarget;
-window.saveWeightHeight = saveWeightHeight;
 window.saveSettings = saveSettings;
 window.addSport = addSport;
 window.removeSport = removeSport;
@@ -1830,7 +1744,7 @@ async function handleExportProfilePdf() {
       settings: settingsCache,
       workouts: workoutsCache,
       weights: weightsCache,
-      measurements: getMeasurements(),
+      measurements: measurementsSig.value,
       muscleGroups,
       fitness,
       aiSummary,
@@ -1905,7 +1819,6 @@ document.addEventListener('DOMContentLoaded', () => {
     exportProfilePdf: () => handleExportProfilePdf(),
     exportAllData: () => window.exportAllData(),
     triggerImportJSON: () => document.getElementById('import-json')?.click(),
-    saveWeight: () => saveWeight(),
     addExerciseToLibrary: () => addExerciseToLibrary(),
     addMuscleGroup: () => addMuscleGroup(),
     copyAppLink: () => copyAppLink(),
