@@ -37,3 +37,20 @@ export function initRouter(showPage: (page: string) => void): void {
     /* no-op */
   }
 }
+
+// ── Registry mount per-pagina (M3, smantellamento ui.js) ───────────────────
+// Le pagine migrate a Preact registrano qui il proprio mount self-contained
+// (host + render + wiring + tab restore). showPage (ancora in ui.js mentre lo
+// si smonta) consulta il registry: se la pagina è registrata usa quel mount,
+// altrimenti cade sul branch legacy. Una pagina alla volta passa dal branch al
+// registry, finché showPage non diventa pura navigazione generica.
+export type PageMount = () => void;
+const pageHandlers: Record<string, PageMount> = {};
+
+export function registerPage(name: string, mount: PageMount): void {
+  pageHandlers[name] = mount;
+}
+
+export function getPageHandler(name: string): PageMount | undefined {
+  return pageHandlers[name];
+}

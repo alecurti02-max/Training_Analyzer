@@ -2,7 +2,8 @@ import { render } from 'preact';
 import { App } from './App.jsx';
 import { initThemeToggle } from './components/ThemeToggle/ThemeToggle.jsx';
 import { mountDashboard, unmountDashboard } from './pages/Dashboard/DashboardPage';
-import { mountHistory, unmountHistory } from './pages/History/HistoryPage';
+import { mountHistory, unmountHistory, mountHistoryPage } from './pages/History/HistoryPage';
+import { registerPage } from './lib/router';
 import {
   mountFitnessAssessment,
   mountAthleticDetail,
@@ -43,6 +44,10 @@ initThemeToggle();
 globalThis.Preact = globalThis.Preact || {};
 globalThis.Preact.dashboard = { mount: mountDashboard, unmount: unmountDashboard };
 globalThis.Preact.history = { mount: mountHistory, unmount: unmountHistory };
+// M3: registry router-driven. History è la prima pagina con mount self-contained
+// (host+render in src/); ui.js::showPage lo prende dal registry invece del
+// proprio branch legacy. Le altre pagine seguiranno una alla volta.
+registerPage('history', mountHistoryPage);
 globalThis.Preact.profile = {
   mount: mountProfilePage,
   unmountPage: unmountProfilePage,

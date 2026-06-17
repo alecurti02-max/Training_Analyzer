@@ -16,7 +16,7 @@ import { renderAdmin, setupAdminGating } from './admin.js';
 import { renderBodyAvatar, getBodyPartInfo } from './bodyAvatar.js';
 import { uid, todayStr, scoreColor, paceToSeconds, secondsToPace, formatDate, getWeekStart, daysBetween } from '../src/lib/utils.js';
 import { toast } from '../src/lib/toast.js';
-import { initialSegment, syncUrl, initRouter } from '../src/lib/router';
+import { initialSegment, syncUrl, initRouter, getPageHandler } from '../src/lib/router';
 import { effect } from '@preact/signals';
 import { workouts as workoutsSig, setWorkouts, addWorkout, updateWorkout as updateWorkoutInStore, postWorkout, deleteWorkoutById, deleteManyWorkouts, deleteAllWorkouts as deleteAllWorkoutsAction } from '../src/store/workouts';
 import { settings as settingsSig, setSettings, persistSettings, activeSports as activeSportsSig, setActiveSports, muscleGroups as muscleGroupsSig, setMuscleGroups } from '../src/store/settings';
@@ -220,8 +220,12 @@ function showPage(page) {
   document.querySelectorAll('.nav-btn, .lay-bottomnav-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.page === page);
   });
+  // M3: pagina migrata al registry router-driven → mount self-contained (src/),
+  // che include host/render/wiring/tab-restore. Le pagine non ancora migrate
+  // proseguono coi branch legacy qui sotto.
+  const pageHandler = getPageHandler(page);
+  if (pageHandler) { pageHandler(); return; }
   if(page==='dashboard') renderDashboard();
-  if(page==='history') renderHistory();
   if(page==='body') {
     // Corpo (BodyPage .tsx, wrap) — ingloba anche Alimentazione/Sonno (N1, ex
     // Recupero): recovery.js popola i suoi id dentro i tab. Dopo il primo mount
@@ -461,7 +465,7 @@ function onDataChanged() {
   if (!activePage) return;
   const id = activePage.id;
   if (id === 'page-dashboard') renderDashboard();
-  if (id === 'page-history') renderHistory();
+  // History (M3) legge il signal workouts → reattiva, niente re-render qui.
   if (id === 'page-body') renderWeightPage();
 }
 
@@ -621,17 +625,11 @@ async function deleteSelected() {
   onDataChanged();
 }
 
+// M3: il mount di History vive in src/ (HistoryPage.mountHistoryPage), registrato
+// nel router. showPage lo invoca via registry; questo shim serve solo ai vecchi
+// call-site legacy (filterHistory/toggleSelectMode su markup nascosto, dead).
 function renderHistory() {
-  // Storico migrato a pagina .tsx autonoma (HistoryPage): possiede markup,
-  // filtro/selezione e legge i workout dal signal store. Montata in un host
-  // dedicato; il markup legacy di #page-history viene nascosto (pattern Train).
-  if (!globalThis.Preact?.history) return;
-  const pageEl = document.getElementById('page-history');
-  if (!pageEl) return;
-  let host = document.getElementById('history-preact-host');
-  if (!host) { host = document.createElement('div'); host.id = 'history-preact-host'; pageEl.appendChild(host); }
-  Array.from(pageEl.children).forEach((c) => { c.style.display = c === host ? '' : 'none'; });
-  globalThis.Preact.history.mount({ host });
+  getPageHandler('history')?.();
 }
 
 // ==================== WORKOUT DETAIL ====================
